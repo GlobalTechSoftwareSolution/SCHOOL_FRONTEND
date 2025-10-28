@@ -1,357 +1,396 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { 
-  Users, 
   BookOpen, 
+  Users, 
   DollarSign, 
-  Settings, 
+  UserCheck, 
   MessageSquare,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
   Shield,
-  BarChart3,
-  Clock,
+  Zap,
   CheckCircle,
-  Play
+  Star,
+  Sparkles
 } from "lucide-react";
 
 const tabs = [
-  { 
-    id: "academics", 
-    label: "Academics", 
-    icon: BookOpen,
-    color: "from-blue-500 to-cyan-500"
-  },
-  { 
-    id: "administration", 
-    label: "Administration", 
-    icon: Settings,
-    color: "from-green-500 to-emerald-500"
-  },
-  { 
-    id: "finance", 
-    label: "Finance", 
-    icon: DollarSign,
-    color: "from-purple-500 to-pink-500"
-  },
-  { 
-    id: "humanResource", 
-    label: "Human Resource", 
-    icon: Users,
-    color: "from-orange-500 to-red-500"
-  },
-  { 
-    id: "communication", 
-    label: "Communication", 
-    icon: MessageSquare,
-    color: "from-indigo-500 to-blue-500"
-  },
+  { id: "academics", label: "Academics", icon: BookOpen, color: "from-blue-500 to-cyan-500" },
+  { id: "administration", label: "Administration", icon: Users, color: "from-green-500 to-emerald-500" },
+  { id: "finance", label: "Finance", icon: DollarSign, color: "from-purple-500 to-pink-500" },
+  { id: "humanResource", label: "Human Resource", icon: UserCheck, color: "from-orange-500 to-red-500" },
+  { id: "communication", label: "Communication", icon: MessageSquare, color: "from-indigo-500 to-blue-500" },
 ];
 
 const modulesData = {
   academics: [
     {
       title: "Student Information System",
-      description: "Comprehensive student lifecycle management with advanced analytics and performance tracking.",
+      description: "Maintain detailed student profiles with historical tracking of changes and transformations over years. Manage all important aspects of student lifecycle.",
       icon: Users,
-      features: ["360° Student Profile", "Academic Tracking", "Performance Analytics", "Parent Portal"],
-      stats: "98% Accuracy",
-      color: "blue"
+      features: ["360° Student Profile", "Historical Tracking", "Academic Records", "Parent Portal"],
+      stats: "98% Efficiency Gain"
     },
     {
-      title: "Smart Attendance System",
-      description: "AI-powered attendance tracking with real-time notifications and predictive analytics.",
-      icon: Clock,
-      features: ["Biometric Integration", "Real-time Alerts", "Pattern Analysis", "Automated Reports"],
-      stats: "99.9% Reliable",
-      color: "green"
+      title: "Attendance Management",
+      description: "Track attendance of every member associated with the school. Easily integrate with biometric devices for seamless attendance recording.",
+      icon: UserCheck,
+      features: ["Biometric Integration", "Real-time Tracking", "Automated Reports", "Parent Notifications"],
+      stats: "100% Accuracy"
     },
     {
-      title: "Lesson Planning Suite",
-      description: "Collaborative lesson planning with curriculum mapping and resource integration.",
+      title: "Lesson Planning",
+      description: "Transform the colossal task of lesson planning into a simple, effective, and error-free process. Organize academic sessions systematically.",
       icon: BookOpen,
-      features: ["Curriculum Mapping", "Resource Library", "Collaboration Tools", "Progress Tracking"],
-      stats: "500+ Templates",
-      color: "purple"
-    },
-    {
-      title: "Assignment Management",
-      description: "End-to-end assignment workflow from creation to grading and feedback.",
-      icon: CheckCircle,
-      features: ["Auto-grading", "Plagiarism Check", "Feedback System", "Gradebook Sync"],
-      stats: "70% Time Saved",
-      color: "orange"
+      features: ["Curriculum Mapping", "Session Planning", "Resource Allocation", "Progress Tracking"],
+      stats: "70% Time Saved"
     }
   ],
   administration: [
     {
-      title: "Transport Management",
-      description: "Intelligent route optimization and real-time vehicle tracking for safety and efficiency.",
+      title: "Inventory Management",
+      description: "Track all school assets and prevent thefts or misplacement. Maintain comprehensive inventory records with real-time updates.",
       icon: Shield,
-      features: ["GPS Tracking", "Route Optimization", "Parent Alerts", "Fuel Management"],
-      stats: "40% Cost Reduced",
-      color: "blue"
+      features: ["Asset Tracking", "Stock Management", "Theft Prevention", "Real-time Updates"],
+      stats: "Complete Control"
     },
     {
       title: "Library Management",
-      description: "Digital library ecosystem with smart cataloging and analytics-driven recommendations.",
+      description: "Manage your school's knowledge reservoir efficiently. Streamline book issuance, returns, and catalog management.",
       icon: BookOpen,
-      features: ["Digital Catalog", "Auto-renewals", "Reading Analytics", "E-book Integration"],
-      stats: "2K+ Digital Books",
-      color: "green"
+      features: ["Digital Catalog", "Book Tracking", "Member Management", "Analytics"],
+      stats: "Organized Knowledge"
+    },
+    {
+      title: "Transport Management",
+      description: "Monitor school transport with route vacancy-occupancy graphical representation. Ensure student safety and efficient routing.",
+      icon: Users,
+      features: ["Route Optimization", "GPS Tracking", "Safety Monitoring", "Parent Alerts"],
+      stats: "Safe Transport"
     }
   ],
   finance: [
     {
-      title: "Fee Management System",
-      description: "Automated fee processing with multiple payment gateways and financial reporting.",
+      title: "Fee Management",
+      description: "Streamline fee collection with integrated online payment gateway. Access fee dashboard with day's collection and dues information.",
       icon: DollarSign,
-      features: ["Auto Invoicing", "Multi-payment Gateways", "Tax Compliance", "Financial Reports"],
-      stats: "Zero Errors",
-      color: "purple"
+      features: ["Online Payments", "Fee Dashboard", "Receipt Generation", "Dues Tracking"],
+      stats: "Zero Errors"
     },
     {
-      title: "Budget Planning & Analytics",
-      description: "AI-driven budget forecasting and expense optimization with predictive insights.",
-      icon: BarChart3,
-      features: ["Predictive Budgeting", "Expense Tracking", "ROI Analysis", "Audit Trail"],
-      stats: "95% Accuracy",
-      color: "orange"
+      title: "Financial Accounting",
+      description: "Comprehensive financial management with user-defined ledgers and ledger groups. Tailor financial management to specific needs.",
+      icon: BookOpen,
+      features: ["Custom Ledgers", "Financial Reports", "Transaction Tracking", "Audit Trail"],
+      stats: "Complete Financial Control"
+    },
+    {
+      title: "Payroll Management",
+      description: "Handle salary processing with precision. Manage all salary components accurately with meticulous calculation.",
+      icon: UserCheck,
+      features: ["Salary Processing", "Component Management", "Tax Calculation", "Payslip Generation"],
+      stats: "Accurate Processing"
     }
   ],
   humanResource: [
     {
-      title: "Staff Management Hub",
-      description: "Complete employee lifecycle management from recruitment to retirement.",
+      title: "Employee Recruitment",
+      description: "Streamline the entire recruitment process from application to onboarding. Manage candidate data efficiently.",
       icon: Users,
-      features: ["Recruitment CRM", "Performance Management", "Training Records", "Document Vault"],
-      stats: "360° Employee View",
-      color: "blue"
+      features: ["Candidate Tracking", "Interview Scheduling", "Onboarding", "Document Management"],
+      stats: "Streamlined Hiring"
     },
     {
-      title: "Payroll Automation",
-      description: "Seamless payroll processing integrated with attendance and compliance management.",
-      icon: DollarSign,
-      features: ["Auto-calculation", "Tax Compliance", "Payslip Generation", "Bank Integration"],
-      stats: "100% Compliance",
-      color: "green"
+      title: "Employee Information",
+      description: "Maintain detailed profiles of all staff members with customizable fields to meet specific requirements.",
+      icon: UserCheck,
+      features: ["Profile Management", "Custom Fields", "Document Storage", "History Tracking"],
+      stats: "Centralized Records"
+    },
+    {
+      title: "Leave & Attendance",
+      description: "Advanced attendance system supporting biometrics, face recognition, RFID, and mobile app with location data.",
+      icon: CheckCircle,
+      features: ["Multiple Methods", "Real-time Tracking", "Leave Management", "Location Data"],
+      stats: "Advanced Tracking"
     }
   ],
   communication: [
     {
-      title: "Smart Notification System",
-      description: "Multi-channel communication platform with smart routing and analytics.",
-      icon: MessageSquare,
-      features: ["Multi-channel", "Smart Routing", "Delivery Analytics", "Scheduled Messaging"],
-      stats: "99% Delivery Rate",
-      color: "purple"
+      title: "Student Image Gallery",
+      description: "Display student images class-wise and group-wise with event descriptions. Enhance student engagement and awareness.",
+      icon: Users,
+      features: ["Event Galleries", "Class-wise Display", "Student Engagement", "Latest Updates"],
+      stats: "Enhanced Visibility"
     },
     {
-      title: "Announcement Center",
-      description: "Centralized announcement system with targeting and engagement tracking.",
-      icon: Users,
-      features: ["Targeted Messaging", "Engagement Analytics", "Multi-format Support", "Archive System"],
-      stats: "85% Open Rate",
-      color: "orange"
+      title: "Mobile SMS",
+      description: "Send important bulk SMS to all parents with one click. Keep parents updated with school happenings and child information.",
+      icon: MessageSquare,
+      features: ["Bulk Messaging", "Instant Updates", "Parent Communication", "One-click Operation"],
+      stats: "Instant Communication"
+    },
+    {
+      title: "WhatsApp Integration",
+      description: "Leverage WhatsApp Business API with over 90% open rate for enhanced engagement and streamlined communication.",
+      icon: Zap,
+      features: ["WhatsApp API", "Multimedia Messaging", "High Engagement", "Streamlined Communication"],
+      stats: "90% Open Rate"
     }
   ]
 };
 
-const colorClasses = {
-  blue: { bg: "bg-blue-500", gradient: "from-blue-500 to-cyan-500", text: "text-blue-600" },
-  green: { bg: "bg-green-500", gradient: "from-green-500 to-emerald-500", text: "text-green-600" },
-  purple: { bg: "bg-purple-500", gradient: "from-purple-500 to-pink-500", text: "text-purple-600" },
-  orange: { bg: "bg-orange-500", gradient: "from-orange-500 to-red-500", text: "text-orange-600" }
+// Floating particles
+const FloatingParticles = () => {
+  if (typeof window === "undefined") return null; // prevent SSR crash
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {[...Array(20)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full bg-gradient-to-r from-blue-200 to-purple-200"
+          initial={{
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            scale: Math.random() * 0.5 + 0.5,
+          }}
+          animate={{
+            y: [null, -100, -200],
+            x: [null, Math.random() * 100 - 50],
+            opacity: [0, 1, 0],
+          }}
+          transition={{
+            duration: Math.random() * 3 + 2,
+            repeat: Infinity,
+            delay: Math.random() * 2,
+          }}
+          style={{
+            width: Math.random() * 20 + 5,
+            height: Math.random() * 20 + 5,
+          }}
+        />
+      ))}
+    </div>
+  );
 };
 
 export default function ERPModules() {
   const [activeTab, setActiveTab] = useState("academics");
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
+
+  const currentModules = modulesData[activeTab as keyof typeof modulesData];
+  const slidesToShow = 3;
+  const totalSlides = Math.ceil(currentModules.length / slidesToShow);
+
+  useEffect(() => {
+    if (!isPlaying || isHovering) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % totalSlides);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isPlaying, isHovering, totalSlides]);
+
+  const visibleModules = currentModules.slice(
+    currentSlide * slidesToShow,
+    (currentSlide + 1) * slidesToShow
+  );
+
+  // ✅ FIXED VARIANTS TYPES
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring" as const, stiffness: 100 },
+    },
+  };
 
   return (
-    <section className="relative bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Background Elements */}
+    <section className="relative py-20 bg-gradient-to-br from-white via-blue-50 to-indigo-100 overflow-hidden">
+      {/* Background */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-200 rounded-full blur-3xl opacity-30"></div>
+        <FloatingParticles />
       </div>
 
-      <div className="relative max-w-7xl mx-auto">
-        {/* Header Section */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.8, type: "spring" }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-lg mb-6">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-blue-600">ERP MODULES</span>
-          </div>
-          
-          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
-            Comprehensive School Management
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, type: "spring" }}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white/80 backdrop-blur-sm rounded-2xl mb-6 border border-blue-200 shadow-lg"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+            />
+            <span className="text-sm font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              ERP MODULES
+            </span>
+            <Sparkles className="w-4 h-4 text-purple-500" />
+          </motion.div>
+
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-6">
+            Comprehensive ERP System
           </h2>
-          
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Streamline your institution's operations with our intelligent ERP system. 
-            <span className="font-semibold text-blue-600"> 40+ integrated modules </span>
-            designed for modern educational excellence.
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
+            A comprehensive ERP Module with user-friendly dashboards, easy navigation, and well-structured reports.
           </p>
         </motion.div>
 
-        {/* Enhanced Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex flex-wrap justify-center gap-3 mb-16"
-        >
+        {/* Tabs */}
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            
             return (
               <motion.button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                whileHover={{ scale: 1.05 }}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setCurrentSlide(0);
+                }}
+                whileHover={{ scale: 1.05, y: -4 }}
                 whileTap={{ scale: 0.95 }}
-                className={`relative group flex items-center gap-3 px-6 py-4 rounded-2xl font-semibold transition-all duration-300 ${
+                className={`relative group flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold transition-all duration-300 shadow-lg ${
                   isActive
-                    ? `bg-gradient-to-r ${tab.color} text-white shadow-xl`
-                    : "bg-white text-gray-700 hover:text-blue-600 shadow-lg hover:shadow-xl"
+                    ? `bg-gradient-to-r ${tab.color} text-white shadow-2xl`
+                    : "bg-white text-gray-700 hover:text-gray-900 hover:shadow-xl border border-gray-200"
                 }`}
               >
                 <Icon className="w-5 h-5" />
                 {tab.label}
-                
-                {/* Active indicator */}
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 rounded-2xl bg-gradient-to-r border-2 border-white/20"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
               </motion.button>
             );
           })}
-        </motion.div>
+        </div>
 
-        {/* Modules Grid */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -40 }}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6"
-          >
-            {modulesData[activeTab as keyof typeof modulesData].map((module, index) => {
-              const Icon = module.icon;
-              const colors = colorClasses[module.color as keyof typeof colorClasses];
-              
-              return (
-                <motion.div
-                  key={module.title}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  whileHover={{ y: -8, scale: 1.02 }}
-                  onHoverStart={() => setHoveredCard(module.title)}
-                  onHoverEnd={() => setHoveredCard(null)}
-                  className="relative group"
-                >
-                  <div className="relative bg-white rounded-3xl p-6 shadow-2xl hover:shadow-3xl transition-all duration-500 border border-gray-100 h-full flex flex-col">
-                    
-                    {/* Icon Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-2xl bg-gradient-to-r ${colors.gradient} shadow-lg`}>
-                        <Icon className="w-6 h-6 text-white" />
-                      </div>
-                      <motion.div
-                        animate={{ 
-                          scale: hoveredCard === module.title ? 1 : 0.8,
-                          opacity: hoveredCard === module.title ? 1 : 0.5
-                        }}
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${colors.text} bg-blue-50`}
-                      >
-                        {module.stats}
-                      </motion.div>
-                    </div>
-
-                    {/* Content */}
-                    <h3 className="text-xl font-bold text-gray-800 mb-3 leading-tight">
-                      {module.title}
-                    </h3>
-                    
-                    <p className="text-gray-600 text-sm leading-relaxed mb-4 flex-grow">
-                      {module.description}
-                    </p>
-
-                    {/* Features List */}
-                    <div className="space-y-2 mb-6">
-                      {module.features.slice(0, 3).map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full ${colors.bg}`}></div>
-                          <span className="text-xs text-gray-500 font-medium">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Action Button */}
-                    <motion.button
-                      whileHover={{ x: 5 }}
-                      className={`group flex items-center gap-2 text-sm font-semibold ${colors.text} mt-auto pt-4 border-t border-gray-100`}
-                    >
-                      Explore Module
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </motion.button>
-
-                    {/* Hover Effect */}
-                    <div className={`absolute inset-0 rounded-3xl bg-gradient-to-r ${colors.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300 -z-10`} />
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Bottom CTA */}
+        {/* Modules */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center mt-16"
+          key={activeTab}
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, type: "spring" }}
+          className="relative"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
         >
-          <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4">
-              Ready to Transform Your Institution?
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Join 500+ educational institutions using our ERP system
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-3"
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
+            {visibleModules.map((module) => (
+              <motion.div
+                key={module.title}
+                variants={itemVariants}
+                whileHover={{
+                  y: -12,
+                  scale: 1.03,
+                  transition: { type: "spring", stiffness: 300 },
+                }}
+                className="group relative"
               >
-                <Play className="w-5 h-5" />
-                Schedule Demo
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-white text-blue-600 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all border border-blue-200"
-              >
-                Download Brochure
-              </motion.button>
-            </div>
-          </div>
+                <div className="relative bg-white rounded-3xl p-8 border border-gray-200 hover:border-blue-300 transition-all duration-500 h-full flex flex-col shadow-lg hover:shadow-2xl">
+                  <motion.div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
+                  <div className="flex items-start justify-between mb-6">
+                    <motion.div
+                      className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg"
+                      whileHover={{
+                        rotate: [0, -10, 10, 0],
+                        transition: { duration: 0.5 },
+                      }}
+                    >
+                      <module.icon className="w-8 h-8 text-white" />
+                    </motion.div>
+                    <motion.div
+                      className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-lg"
+                      whileHover={{ scale: 1.05 }}
+                    >
+                      <span className="text-xs font-bold text-white">{module.stats}</span>
+                    </motion.div>
+                  </div>
+
+                  <motion.h3 className="text-2xl font-bold text-gray-800 mb-4 leading-tight">
+                    {module.title}
+                  </motion.h3>
+                  <p className="text-gray-600 leading-relaxed mb-6 flex-grow">
+                    {module.description}
+                  </p>
+
+                  <div className="space-y-3 mb-8">
+                    {module.features.map((feature, idx) => (
+                      <motion.div
+                        key={idx}
+                        className="flex items-center gap-3"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                      >
+                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 font-medium">{feature}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  <motion.button
+                    whileHover={{
+                      x: 8,
+                      backgroundColor: "#3B82F6",
+                      color: "white",
+                    }}
+                    className="flex items-center gap-2 text-sm font-semibold text-blue-600 px-4 py-3 rounded-xl border border-blue-200 group-hover:border-blue-500 transition-all w-fit"
+                  >
+                    Read More
+                    <motion.div
+                      animate={{ x: [0, 4, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </motion.div>
+                  </motion.button>
+
+                  <motion.div
+                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100"
+                    animate={{
+                      rotate: 360,
+                      scale: [1, 1.2, 1],
+                    }}
+                    transition={{
+                      rotate: { duration: 20, repeat: Infinity, ease: "linear" },
+                      scale: { duration: 2, repeat: Infinity },
+                    }}
+                  >
+                    <Star className="w-4 h-4 text-yellow-400" />
+                  </motion.div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </motion.div>
       </div>
     </section>

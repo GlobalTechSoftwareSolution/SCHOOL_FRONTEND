@@ -7,6 +7,7 @@ import Navbar from "@/app/components/Navbar";
 import Hero from "@/app/components/Hero";
 import Erpmodules from "@/app/components/Erpmodules";
 import Faqs from '@/app/components/Faqs'
+import Personalizedportals from  '@/app/components/Personalizedportals'
 import Footer from "@/app/components/Footer";
 
 export default function Page() {
@@ -76,6 +77,7 @@ export default function Page() {
             <Navbar />
             <Hero />
             <Erpmodules />
+            <Personalizedportals />
             <Faqs />
             <Footer />
           </motion.div>
