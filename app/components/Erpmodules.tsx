@@ -34,7 +34,7 @@ const modulesData = {
       icon: Users,
       features: ["360° Student Profile", "Historical Tracking", "Academic Records", "Parent Portal"],
       stats: "98% Efficiency Gain",
-      Link: "/erpmodules/academics/student-information",
+      Link: "/erpmodules/academics/student_information",
     },
     {
       title: "Attendance Management",
@@ -43,7 +43,7 @@ const modulesData = {
       icon: UserCheck,
       features: ["Biometric Integration", "Real-time Tracking", "Automated Reports", "Parent Notifications"],
       stats: "100% Accuracy",
-      Link: "/erpmodules/academics/attendence-information",
+      Link: "/erpmodules/academics/attendence_information",
     },
     {
       title: "Lesson Planning",
@@ -52,7 +52,7 @@ const modulesData = {
       icon: BookOpen,
       features: ["Curriculum Mapping", "Session Planning", "Resource Allocation", "Progress Tracking"],
       stats: "70% Time Saved",
-      Link: "/erpmodules/academics/lesson-planning",
+      Link: "/erpmodules/academics/lesson_planning",
     },
   ],
   administration: [
@@ -130,7 +130,7 @@ const modulesData = {
       icon: UserCheck,
       features: ["Profile Management", "Custom Fields", "Document Storage", "History Tracking"],
       stats: "Centralized Records",
-      Link: "/erpmodules/humanresource/employee-info",
+      Link: "/erpmodules/humanresource/employee_info",
     },
     {
       title: "Leave & Attendance",
@@ -139,7 +139,7 @@ const modulesData = {
       icon: CheckCircle,
       features: ["Multiple Methods", "Real-time Tracking", "Leave Management", "Location Data"],
       stats: "Advanced Tracking",
-      Link: "/erpmodules/humanresource/leave-attendance",
+      Link: "/erpmodules/humanresource/leave_attendance",
     },
   ],
   communication: [
