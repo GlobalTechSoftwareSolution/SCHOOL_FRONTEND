@@ -80,7 +80,7 @@ export default function StudentInformationSection() {
   return (
     <>
       <Navbar />
-      <section className="relative min-h-screen py-16 lg:py-24 overflow-hidden bg-gradient-to-br from-white via-blue-50 to-indigo-100">
+      <section className="relative min-h-screen mt-10 md:mt-5 py-16 lg:py-24 overflow-hidden bg-gradient-to-br from-white via-blue-50 to-indigo-100">
         
         {/* Background Elements */}
         <div className="absolute top-0 left-0 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
@@ -89,18 +89,6 @@ export default function StudentInformationSection() {
 
         {/* Main Container */}
         <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8">
-          
-          {/* Back Button */}
-          <motion.button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mb-8 transition-colors duration-200 group"
-            whileHover={{ x: -4 }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <ChevronLeftIcon className="h-5 w-5 group-hover:-translate-x-1 transition-transform duration-200" />
-            Back to Previous Page
-          </motion.button>
 
           {/* Hero Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
@@ -110,7 +98,7 @@ export default function StudentInformationSection() {
               transition={{ duration: 0.8 }}
               className="space-y-6"
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+              <div className="inline-flex items-center md:items-center  justify-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                 <UserGroupIcon className="h-4 w-4" />
                 Comprehensive Student Management
               </div>

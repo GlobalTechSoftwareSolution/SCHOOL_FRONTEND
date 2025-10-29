@@ -8,21 +8,15 @@ export default function SignupPage() {
   const [form, setForm] = useState({
     email: '',
     password: '',
-    confirmPassword: '',
-    role: 'STUDENT',
-    name: '',
-    phone: '',
-    gradeId: '',
-    sectionId: '',
-    roll: '',
-    subject: '',
-    parent: '',
+    password2: '', // Changed from confirmPassword to password2
+    role: 'Student', // Changed to match API format
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -35,40 +29,69 @@ export default function SignupPage() {
   };
 
   const handleSubmit = async () => {
-    if (form.password !== form.confirmPassword) {
+    if (form.password !== form.password2) {
       alert('Passwords do not match!');
       return;
     }
 
-    let payload: any = {
-      email: form.email,
-      password: form.password,
-      role: form.role,
-      name: form.name,
-      phone: form.phone,
-    };
-
-    if (form.role === 'STUDENT') {
-      payload.sectionId = form.sectionId;
-      payload.roll = form.roll;
-      payload.parent = form.parent;
-      payload.createdByAdmin = true;
-    } else if (form.role === 'TEACHER') {
-      payload.subject = form.subject;
+    if (form.password.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
     }
 
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    setLoading(true);
 
-    const data = await res.json();
-    alert(data.message || data.error);
+    try {
+      const payload = {
+        email: form.email,
+        password: form.password,
+        password2: form.password2,
+        role: form.role,
+      };
+
+      const res = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/signup/', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert('Registration successful! Please check your email for verification.');
+        // Redirect to login page
+        window.location.href = '/login';
+      } else {
+        // Handle different error cases
+        if (data.email) {
+          alert(`Email error: ${data.email[0]}`);
+        } else if (data.password) {
+          alert(`Password error: ${data.password[0]}`);
+        } else if (data.non_field_errors) {
+          alert(`Error: ${data.non_field_errors[0]}`);
+        } else {
+          alert('Registration failed. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('An error occurred during registration. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const nextStep = () => {
-    if (currentStep < 3) setCurrentStep(currentStep + 1);
+    // Validate current step before proceeding
+    if (currentStep === 1) {
+      if (!form.email || !form.email.includes('@')) {
+        alert('Please enter a valid email address');
+        return;
+      }
+    }
+    if (currentStep < 2) setCurrentStep(currentStep + 1);
   };
 
   const prevStep = () => {
@@ -77,9 +100,9 @@ export default function SignupPage() {
 
   const getRoleIcon = () => {
     switch (form.role) {
-      case 'STUDENT': return <GraduationCap className="w-6 h-6" />;
-      case 'TEACHER': return <School className="w-6 h-6" />;
-      case 'ADMIN': return <Users className="w-6 h-6" />;
+      case 'Student': return <GraduationCap className="w-6 h-6" />;
+      case 'Teacher': return <School className="w-6 h-6" />;
+      case 'Admin': return <Users className="w-6 h-6" />;
       default: return <User className="w-6 h-6" />;
     }
   };
@@ -102,13 +125,13 @@ export default function SignupPage() {
         
         {/* Floating Elements */}
         <div className="absolute top-20 left-10 animate-float">
-          <BookOpen className="text-blue-300 w-8 h-8" />
+          <BookOpen className="text-blue-400 w-8 h-8" />
         </div>
         <div className="absolute top-40 right-20 animate-float animation-delay-1000">
-          <GraduationCap className="text-purple-300 w-10 h-10" />
+          <GraduationCap className="text-purple-400 w-10 h-10" />
         </div>
         <div className="absolute bottom-40 left-20 animate-float animation-delay-2000">
-          <School className="text-pink-300 w-9 h-9" />
+          <School className="text-pink-400 w-9 h-9" />
         </div>
       </div>
 
@@ -130,7 +153,7 @@ export default function SignupPage() {
               Start Your <span className="text-purple-600">Learning Journey</span> 🎯
             </h2>
             
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+            <p className="text-xl text-gray-700 mb-8 leading-relaxed">
               Join thousands of students and educators in our innovative learning platform. 
               Create your account and unlock a world of knowledge and opportunities.
             </p>
@@ -138,38 +161,38 @@ export default function SignupPage() {
             {/* Features List */}
             <div className="space-y-4">
               <div className="flex items-center space-x-3 text-gray-700">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>Interactive learning materials</span>
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-gray-700">Interactive learning materials</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-700">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                <span>Expert-led courses and guidance</span>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-gray-700">Expert-led courses and guidance</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-700">
-                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                <span>Progress tracking and analytics</span>
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                <span className="text-gray-700">Progress tracking and analytics</span>
               </div>
             </div>
           </div>
 
           {/* Right Side - Signup Form */}
           <div className="lg:w-1/2 w-full max-w-lg">
-            <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 transform hover:scale-[1.02] transition-all duration-300">
+            <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-gray-200/50 p-8 transform hover:scale-[1.02] transition-all duration-300">
               {/* Progress Steps */}
               <div className="flex justify-between items-center mb-8">
-                {[1, 2, 3].map((step) => (
+                {[1, 2].map((step) => (
                   <div key={step} className="flex flex-col items-center">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
                       step === currentStep 
                         ? 'bg-purple-600 text-white scale-110' 
                         : step < currentStep 
                         ? 'bg-green-500 text-white' 
-                        : 'bg-gray-200 text-gray-500'
+                        : 'bg-gray-300 text-gray-600'
                     }`}>
                       {step < currentStep ? '✓' : step}
                     </div>
-                    <span className="text-xs mt-2 text-gray-600">
-                      {step === 1 ? 'Account' : step === 2 ? 'Profile' : 'Complete'}
+                    <span className="text-xs mt-2 text-gray-700 font-medium">
+                      {step === 1 ? 'Account' : 'Complete'}
                     </span>
                   </div>
                 ))}
@@ -187,7 +210,7 @@ export default function SignupPage() {
                 {currentStep === 1 && (
                   <>
                     <div className="relative">
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
                         <Mail className="w-5 h-5" />
                       </div>
                       <input
@@ -196,12 +219,12 @@ export default function SignupPage() {
                         value={form.email}
                         onChange={handleChange}
                         placeholder="Enter your email address"
-                        className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
+                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all duration-200 placeholder-gray-500 text-gray-800"
                       />
                     </div>
 
                     <div className="relative">
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
                         <Lock className="w-5 h-5" />
                       </div>
                       <input
@@ -210,33 +233,33 @@ export default function SignupPage() {
                         value={form.password}
                         onChange={handleChange}
                         placeholder="Create a strong password"
-                        className="w-full pl-12 pr-12 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
+                        className="w-full pl-12 pr-12 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all duration-200 placeholder-gray-500 text-gray-800"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
 
                     <div className="relative">
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
                         <Lock className="w-5 h-5" />
                       </div>
                       <input
-                        name="confirmPassword"
+                        name="password2"
                         type={showConfirm ? 'text' : 'password'}
-                        value={form.confirmPassword}
+                        value={form.password2}
                         onChange={handleChange}
                         placeholder="Confirm your password"
-                        className="w-full pl-12 pr-12 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
+                        className="w-full pl-12 pr-12 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all duration-200 placeholder-gray-500 text-gray-800"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirm(!showConfirm)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200"
                       >
                         {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -244,115 +267,35 @@ export default function SignupPage() {
                   </>
                 )}
 
-                {/* Step 2: Role & Personal Info */}
+                {/* Step 2: Role Selection */}
                 {currentStep === 2 && (
                   <>
                     <div className="relative">
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
                         {getRoleIcon()}
                       </div>
                       <select
                         name="role"
                         value={form.role}
                         onChange={handleChange}
-                        className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 appearance-none cursor-pointer"
+                        className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white transition-all duration-200 text-gray-800 cursor-pointer"
                       >
-                        <option value="STUDENT">🎓 Student</option>
-                        <option value="TEACHER">👨‍🏫 Teacher</option>
-                        <option value="ADMIN">⚡ Admin</option>
+                        <option value="Student" className="text-gray-800">🎓 Student</option>
+                        <option value="Teacher" className="text-gray-800">👨‍🏫 Teacher</option>
+                        <option value="Admin" className="text-gray-800">⚡ Admin</option>
                       </select>
                     </div>
 
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                        <User className="w-5 h-5" />
-                      </div>
-                      <input
-                        name="name"
-                        value={form.name}
-                        onChange={handleChange}
-                        placeholder="Full name"
-                        className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
-                      />
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                      <h4 className="font-semibold text-blue-800 mb-2">
+                        {form.role} Account
+                      </h4>
+                      <p className="text-blue-700 text-sm">
+                        {form.role === 'Student' && 'Get access to courses, assignments, and learning materials.'}
+                        {form.role === 'Teacher' && 'Create courses, manage students, and track progress.'}
+                        {form.role === 'Admin' && 'Manage the platform, users, and system settings.'}
+                      </p>
                     </div>
-
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                        <Phone className="w-5 h-5" />
-                      </div>
-                      <input
-                        name="phone"
-                        value={form.phone}
-                        onChange={handleChange}
-                        placeholder="Phone number"
-                        className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {/* Step 3: Role-specific Details */}
-                {currentStep === 3 && (
-                  <>
-                    {form.role === 'STUDENT' && (
-                      <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="relative">
-                            <input
-                              name="gradeId"
-                              value={form.gradeId}
-                              onChange={handleChange}
-                              placeholder="Grade"
-                              className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
-                            />
-                          </div>
-                          <div className="relative">
-                            <input
-                              name="sectionId"
-                              value={form.sectionId}
-                              onChange={handleChange}
-                              placeholder="Section"
-                              className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="relative">
-                            <input
-                              name="roll"
-                              value={form.roll}
-                              onChange={handleChange}
-                              placeholder="Roll Number"
-                              className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
-                            />
-                          </div>
-                          <div className="relative">
-                            <input
-                              name="parent"
-                              value={form.parent}
-                              onChange={handleChange}
-                              placeholder="Parent Name"
-                              className="w-full px-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {form.role === 'TEACHER' && (
-                      <div className="relative">
-                        <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                          <BookOpen className="w-5 h-5" />
-                        </div>
-                        <input
-                          name="subject"
-                          value={form.subject}
-                          onChange={handleChange}
-                          placeholder="Subject you teach"
-                          className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200 placeholder-gray-400"
-                        />
-                      </div>
-                    )}
                   </>
                 )}
 
@@ -361,16 +304,16 @@ export default function SignupPage() {
                   {currentStep > 1 && (
                     <button
                       onClick={prevStep}
-                      className="flex-1 py-4 rounded-2xl text-gray-600 border-2 border-gray-300 font-semibold hover:bg-gray-50 transition-all duration-300 transform hover:scale-105"
+                      className="flex-1 py-4 rounded-2xl text-gray-700 border-2 border-gray-400 font-semibold hover:bg-gray-50 hover:border-gray-500 transition-all duration-300 transform hover:scale-105"
                     >
                       Back
                     </button>
                   )}
                   
-                  {currentStep < 3 ? (
+                  {currentStep < 2 ? (
                     <button
                       onClick={nextStep}
-                      className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
+                      className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-700 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
                     >
                       <span>Continue</span>
                       <ArrowRight className="w-4 h-4" />
@@ -378,9 +321,21 @@ export default function SignupPage() {
                   ) : (
                     <button
                       onClick={handleSubmit}
-                      className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-green-500 to-blue-600 text-white font-semibold hover:from-green-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                      disabled={loading}
+                      className={`flex-1 py-4 rounded-2xl text-white font-semibold transition-all duration-300 transform hover:scale-105 ${
+                        loading 
+                          ? 'bg-gray-400 cursor-not-allowed' 
+                          : 'bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 shadow-lg hover:shadow-xl'
+                      }`}
                     >
-                      Create Account
+                      {loading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Creating Account...</span>
+                        </div>
+                      ) : (
+                        'Create Account'
+                      )}
                     </button>
                   )}
                 </div>
@@ -388,7 +343,7 @@ export default function SignupPage() {
 
               {/* Footer Links */}
               <div className="mt-8 text-center">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-700">
                   Already have an account?{' '}
                   <Link href="/login" className="text-purple-600 hover:text-purple-700 font-medium transition-colors duration-200">
                     Sign in here

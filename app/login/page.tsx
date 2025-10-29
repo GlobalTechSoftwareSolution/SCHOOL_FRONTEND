@@ -20,7 +20,7 @@ function LoginPageContent() {
   }, []);
 
   const login = async () => {
-    if (!email || !password || !role) {
+    if (!email || !password) {
       alert('Please fill in all fields');
       return;
     }
@@ -28,43 +28,64 @@ function LoginPageContent() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login/', {
+      // Step 1: Get tokens
+      const tokenRes = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/token/', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!tokenRes.ok) {
+        setLoading(false);
+        alert('Invalid credentials or unapproved user');
+        return;
+      }
+
+      const tokenData = await tokenRes.json();
+      const accessToken = tokenData.access;
+      const refreshToken = tokenData.refresh;
+
+      // Save tokens locally
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+
+      // Step 2: Fetch user info using access token
+      const userRes = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/login/', {
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, role }),
+        }
       });
 
       setLoading(false);
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.token) {
-          localStorage.setItem('authToken', data.token);
-        }
-        if (callbackUrl) {
-          router.push(callbackUrl);
-        } else {
-          switch (role) {
-            case 'admin':
-              router.push('/admin');
-              break;
-            case 'teacher':
-              router.push('/teachers');
-              break;
-            case 'student':
-            default:
-              router.push('/students');
-              break;
-          }
-        }
-      } else {
-        alert('Login failed: Check credentials or approval status');
+      if (!userRes.ok) {
+        alert('Unable to fetch user details. Try again.');
+        return;
       }
+
+      const userData = await userRes.json();
+      localStorage.setItem('userData', JSON.stringify(userData));
+
+      // Step 3: Redirect based on role
+      switch (userData.role?.toLowerCase()) {
+        case 'admin':
+          router.push('/admin');
+          break;
+        case 'teacher':
+          router.push('/teachers');
+          break;
+        case 'student':
+        default:
+          router.push('/students');
+          break;
+      }
+
     } catch (error) {
       setLoading(false);
-      alert('An error occurred during login. Please try again.');
+      console.error('Login error:', error);
+      alert('Something went wrong. Please try again.');
     }
   };
 
