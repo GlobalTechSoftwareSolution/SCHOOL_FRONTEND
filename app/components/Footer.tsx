@@ -7,17 +7,12 @@ import { motion } from "framer-motion";
 import { 
   Facebook, 
   Instagram, 
+  Youtube,
   Mail, 
   Phone, 
   MapPin,
   ArrowUp,
-  Download,
-  Calendar,
-  BookOpen,
-  Users,
-  Shield,
-  Globe,
-  Youtube
+  Globe
 } from "lucide-react";
 
 const Footer = () => {
@@ -41,27 +36,25 @@ const Footer = () => {
     {
       title: "Academics",
       links: [
-        { name: "Course Catalog", href: "/courses" },
-        { name: "Faculty Directory", href: "/faculty" },
-        { name: "Academic Calendar", href: "/calendar" },
-        { name: "Library Resources", href: "/library" },
-        { name: "Research Programs", href: "/research" },
+        { name: "Course Catalog", href: "/footer_links/academics/courses" },
+        // { name: "Faculty Directory", href: "/footer_links/academics/faculty" },
+        // { name: "Academic Calendar", href: "/footer_links/academics/calendar" },
+        { name: "Library Resources", href: "/footer_links/academics/library" }, 
+        { name: "Research Programs", href: "/footer_links/academics/research" },
       ]
     },
     {
       title: "Student Life",
       links: [
-        { name: "Student Portal", href: "/student" },
-        { name: "Clubs & Organizations", href: "/clubs" },
-        { name: "Events & Activities", href: "/events" },
-        { name: "Career Services", href: "/careers" },
+        { name: "Student Portal", href: "/footer_links/student_life/student" },
+        { name: "Clubs & Organizations", href: "/footer_links/student_life/clubs" },
+        { name: "Events & Activities", href: "/footer_links/student_life/events" },
       ]
     },
     {
       title: "Support",
       links: [
-        { name: "Help Center", href: "/help" },
-        { name: "Technical Support", href: "/support" },
+        { name: "Help Center", href: "/footer_links/support/help" },
         { name: "Privacy Policy", href: "/privacy" },
         { name: "Terms of Service", href: "/terms" },
       ]
@@ -69,15 +62,15 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { icon: Facebook, href: "https://facebook.com", color: "hover:text-blue-600" },
-    { icon: Instagram, href: "https://instagram.com", color: "hover:text-pink-600" },
-    { icon: Youtube, href: "https://youtube.com", color: "hover:text-red-700" },
+    { icon: Facebook, href: "https://www.facebook.com/profile.php?id=61576624472044", color: "hover:text-blue-600" },
+    { icon: Instagram, href: "https://www.instagram.com/globaltechsoftwaresolutions00/?next=%2F", color: "hover:text-pink-600" },
+    { icon: Youtube, href: "https://www.youtube.com/@Globaltech-softwaresolutions", color: "hover:text-red-700" },
   ];
 
   const contactInfo = [
-    { icon: Phone, text: "+1 (555) 123-4567" },
-    { icon: Mail, text: "info@schoolportal.edu" },
-    { icon: MapPin, text: "123 Education Lane, Campus City" },
+    { icon: Phone, text: "+91 9844281875" },
+    { icon: Mail, text: "tech@globaltechsoftwaresolutions.com" },
+    { icon: MapPin, text: "No 10, 4th Floor, Gaduniya Complex, Ramaiah Layout, Vidyaranyapura, Bangalore - 560097" },
   ];
 
   return (
@@ -114,7 +107,7 @@ const Footer = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
-                    Academic Excellence Portal
+                    Smart School Excellence Portal
                   </h2>
                   <p className="text-blue-200 text-sm font-medium">
                     Shaping Future Leaders
@@ -199,63 +192,19 @@ const Footer = () => {
               ))}
             </div>
           </div>
-
-          {/* Newsletter Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-gradient-to-r from-blue-800/50 to-purple-800/50 rounded-2xl p-8 backdrop-blur-sm border border-white/10"
-          >
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-white mb-2">
-                  Stay Updated with Campus News
-                </h3>
-                <p className="text-blue-200 text-sm">
-                  Subscribe to our newsletter for the latest updates, events, and academic announcements.
-                </p>
-              </div>
-              
-              <form onSubmit={handleSubscribe} className="flex gap-3 w-full lg:w-auto">
-                <div className="relative flex-1 lg:flex-none">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full lg:w-80 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent backdrop-blur-sm"
-                    required
-                  />
-                  <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-blue-200" />
-                </div>
-                <motion.button
-                  type="submit"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-blue-500/25 transition-all duration-300 whitespace-nowrap"
-                >
-                  {isSubscribed ? "Subscribed! 🎉" : "Subscribe"}
-                </motion.button>
-              </form>
-            </div>
-          </motion.div>
         </div>
 
         {/* Bottom Bar */}
         <div className="border-t border-white/10 py-6">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-6 text-sm text-blue-200">
-              <span>© {new Date().getFullYear()} Academic Excellence Portal. All rights reserved.</span>
+              <span>© {new Date().getFullYear()} Smart School Excellence Portal. All rights reserved.</span>
               <div className="flex items-center gap-4">
                 <Link href="/privacy" className="hover:text-white transition">
                   Privacy Policy
                 </Link>
                 <Link href="/terms" className="hover:text-white transition">
                   Terms of Service
-                </Link>
-                <Link href="/sitemap" className="hover:text-white transition">
-                  Sitemap
                 </Link>
               </div>
             </div>

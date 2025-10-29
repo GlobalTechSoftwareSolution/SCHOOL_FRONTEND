@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+// import Navbar from "../components/Navbar";
+// import Footer from "../components/Footer";
 
 const slides = [
   {
@@ -140,7 +140,7 @@ export default function SchoolFeaturesSlider() {
 
   return (
     <>
-      <Navbar />
+      {/* <Navbar /> */}
       <section className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -255,15 +255,6 @@ export default function SchoolFeaturesSlider() {
                           </div>
                         ))}
                       </div>
-
-                      {/* Action Button */}
-                      <motion.button
-                        whileHover={{ x: 4 }}
-                        className="flex items-center gap-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent group-hover:gap-3 transition-all"
-                      >
-                        Learn More
-                        <ArrowRight className="w-4 h-4" />
-                      </motion.button>
                     </div>
 
                     {/* Hover Gradient Effect */}
@@ -275,7 +266,7 @@ export default function SchoolFeaturesSlider() {
           </motion.div>
         </div>
       </section>
-      <Footer />
+      {/* <Footer /> */}
     </>
   );
 }

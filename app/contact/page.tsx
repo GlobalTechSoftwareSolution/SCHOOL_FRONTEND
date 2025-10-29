@@ -108,7 +108,7 @@ export default function ContactPage() {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-lg mb-6 border border-gray-100">
+          <div className="inline-flex items-center gap-2 mt-10 px-4 py-2 bg-white rounded-full shadow-lg mb-6 border border-gray-100">
             <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
             <span className="text-sm font-semibold text-gray-700">CONTACT OUR TEAM</span>
           </div>
