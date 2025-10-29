@@ -42,7 +42,7 @@ const Admin = () => {
     {
       title: "🖥️ User Roles & Access",
       content:
-        "Different user roles such as Super Admin, Academic Admin, Finance Admin, HR Admin, and Principal, each with distinct access permissions and dashboards.",
+        "Different user roles such as Super Admin, Academic Admin, Finance Admin and Principal, each with distinct access permissions and dashboards.",
     },
     {
       title: "⚙️ System Integration",
@@ -58,11 +58,6 @@ const Admin = () => {
       title: "🔐 Benefits",
       content:
         "Enhances efficiency, transparency, and collaboration while reducing paperwork and enabling real-time monitoring.",
-    },
-    {
-      title: "🧠 Future Enhancements",
-      content:
-        "AI-powered analytics, IoT integrations, blockchain-backed verification, and voice-enabled admin commands.",
     },
   ];
 

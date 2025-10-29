@@ -61,10 +61,6 @@ const AboutUs: React.FC = () => {
     {
       category: "Communication",
       items: ["Parent Portal", "Mobile App", "SMS Integration", "Email Notifications", "Announcements"]
-    },
-    {
-      category: "HR & Finance",
-      items: ["Staff Management", "Payroll System", "Leave Management", "Accounting", "Report Generation"]
     }
   ];
 

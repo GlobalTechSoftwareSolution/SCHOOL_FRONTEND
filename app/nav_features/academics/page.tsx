@@ -109,7 +109,6 @@ const Academics = () => {
         "Student Information System (SIS)",
         "Fee Management",
         "Library Management",
-        "Human Resource (HR)",
         "Communication System (Email/SMS/App)",
         "Online Learning Platforms (Google Classroom, Zoom, Moodle)",
       ],

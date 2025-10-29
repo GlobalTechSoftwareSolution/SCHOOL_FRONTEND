@@ -171,9 +171,7 @@ const Students = () => {
         </h2>
         <ul className="list-disc pl-6 text-gray-700 space-y-2">
           <li>AI-driven performance insights and study recommendations.</li>
-          <li>Mobile app for instant alerts and offline access.</li>
-          <li>Multi-language support and accessibility tools.</li>
-          <li>Voice assistant integration for smart navigation.</li>
+          <li>Mobile app for instant alerts.</li>
           <li>Gamification features like badges and progress streaks.</li>
         </ul>
       </motion.div>

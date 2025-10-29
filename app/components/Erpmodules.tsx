@@ -21,7 +21,6 @@ const tabs = [
   { id: "academics", label: "Academics", icon: BookOpen, color: "from-blue-500 to-cyan-500" },
   { id: "administration", label: "Administration", icon: Users, color: "from-green-500 to-emerald-500" },
   { id: "finance", label: "Finance", icon: DollarSign, color: "from-purple-500 to-pink-500" },
-  { id: "humanResource", label: "Human Resource", icon: UserCheck, color: "from-orange-500 to-red-500" },
   { id: "communication", label: "Communication", icon: MessageSquare, color: "from-indigo-500 to-blue-500" },
 ];
 
@@ -111,35 +110,6 @@ const modulesData = {
       features: ["Salary Processing", "Component Management", "Tax Calculation", "Payslip Generation"],
       stats: "Accurate Processing",
       Link: "/erpmodules/finance/payroll",
-    },
-  ],
-  humanResource: [
-    {
-      title: "Employee Recruitment",
-      description:
-        "Streamline the entire recruitment process from application to onboarding. Manage candidate data efficiently.",
-      icon: Users,
-      features: ["Candidate Tracking", "Interview Scheduling", "Onboarding", "Document Management"],
-      stats: "Streamlined Hiring",
-      Link: "/erpmodules/humanresource/recruitment",
-    },
-    {
-      title: "Employee Information",
-      description:
-        "Maintain detailed profiles of all staff members with customizable fields to meet specific requirements.",
-      icon: UserCheck,
-      features: ["Profile Management", "Custom Fields", "Document Storage", "History Tracking"],
-      stats: "Centralized Records",
-      Link: "/erpmodules/humanresource/employee_info",
-    },
-    {
-      title: "Leave & Attendance",
-      description:
-        "Advanced attendance system supporting biometrics, face recognition, RFID, and mobile app with location data.",
-      icon: CheckCircle,
-      features: ["Multiple Methods", "Real-time Tracking", "Leave Management", "Location Data"],
-      stats: "Advanced Tracking",
-      Link: "/erpmodules/humanresource/leave_attendance",
     },
   ],
   communication: [

@@ -48,8 +48,7 @@ const Faculty = () => {
 Seamless integration with:  
 - Academic Management Module (for curriculum & exams)  
 - Student Portal (for assignments & grades)  
-- Attendance Management (for class tracking)  
-- HR & Payroll Module (for workload & salary)  
+- Attendance Management (for class tracking)   
 - Communication System (for messaging & notifications)  
 - Learning Management System (LMS) (for e-learning & assessments)`,
     },
@@ -74,16 +73,7 @@ Seamless integration with:
 - Promotes accountability and transparency`,
     },
     {
-      title: "🧠 8. Future Enhancements",
-      content: `
-- AI-based teaching assistance and automated grading  
-- Smart analytics for teacher performance evaluation  
-- Integration with online learning tools (Zoom, Google Meet)  
-- Voice command support for attendance & grading  
-- AI-suggested lesson improvements based on student feedback`,
-    },
-    {
-      title: "📚 9. Conclusion",
+      title: "📚 8. Conclusion",
       content: `
 The Faculty Hub Module acts as the backbone of the SchoolERP System, bridging the gap between administration and academic delivery. By digitizing faculty operations, it helps educators focus more on teaching and mentoring rather than administrative tasks. It’s a powerful, collaborative platform that fosters a truly smart learning ecosystem for students.`,
     },

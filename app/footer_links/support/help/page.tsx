@@ -53,10 +53,6 @@ const Help = () => {
       content: `• Improves issue resolution speed by up to 50%.\n• Reduces support workload.\n• Enhances user satisfaction.\n• Promotes self-service learning culture.`,
     },
     {
-      title: "🔮 Future Enhancements",
-      content: `✨ AI Chatbot Assistant\n🎙️ Voice Help Search\n💬 Community Forum\n🧠 Predictive Issue Alerts\n🌍 Integration with Zendesk or Freshdesk.`,
-    },
-    {
       title: "🧠 Conclusion",
       content: `The Help Center ensures a connected, transparent, and efficient support system — empowering all users in the SchoolERP ecosystem.`,
     },
