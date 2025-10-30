@@ -1,11 +1,11 @@
 "use client";
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FiLogOut, FiMenu, FiX } from "react-icons/fi";
 
-type Role = "management" | "principal" | "teachers" | "students" | "admin";
+type Role = "management" | "principal" | "teachers" | "students" | "admin" | "parents";
 
 type Props = {
   children: ReactNode;
@@ -13,71 +13,84 @@ type Props = {
 };
 
 const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
+  parents:[
+    { name: "Dashboard", path: "/parents/parents_dashboard" },
+    { name: "Attendence", path: "/parents/parents_attendence" },
+    { name: "Reports", path: "/parents/parents_reports" },
+    { name: "Fees", path: "/parents/parents_fees" },
+    { name: "Activites", path: "/parents/parents_activities" },
+    { name: "Notices", path: "/parents/parents_notices" },
+    { name: "Programs", path: "/parents/parents_programs" },
+  ],
+
   management: [
-    { name: "Dashboard", path: "/management/dashboard" },
-    { name: "Reports", path: "/management/reports" },
-    { name: "Employees", path: "/management/employees" },
-    { name: "Attendence", path: "/management/attendence" },
+    { name: "Dashboard", path: "/management/management_dashboard" },
+    { name: "Reports", path: "/management/management_reports" },
+    { name: "Activites", path: "/management/management_activites" },
+    { name: "Students", path: "/management/management_students" },
+    { name: "Teachers(or)Faculty", path: "/management/management_teachers" },
+    { name: "Attendence", path: "/management/management_attendence" },
     { name: "Monthly Report", path: "/management/management_monthly_report" },
-    { name: "Finance", path: "/management/finance" },
-    { name: "Projects", path: "/management/projects" },
-    { name: "Notice", path: "/management/notice" },
-    { name: "Calender", path: "/management/calender" },
+    { name: "Finance", path: "/management/management_finance" },
+    { name: "Pendingfees", path: "/management/management_pendingfee" },
+    { name: "Program", path: "/management/management_programs" },
+    { name: "Notice", path: "/management/management_notice" },
+    { name: "Transport", path: "/management/management_transport" },
+    { name: "Calender", path: "/management/management_calender" },
     { name: "Raise Issues", path: "/management/management_issues" },
-    { name: "Profile", path: "/management/profile" },
+    { name: "Profile", path: "/management/management_profile" },
   ],
   principal: [
-    { name: "Tasks", path: "/principal/tasks" },
-    { name: "Reports", path: "/principal/reports" },
-    { name: "Team", path: "/principal/team" },
-    { name: "LeaveApprovals", path: "/principal/leaveapprovals" },
-    { name: "Attendence", path: "/principal/attendence" },
+    { name: "Dashboard", path: "/principal/principal_dashboards" },
+    { name: "Activites", path: "/principal/principal_activites" },
+    { name: "Reports", path: "/principal/principal_reports" },
+    { name: "Teachers", path: "/principal/principal_teachers" },
+    { name: "Students", path: "/principal/principal_students" },
+    { name: "Attendence", path: "/principal/principal_attendence" },
     { name: "Monthly Report", path: "/principal/principal_monthly_report" },
-    { name: "Notice", path: "/principal/notice" },
-    { name: "Calender", path: "/principal/calender" },
+    { name: "Notice", path: "/principal/principal_notice" },
+    { name: "Calender", path: "/principal/principal_calender" },
     { name: "Raise Issues", path: "/principal/principal_issues" },
     { name: "Projects", path: "/principal/principal_projects" },
-    { name: "Resigned Employee", path: "/principal/resigned_employee" },
-    { name: "Profile", path: "/principal/profile" },
+    { name: "Programs", path: "/principal/principal_programs" },
+    { name: "Absent Students", path: "/principal/principal_absent_students" },
+    { name: "Profile", path: "/principal/principal_profile" },
   ],
   teachers: [
-    { name: "Employees", path: "/teachers/employee" },
-    { name: "Leaves", path: "/teachers/leaves" },
-    { name: "Attendance", path: "/teachers/attendance" },
+    { name: "Dashboard", path: "/teacher/teachers_dashboard" },
+    { name: "Leaves", path: "/teachers/teachers_leaves" },
+    { name: "Attendance", path: "/teachers/teachers_attendance" },
+    { name: "Assignment", path: "/teachers/teachers_assignment" },
     { name: "Monthly Report", path: "/teachers/teachers_monthly_report" },
-    { name: "Payroll", path: "/teachers/payroll" },
-    { name: "Onboarding", path: "/teachers/onboarding" },
-    { name: "Offboarding", path: "/teachers/offboarding" },
-    { name: "Calender", path: "/teachers/calender" },
-    { name: "Notice", path: "/teachers/notice" },
+    { name: "Marks", path: "/teachers/teachers_marks" },
+    { name: "Calender", path: "/teachers/teachers_calender" },
+    { name: "Notice", path: "/teachers/teachers_notice" },
     { name: "Raise Issues", path: "/teachers/teachers_issues" },
-    { name: "Issue Documents", path: "/teachers/documents" },
-    { name: "HR Careers", path: "/teachers/hrcareers" },
-    { name: "Projects", path: "/teachers/hr_projects" },
-    { name: "Profile", path: "/teachers/profile" },
+    { name: "Projects", path: "/teachers/teachers_project" },
+    { name: "Issue Documents", path: "/teachers/teachersdocuments" },
+    { name: "Profile", path: "/teachers/teachers_profile" },
   ],
   students: [
-    { name: "Dashboard", path: "/students/dashboard" },
-    { name: "Tasks", path: "/students/tasks" },
-    { name: "Attendance", path: "/students/attendance" },
-    { name: "Leaves", path: "/students/leaves" },
-    { name: "Payroll", path: "/students/payroll" },
-    { name: "Calender", path: "/students/calender" },
-    { name: "Notice", path: "/students/notice" },
-    { name: "KRA & KPA", path: "/students/Kra&Kpa" },
+    { name: "Dashboard", path: "/students/students_dashboard" },
+    { name: "Tasks", path: "/students/students_tasks" },
+    { name: "Attendance", path: "/students/students_attendance" },
+    { name: "Assignment", path: "/students/students_assignment" },
+    { name: "Leaves", path: "/students/students_leaves" },
+    { name: "Marks", path: "/students/students_marks" },
+    { name: "Calender", path: "/students/students_calender" },
+    { name: "Notice", path: "/students/students_notice" },
     { name: "Raise Issues", path: "/students/students_issues" },
-    { name: "Projects", path: "/students/students_projects" },
-    { name: "Resign", path: "/students/students_resign" },
-    { name: "Profile", path: "/students/profile" },
+    { name: "Docs", path: "/students/students_docs" },
+    { name: "Profile", path: "/students/students_profile" },
   ],
   admin: [
     { name: "Attendence", path: "/admin/admin_attendence" },
     { name: "Students", path: "/admin/admin_students" },
-    { name: "documents", path: "/admin/admin_documents" },
     { name: "Approvals", path: "/admin/admin_approval" },
     { name: "Calender", path: "/admin/admin_calender" },
     { name: "Notice", path: "/admin/admin_notice" },
     { name: "Raise Issues", path: "/admin/admin_issues" },
+    { name: "All Feilds", path: "/admin/admin_feilds" },
     { name: "Profile", path: "/admin/admin_profile" },
   ],
 };
@@ -86,6 +99,22 @@ export default function DashboardLayout({ children, role }: Props) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedUser = localStorage.getItem("userInfo");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUserEmail(parsedUser.email || "Unknown User");
+        } catch {
+          setUserEmail("Unknown User");
+        }
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -111,7 +140,7 @@ export default function DashboardLayout({ children, role }: Props) {
           />
           <div className="flex flex-col">
             <p className="text-lg font-semibold text-white">
-              Welcome
+              {userEmail ? userEmail : "Welcome"}
             </p>
             <p className="text-sm text-blue-200">{role.toUpperCase()}</p>
           </div>
@@ -154,7 +183,7 @@ export default function DashboardLayout({ children, role }: Props) {
               <FiX size={24} />
             </button>
 
-            <div className="p-4 flex flex-col items-center gap-2 border-b border-blue-700">
+            <div className="p-4 flex flex-col items-center gap-2 border-b border-blue-700 mt-12">
               <Image
                 src="/default-profile.png"
                 alt="Profile"
@@ -163,7 +192,9 @@ export default function DashboardLayout({ children, role }: Props) {
                 className="rounded-full border-2 border-white shadow-md object-cover w-14 h-14"
               />
               <div className="text-center">
-                <p className="text-md font-semibold text-white">Welcome</p>
+                <p className="text-md font-semibold text-white">
+                  {userEmail ? userEmail : "Welcome"}
+                </p>
                 <p className="text-xs text-blue-200 uppercase">{role.toUpperCase()}</p>
               </div>
             </div>
@@ -237,20 +268,6 @@ export default function DashboardLayout({ children, role }: Props) {
             </h2>
           </div>
 
-          <div className="relative">
-            <button
-              onClick={() => router.push(`/${role}/profile`)}
-              className="focus:outline-none"
-            >
-              <Image
-                src="/default-profile.png"
-                alt="Profile"
-                width={40}
-                height={40}
-                className="rounded-full border border-gray-300 shadow-md object-cover w-10 h-10 cursor-pointer"
-              />
-            </button>
-          </div>
         </header>
 
         <div className="pt-20 p-6 flex-1 overflow-auto">{children}</div>

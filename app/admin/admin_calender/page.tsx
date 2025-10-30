@@ -1,11 +1,16 @@
 import React from 'react'
+import Googlecalender from '@/app/components/Googlecalender'
+import DashboardLayout from '@/app/components/DashboardLayout'
 
-const Calender_Page = () => {
+const Admin_calender = () => {
   return (
     <div>
-      hey admin Calender page
+      <DashboardLayout role='admin'>
+
+      <Googlecalender />
+      </DashboardLayout>
     </div>
   )
 }
 
-export default Calender_Page
+export default Admin_calender

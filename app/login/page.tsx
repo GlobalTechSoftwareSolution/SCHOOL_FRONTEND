@@ -1,6 +1,7 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
+import { Dialog } from '@headlessui/react';
 import { Eye, EyeOff, User, Lock, Mail, School, Sparkles, BookOpen, GraduationCap } from 'lucide-react';
 
 function LoginPageContent() {
@@ -10,6 +11,7 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [dialog, setDialog] = useState({ open: false, title: '', message: '' });
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,18 +21,87 @@ function LoginPageContent() {
     setIsMounted(true);
   }, []);
 
+  // Helper: show dialog
+  const showDialog = (title: string, message: string) => {
+    setDialog({ open: true, title, message });
+  };
+
+  // Helper function to handle successful login
+  const handleSuccessfulLogin = async (userData: any, tokenData: any) => {
+    // Validate that user has the expected role or is approved
+    if (!userData.role) {
+      userData.role = role;
+    }
+
+    // Check if user is approved/has access
+    if (userData.is_active === false) {
+      showDialog("Account Inactive", "Your account is inactive. Please contact administrator.");
+      setLoading(false);
+      return;
+    }
+
+    if (userData.is_approved === false) {
+      showDialog("Approval Pending", "Your account is pending approval. Please contact administrator.");
+      setLoading(false);
+      return;
+    }
+
+    // Check if role matches (case-insensitive)
+    if (userData.role.toLowerCase() !== role.toLowerCase()) {
+      showDialog("Role Mismatch", `Your account is registered as ${userData.role}. Please select the correct role.`);
+      setLoading(false);
+      return;
+    }
+
+    // Store user info
+    const userInfo = {
+      email: userData.email || email,
+      name: userData.name || userData.username || email.split('@')[0],
+      role: userData.role,
+      id: userData.id,
+      is_active: userData.is_active,
+      is_approved: userData.is_approved,
+      is_staff: userData.is_staff,
+      created_at: userData.created_at,
+      updated_at: userData.updated_at,
+      ...userData
+    };
+
+    localStorage.setItem('userData', JSON.stringify(userData));
+    localStorage.setItem('userInfo', JSON.stringify(userInfo));
+    localStorage.setItem('userRole', userData.role);
+    localStorage.setItem('userEmail', userData.email || email);
+
+    setLoading(false);
+
+    // Redirect based on verified role
+    const userRole = userInfo.role.toLowerCase();
+
+    const redirectPaths = {
+      'admin': '/admin',
+      'teacher': '/teachers', 
+      'student': '/students',
+      'management': '/management',
+      'principal': '/principal',
+      'parent': '/parents'
+    };
+
+    const redirectPath = redirectPaths[userRole as keyof typeof redirectPaths] || '/students';    
+    router.push(redirectPath);
+  };
+
   const login = async () => {
     if (!email || !password) {
-      alert('Please fill in all fields');
+      showDialog("Invalid Input", "Please fill in all fields");
       return;
     }
 
     setLoading(true);
 
     try {
-      console.log("🔐 Attempting login with:", { email, password, role });
+      // STEP 1: Get JWT token and user data from token endpoint
+      const formattedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 
-      // FIXED: Use the token endpoint to get JWT tokens
       const tokenRes = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/token/', {
         method: 'POST',
         headers: { 
@@ -38,118 +109,45 @@ function LoginPageContent() {
         },
         body: JSON.stringify({ 
           email, 
-          password
-          // Note: role might not be needed for token endpoint
+          password,
+          role: formattedRole  // Capitalize role for backend compatibility
         })
       });
 
-      console.log("📡 Token response status:", tokenRes.status);
-
       if (!tokenRes.ok) {
-        const errorData = await tokenRes.json();
-        console.error("❌ Token fetch failed:", errorData);
         setLoading(false);
-        alert('Invalid credentials or unapproved user');
+        if (tokenRes.status === 401) {
+          showDialog("Invalid Credentials", "Invalid email or password.");
+        } else if (tokenRes.status === 400) {
+          showDialog("Invalid Input", "Please check your email, password or role.");
+        } else {
+          showDialog("Login Failed", "Login failed. Please try again.");
+        }
         return;
       }
 
-      let tokenData;
-      try {
-        tokenData = await tokenRes.json();
-      } catch (jsonError) {
-        console.error("❌ Failed to parse token response:", jsonError);
-        throw new Error("Invalid token response from server");
-      }
-      console.log("✅ Tokens received:", tokenData);
-      console.log("🔑 Access Token:", tokenData.access);
-      console.log("📧 Logged in Email:", email);
+      const tokenData = await tokenRes.json();
 
       // Store the tokens
       localStorage.setItem('accessToken', tokenData.access);
       localStorage.setItem('refreshToken', tokenData.refresh);
-      localStorage.setItem('authToken', tokenData.access); // For compatibility
+      localStorage.setItem('authToken', tokenData.access);
 
-      // Now fetch user data using the access token
-      console.log("🔍 Fetching user data with token...");
-      const userRes = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/login/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${tokenData.access}`,
-          'Content-Type': 'application/json',
-        }
-      });
+      // ✅ Directly handle login with token data (no extra /login call)
+      const userData = {
+        email: tokenData.email,
+        role: tokenData.role,
+        is_active: tokenData.is_active,
+        is_approved: tokenData.is_approved,
+        is_staff: tokenData.is_staff || false,
+        created_at: tokenData.created_at,
+        updated_at: tokenData.updated_at
+      };
 
-      interface UserData {
-        email?: string;
-        name?: string;
-        role?: string;
-        [key: string]: any;
-      }
-      let userData: UserData = {};
-      if (userRes.ok) {
-        userData = await userRes.json();
-        console.log("✅ User data received:", userData);
-        localStorage.setItem('userData', JSON.stringify(userData));
-      } else {
-        console.warn("⚠ Could not fetch user data, using basic info");
-        // If no user endpoint, create basic user info
-        userData = {
-          email: email,
-          name: email.split('@')[0],
-          role: role // Use the selected role as fallback
-        };
-      }
-
-      // Store user info in multiple formats for compatibility
-      localStorage.setItem('userInfo', JSON.stringify({
-        email: email,
-        name: userData.name || email.split('@')[0],
-        role: userData.role || role,
-        ...userData
-      }));
-
-      // Debug: Check what was stored
-      console.log("💾 Storage check after login:", {
-        accessToken: localStorage.getItem('accessToken'),
-        authToken: localStorage.getItem('authToken'),
-        userData: localStorage.getItem('userData'),
-        userInfo: localStorage.getItem('userInfo'),
-        refreshToken: localStorage.getItem('refreshToken')
-      });
-
-      setLoading(false);
-
-      // Redirect based on role
-      const userRole = userData.role?.toLowerCase() || role.toLowerCase();
-      console.log("🎯 Redirecting to role:", userRole);
-
-      switch (userRole) {
-        case 'admin':
-          router.push('/admin');
-          break;
-        case 'teacher':
-          router.push('/teachers');
-          break;
-        case 'student':
-          router.push('/students');
-          break;
-        case 'management':
-          router.push('/management');
-          break;
-        case 'principal':
-          router.push('/principal');
-          break;
-        default:
-          console.warn("⚠ Unknown role, defaulting to student");
-          router.push('/students');
-          break;
-      }
-      console.log(`✅ Redirect successful for ${userRole}`);
-
+      await handleSuccessfulLogin(userData, tokenData);
     } catch (error) {
       setLoading(false);
-      console.error('💥 Login error:', error);
-      alert('Network error. Please check your connection and try again.');
+      showDialog("Network Error", "Please check your internet connection and try again.");
     }
   };
 
@@ -161,13 +159,26 @@ function LoginPageContent() {
 
   // Debug function to check storage
   const checkStorage = () => {
-    console.log("🔍 CURRENT STORAGE:", {
-      accessToken: localStorage.getItem('accessToken'),
-      authToken: localStorage.getItem('authToken'),
-      userData: localStorage.getItem('userData'),
-      userInfo: localStorage.getItem('userInfo'),
-      refreshToken: localStorage.getItem('refreshToken')
-    });
+    // Storage check logic here (logging removed for production)
+  };
+
+  // Clear storage for testing
+  const clearStorage = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('userInfo');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('refreshToken');
+    showDialog("Storage Cleared", "Storage cleared for testing.");
+  };
+
+  // Test with sample credentials
+  const testLogin = (testRole: string) => {
+    setEmail('student1@school.com');
+    setPassword('student1@school.com');
+    setRole(testRole);
   };
 
   if (!isMounted) {
@@ -198,14 +209,6 @@ function LoginPageContent() {
         </div>
       </div>
 
-      {/* Debug button - remove in production */}
-      <button 
-        onClick={checkStorage}
-        className="fixed top-4 right-4 z-50 bg-red-500 text-white px-3 py-1 rounded text-sm"
-      >
-        Debug Storage
-      </button>
-
       {/* Main Content */}
       <div className="relative z-10 flex flex-col lg:flex-row items-center justify-center w-full max-w-6xl mx-4">
         {/* Left Side - Hero Section */}
@@ -228,15 +231,15 @@ function LoginPageContent() {
           <div className="hidden lg:block">
             <div className="flex items-center space-x-4 text-gray-900 mb-3">
               <div className="w-3 h-3 bg-green-600 rounded-full animate-pulse"></div>
-              <span>Connect with educators worldwide</span>
+              <span>Two-step authentication security</span>
             </div>
             <div className="flex items-center space-x-4 text-gray-900 mb-3">
               <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
-              <span>Access exclusive learning resources</span>
+              <span>Role-based access control</span>
             </div>
             <div className="flex items-center space-x-4 text-gray-900">
               <div className="w-3 h-3 bg-purple-600 rounded-full animate-pulse"></div>
-              <span>Track your progress in real-time</span>
+              <span>Real-time verification system</span>
             </div>
           </div>
         </div>
@@ -271,6 +274,7 @@ function LoginPageContent() {
                   <option value="admin">⚡ Admin</option>
                   <option value="management">🏢 Management</option>
                   <option value="principal">👨‍💼 Principal</option>
+                  <option value="parent">👨‍👩‍👧 Parent</option>
                 </select>
                 <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-900 pointer-events-none">▼</div>
               </div>
@@ -350,7 +354,7 @@ function LoginPageContent() {
               <a href="/forgot-password" className="text-sm text-purple-800 hover:text-purple-900 font-medium transition-colors duration-200">
                 Forgot your password?
               </a>
-              
+
               <p className="text-sm text-gray-800 mt-4">
                 New to EduPortal?{' '}
                 <a href="/signup" className="text-purple-800 hover:text-purple-900 font-medium transition-colors duration-200">
@@ -361,6 +365,15 @@ function LoginPageContent() {
           </div>
         </div>
       </div>
+
+      {/* Modal Dialog */}
+      <Dialog open={dialog.open} onClose={() => setDialog({ ...dialog, open: false })} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <Dialog.Panel className="bg-white p-6 rounded-2xl shadow-xl w-80 text-center">
+          <Dialog.Title className="text-lg font-bold text-purple-800 mb-2">{dialog.title}</Dialog.Title>
+          <Dialog.Description className="text-gray-800 mb-4">{dialog.message}</Dialog.Description>
+          <button onClick={() => setDialog({ ...dialog, open: false })} className="px-4 py-2 bg-purple-800 text-white rounded-lg hover:bg-purple-900 transition-all duration-200">OK</button>
+        </Dialog.Panel>
+      </Dialog>
 
       {/* Custom CSS for animations */}
       <style jsx>{`

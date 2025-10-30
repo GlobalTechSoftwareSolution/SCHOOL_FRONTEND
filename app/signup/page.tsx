@@ -2,7 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Eye, EyeOff, User, Mail, Lock, Phone, BookOpen, GraduationCap, School, Users, Sparkles, ArrowRight } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  User,
+  Mail,
+  Lock,
+  Phone,
+  BookOpen,
+  GraduationCap,
+  School,
+  Users,
+  Sparkles,
+  ArrowRight,
+  UserCog,
+  Briefcase,
+  Crown
+} from "lucide-react";
+
 
 export default function SignupPage() {
   const [form, setForm] = useState({
@@ -102,7 +119,10 @@ export default function SignupPage() {
     switch (form.role) {
       case 'Student': return <GraduationCap className="w-6 h-6" />;
       case 'Teacher': return <School className="w-6 h-6" />;
-      case 'Admin': return <Users className="w-6 h-6" />;
+      case 'Admin': return <UserCog  className="w-6 h-6" />;
+      case 'Management': return <Briefcase  className="w-6 h-6" />;
+      case 'Principal': return <Crown  className="w-6 h-6" />;
+      case 'Parent': return <Users  className="w-6 h-6" />;
       default: return <User className="w-6 h-6" />;
     }
   };
@@ -283,6 +303,9 @@ export default function SignupPage() {
                         <option value="Student" className="text-gray-800">🎓 Student</option>
                         <option value="Teacher" className="text-gray-800">👨‍🏫 Teacher</option>
                         <option value="Admin" className="text-gray-800">⚡ Admin</option>
+                        <option value="management" className="text-gray-800">🏢 Management</option>
+                        <option value="principal" className="text-gray-800">👨‍💼 Principal</option>
+                        <option value="Parent" className="text-gray-800">👨‍👩‍👧‍👦 Parent</option>
                       </select>
                     </div>
 
