@@ -168,10 +168,10 @@ const Lesson_planning = () => {
           🖥️ Example Use Case
         </h2>
         <p className="text-gray-700 leading-relaxed">
-          - <strong>Teacher</strong> logs into the portal and selects their subject.  
-          - The <strong>system</strong> automatically loads the curriculum map for the current term.  
-          - Teacher creates weekly lesson plans using predefined templates.  
-          - <strong>Admin</strong> reviews and approves the plan for accuracy.  
+          - <strong>Teacher</strong> logs into the portal and selects their subject.  <br />
+          - The <strong>system</strong> automatically loads the curriculum map for the current term.  <br />
+          - Teacher creates weekly lesson plans using predefined templates.  <br />
+          - <strong>Admin</strong> reviews and approves the plan for accuracy.  <br />
           - Lesson progress and completion data are synced automatically to dashboards.
         </p>
       </motion.section>

@@ -141,11 +141,11 @@ export default function SchoolFeaturesSlider() {
   return (
     <>
       {/* <Navbar /> */}
-      <section className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-20 px-4 sm:px-6 lg:px-0 overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-200 rounded-full blur-3xl opacity-30"></div>
+          <div className="absolute -bottom-0 -left-40 w-80 h-80 bg-purple-200 rounded-full blur-3xl opacity-30"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto">

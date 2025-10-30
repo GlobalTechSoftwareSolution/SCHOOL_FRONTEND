@@ -53,11 +53,11 @@ const Attendence_Information = () => {
         animate="visible"
       >
         {[
-          {
-            icon: <Fingerprint className="text-blue-600" size={28} />,
-            title: "Biometric Integration",
-            desc: "Automatically record attendance using biometric fingerprint or RFID systems. Syncs real-time data with the SchoolERP dashboard for accuracy.",
-          },
+          // {
+          //   icon: <Fingerprint className="text-blue-600" size={28} />,
+          //   title: "Biometric Integration",
+          //   desc: "Automatically record attendance using biometric fingerprint or RFID systems. Syncs real-time data with the SchoolERP dashboard for accuracy.",
+          // },
           {
             icon: <Clock className="text-blue-600" size={28} />,
             title: "Real-Time Tracking",
@@ -146,10 +146,10 @@ const Attendence_Information = () => {
           🖥️ Example Use Case
         </h2>
         <p className="text-gray-700 leading-relaxed">
-          - <strong>Student</strong> scans their fingerprint at entry.  
-          - The <strong>system</strong> automatically records the time and updates the daily attendance log.  
-          - <strong>Parents</strong> get a real-time notification about attendance status.  
-          - <strong>Admin</strong> reviews automated monthly reports for class-wise attendance trends.  
+          - <strong>Student</strong> scans their fingerprint at entry.  <br />
+          - The <strong>system</strong> automatically records the time and updates the daily attendance log.  <br />
+          - <strong>Parents</strong> get a real-time notification about attendance status.  <br />
+          - <strong>Admin</strong> reviews automated monthly reports for class-wise attendance trends.  <br />
           - <strong>Teachers</strong> can mark attendance manually for special sessions or offline activities.
         </p>
       </motion.section>

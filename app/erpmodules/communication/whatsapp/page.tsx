@@ -183,25 +183,6 @@ const Whatsapp = () => {
         </p>
       </motion.section>
 
-      {/* Tech Section */}
-      <motion.section
-        className="bg-white p-8 rounded-2xl shadow-md border border-gray-200 mb-12"
-        initial="hidden"
-        animate="show"
-        variants={fadeIn}
-      >
-        <h2 className="text-2xl font-semibold mb-4 text-green-700">
-          ⚙️ Technical Highlights
-        </h2>
-        <ul className="list-disc pl-6 space-y-2 text-gray-700">
-          <li>Integrated via official <strong>Meta WhatsApp Business API</strong>.</li>
-          <li>Supports multi-template message automation.</li>
-          <li>Custom dashboards for engagement tracking.</li>
-          <li>Fully compliant with <strong>data privacy standards</strong>.</li>
-          <li>Works seamlessly across Android, iOS, and Web platforms.</li>
-        </ul>
-      </motion.section>
-
       {/* Conclusion */}
       <motion.section
         className="text-center"

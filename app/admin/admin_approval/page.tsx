@@ -24,7 +24,7 @@ const Approvalpage: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch(`${apiBase}/api/accounts/users/`)
+      const response = await fetch(`${apiBase}api/users/`)
       if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`)
       const data: User[] = await response.json()
       setUsers(data)
@@ -40,7 +40,7 @@ const Approvalpage: React.FC = () => {
   // Approve user
   const handleApprove = async (email: string) => {
     try {
-      const response = await fetch(`${apiBase}/api/accounts/approve/`, {
+      const response = await fetch(`${apiBase}api/approve/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -56,7 +56,7 @@ const Approvalpage: React.FC = () => {
   // Reject user
   const handleReject = async (email: string) => {
     try {
-      const response = await fetch(`${apiBase}/api/accounts/reject/`, {
+      const response = await fetch(`${apiBase}api/reject/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

@@ -1,11 +1,9 @@
 "use client";
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FiLogOut, FiMenu, FiX } from "react-icons/fi";
-
-
 
 type Role = "management" | "principal" | "teachers" | "students" | "admin";
 
@@ -14,17 +12,9 @@ type Props = {
   role: Role;
 };
 
-type UserInfo = {
-  name?: string;
-  email?: string;
-  picture?: string; // Google profile photo URL
-  profile_profile_picture?: string; // backend profile pic
-  role?: string;
-};
-
 const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
   management: [
-   { name: "Dashboard", path: "/management/dashboard" },
+    { name: "Dashboard", path: "/management/dashboard" },
     { name: "Reports", path: "/management/reports" },
     { name: "Employees", path: "/management/employees" },
     { name: "Attendence", path: "/management/attendence" },
@@ -79,7 +69,6 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Projects", path: "/students/students_projects" },
     { name: "Resign", path: "/students/students_resign" },
     { name: "Profile", path: "/students/profile" },
-
   ],
   admin: [
     { name: "Attendence", path: "/admin/admin_attendence" },
@@ -90,104 +79,23 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Notice", path: "/admin/admin_notice" },
     { name: "Raise Issues", path: "/admin/admin_issues" },
     { name: "Profile", path: "/admin/admin_profile" },
-
   ],
 };
 
 export default function DashboardLayout({ children, role }: Props) {
   const router = useRouter();
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
-  // Track current path for active link highlighting (survive SSR, refresh, and mobile)
-  const [currentPath, setCurrentPath] = useState<string>("");
-
-  useEffect(() => {
-    // Only run on client
-    if (typeof window !== "undefined") {
-      setCurrentPath(window.location.pathname);
-    }
-  }, []);
-
-  // Load user info from localStorage & listen for updates
-  useEffect(() => {
-    const loadUserInfo = () => {
-      const storedUser = localStorage.getItem("userInfo");
-      if (!storedUser) {
-        router.replace("/login"); // redirect to login if not logged in
-        return;
-      }
-
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUserInfo({
-          name: parsedUser.name || "Guest User",
-          email: parsedUser.email || "",
-          picture: parsedUser.picture || "/default-profile.png",
-          profile_profile_picture: parsedUser.profile_profile_picture || "",
-          role: parsedUser.role || role.toUpperCase(),
-        });
-      } catch (error) {
-        console.error("Error parsing stored user info:", error);
-        router.replace("/login"); // redirect if parsing fails
-      }
-    };
-
-    loadUserInfo();
-    window.addEventListener("profile-updated", loadUserInfo);
-    return () => window.removeEventListener("profile-updated", loadUserInfo);
-  }, [role, router]);
-
-  // Fetch updated user data from backend
-  useEffect(() => {
-    const storedUser = localStorage.getItem("userInfo");
-    if (!storedUser) return;
-
-    try {
-      const parsedUser = JSON.parse(storedUser);
-      const email = parsedUser.email;
-
-      const fetchUser = async () => {
-        try {
-          const url = `${process.env.NEXT_PUBLIC_API_URL}/api/accounts/${role}s/${encodeURIComponent(email)}/`;
-          const res = await fetch(url);
-          if (!res.ok) {
-            console.warn("Failed to fetch user data. Status:", res.status);
-            setUserInfo(parsedUser);
-            return;
-          }
-          const data = await res.json();
-          setUserInfo({
-            name: data.fullname || parsedUser.name,
-            email: data.email,
-            picture: parsedUser.picture,
-            profile_profile_picture: data.profile_picture,
-            role: parsedUser.role,
-          });
-        } catch (error) {
-          console.error("Error fetching user:", error);
-          setUserInfo(parsedUser);
-        }
-      };
-
-      fetchUser();
-    } catch {
-      setUserInfo(null);
-    }
-  }, [role]);
-
-  const handleLogout = useCallback(() => {
+  const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
     document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     document.cookie = "role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     router.replace("/");
-  }, [router]);
+  };
 
   const roleLinks = roleLinksMap[role];
-  const profilePic =
-    userInfo?.profile_profile_picture || userInfo?.picture || "/default-profile.png";
 
   return (
     <div className="flex min-h-screen bg-gray-100 font-sans text-gray-800">
@@ -195,16 +103,15 @@ export default function DashboardLayout({ children, role }: Props) {
       <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-72 bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-lg flex-col z-20">
         <div className="p-6 flex items-center gap-4 border-b border-blue-700">
           <Image
-            src={profilePic}
-            alt={userInfo?.name || "Profile"}
+            src="/default-profile.png"
+            alt="Profile"
             width={64}
             height={64}
-            unoptimized
             className="rounded-full border-2 border-white shadow-md object-cover w-16 h-16"
           />
           <div className="flex flex-col">
             <p className="text-lg font-semibold text-white">
-              {userInfo?.name || "Guest User"}
+              Welcome
             </p>
             <p className="text-sm text-blue-200">{role.toUpperCase()}</p>
           </div>
@@ -215,9 +122,7 @@ export default function DashboardLayout({ children, role }: Props) {
             <Link
               href={link.path}
               key={link.name}
-              className={`px-4 py-2 rounded-lg transition-all font-medium ${
-                currentPath.startsWith(link.path) ? "bg-blue-500 shadow-md" : "hover:bg-blue-500 hover:shadow-md"
-              }`}
+              className="px-4 py-2 rounded-lg transition-all font-medium hover:bg-blue-500 hover:shadow-md"
             >
               {link.name}
             </Link>
@@ -251,16 +156,15 @@ export default function DashboardLayout({ children, role }: Props) {
 
             <div className="p-4 flex flex-col items-center gap-2 border-b border-blue-700">
               <Image
-                src={profilePic}
-                alt={userInfo?.name || "Profile"}
+                src="/default-profile.png"
+                alt="Profile"
                 width={56}
                 height={56}
-                unoptimized
                 className="rounded-full border-2 border-white shadow-md object-cover w-14 h-14"
               />
               <div className="text-center">
-                <p className="text-md font-semibold text-white break-words">{userInfo?.name || "Guest"}</p>
-                <p className="text-xs text-blue-200 uppercase break-words">{role.toUpperCase()}</p>
+                <p className="text-md font-semibold text-white">Welcome</p>
+                <p className="text-xs text-blue-200 uppercase">{role.toUpperCase()}</p>
               </div>
             </div>
 
@@ -270,9 +174,7 @@ export default function DashboardLayout({ children, role }: Props) {
                   href={link.path}
                   key={link.name}
                   onClick={() => setMenuOpen(false)}
-                  className={`px-3 py-2 rounded-lg transition-all font-medium text-sm truncate ${
-                    currentPath.startsWith(link.path) ? "bg-blue-500 shadow-md" : "hover:bg-blue-500 hover:shadow-md"
-                  }`}
+                  className="px-3 py-2 rounded-lg transition-all font-medium text-sm hover:bg-blue-500 hover:shadow-md"
                 >
                   {link.name}
                 </Link>
@@ -341,11 +243,10 @@ export default function DashboardLayout({ children, role }: Props) {
               className="focus:outline-none"
             >
               <Image
-                src={profilePic}
-                alt={userInfo?.name || "Profile"}
+                src="/default-profile.png"
+                alt="Profile"
                 width={40}
                 height={40}
-                unoptimized
                 className="rounded-full border border-gray-300 shadow-md object-cover w-10 h-10 cursor-pointer"
               />
             </button>

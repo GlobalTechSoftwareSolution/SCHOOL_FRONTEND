@@ -73,11 +73,6 @@ const Payroll = () => {
             desc: "Generate digital payslips instantly with detailed breakdowns of salary components. Export in PDF or email directly to employees.",
           },
           {
-            icon: <Users className="text-blue-600" size={26} />,
-            title: "Employee Self-Service",
-            desc: "Allow employees to securely view their salary statements, payslips, and tax summaries through the ERP portal.",
-          },
-          {
             icon: <TrendingUp className="text-blue-600" size={26} />,
             title: "Incentive & Bonus Management",
             desc: "Easily define performance-based bonuses, arrears, and one-time adjustments — fully integrated into monthly payroll cycles.",
@@ -127,10 +122,6 @@ const Payroll = () => {
           <li>
             Integrated with <strong>Accounting Module</strong> for seamless
             salary expense posting and ledger updates.
-          </li>
-          <li>
-            Linked to <strong>Employee Management</strong> to fetch employee
-            profiles, designations, and payment details.
           </li>
           <li>
             Supports integration with <strong>Bank APIs</strong> for direct
