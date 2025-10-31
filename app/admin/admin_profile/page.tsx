@@ -24,36 +24,68 @@ export default function Admin_ProfilePage() {
     department: "",
     joinDate: "",
     address: "",
-    bio: "",
-    subjects: [] as string[]
+    subjects: [] as string[],
+    profile_picture: ""
   });
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab ] = useState("profile");
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Load realistic dummy data when page opens
+  // ✅ Load admin data from live API when page opens
   useEffect(() => {
-    const loadUserData = () => {
+    const loadUserData = async () => {
       setIsLoading(true);
-      // Simulate API call delay
-      setTimeout(() => {
-        const sampleUser = {
-          name: "Dr. Mani Kumar",
-          email: "mani.kumar@greenwood.edu",
-          phone: "+91 98442 81875",
-          role: "Administrator",
-          department: "School Administration",
-          joinDate: "2022-08-15",
-          address: "Greenwood International School, Sector 45, Chennai - 600045",
-          bio: "Dedicated administrator with 8+ years of experience in educational management. Passionate about leveraging technology to enhance learning experiences.",
-          subjects: ["School Management", "Academic Planning", "Staff Coordination"]
-        };
-        setFormData(sampleUser);
+      try {
+        // Get email from localStorage.userInfo (parse as JSON)
+        let email = "";
+        try {
+          const userInfoRaw = localStorage.getItem("userInfo");
+          if (userInfoRaw) {
+            const userInfo = JSON.parse(userInfoRaw);
+            if (userInfo?.email) email = userInfo.email;
+          }
+        } catch (err) {
+          // Ignore parse error, fallback to empty email
+        }
+        if (!email) {
+          console.warn("No admin email found in localStorage.userInfo. Cannot load profile.");
+          setIsLoading(false);
+          return;
+        }
+        const response = await fetch(`https://globaltechsoftwaresolutions.cloud/school-api/api/admins/${email}/`);
+        if (!response.ok) throw new Error("Failed to fetch admin data");
+        const data = await response.json();
+        // Format joinDate as YYYY-MM-DD if possible
+        let joinDate = "";
+        if (data.user_details?.created_at) {
+          // Try to parse and format as YYYY-MM-DD
+          const dt = new Date(data.user_details.created_at);
+          if (!isNaN(dt.getTime())) {
+            // ISO string is yyyy-mm-ddTHH:MM:SSZ, so take substring
+            joinDate = dt.toISOString().slice(0, 10);
+          } else if (typeof data.user_details.created_at === "string" && data.user_details.created_at.includes(" ")) {
+            // fallback to split by space
+            joinDate = data.user_details.created_at.split(" ")[0];
+          }
+        }
+        setFormData({
+          name: data.fullname || data.user_details?.email?.split("@")[0] || "",
+          email: data.email || data.user_details?.email || "",
+          phone: data.phone || "",
+          role: data.user_details?.role || "Admin",
+          department: data.department || "School Administration",
+          joinDate: joinDate,
+          address: data.office_address || "",
+          subjects: Array.isArray(data.subjects) ? data.subjects : [],
+          profile_picture: data.profile_picture || "/default-avatar.png"
+        });
+      } catch (err) {
+        console.error("Error loading admin profile:", err);
+      } finally {
         setIsLoading(false);
-      }, 1000);
+      }
     };
-
     loadUserData();
   }, []);
 
@@ -63,24 +95,91 @@ export default function Admin_ProfilePage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ Save updated data
-  const handleSave = () => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      localStorage.setItem("userProfile", JSON.stringify(formData));
-      setIsEditing(false);
-      setIsLoading(false);
-      
+  // ✅ Handle profile picture change: upload directly to PATCH endpoint with FormData
+  const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    // Show instant local preview
+    const previewUrl = URL.createObjectURL(file);
+    setFormData((prev) => ({ ...prev, profile_picture: previewUrl }));
+
+    try {
+      setIsLoading(true);
+      const formDataPatch = new FormData();
+      formDataPatch.append("profile_picture", file);
+      // Optionally, send other fields if backend requires (here, only picture for this change)
+      const response = await fetch(`https://globaltechsoftwaresolutions.cloud/school-api/api/admins/${formData.email}/`, {
+        method: "PATCH",
+        body: formDataPatch,
+      });
+      if (!response.ok) throw new Error("Failed to upload profile picture");
+      const updatedData = await response.json();
+      setFormData((prev) => ({
+        ...prev,
+        profile_picture: updatedData.profile_picture || prev.profile_picture,
+        // Optionally update other fields if returned
+        name: updatedData.fullname || prev.name,
+        phone: updatedData.phone || prev.phone,
+        address: updatedData.office_address || prev.address
+      }));
       // Show success notification
       const event = new CustomEvent('notification', {
-        detail: { 
-          type: 'success', 
-          message: 'Profile updated successfully!' 
+        detail: {
+          type: 'success',
+          message: 'Profile picture updated successfully!'
         }
       });
       window.dispatchEvent(event);
-    }, 800);
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ Save updated data using PATCH and FormData (not JSON)
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("fullname", formData.name);
+      formDataToSend.append("phone", formData.phone);
+      formDataToSend.append("office_address", formData.address);
+      // Only append profile_picture if it's a file (not just a URL string)
+      // For this, we check if the input element has a file (find it in the DOM)
+      const fileInput = document.querySelector('input[type="file"][accept^="image"]') as HTMLInputElement | null;
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        formDataToSend.append("profile_picture", fileInput.files[0]);
+      }
+
+      const response = await fetch(`https://globaltechsoftwaresolutions.cloud/school-api/api/admins/${formData.email}/`, {
+        method: "PATCH",
+        body: formDataToSend,
+      });
+      if (!response.ok) throw new Error("Failed to update profile");
+      const updatedData = await response.json();
+      setFormData((prev) => ({
+        ...prev,
+        name: updatedData.fullname || prev.name,
+        phone: updatedData.phone || prev.phone,
+        address: updatedData.office_address || prev.address,
+        profile_picture: updatedData.profile_picture || prev.profile_picture
+      }));
+      setIsEditing(false);
+
+      // Show success notification
+      const event = new CustomEvent('notification', {
+        detail: {
+          type: 'success',
+          message: 'Profile updated successfully!'
+        }
+      });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ✅ Cancel editing
@@ -153,6 +252,31 @@ export default function Admin_ProfilePage() {
                       </div>
 
                       <div className="p-6 space-y-6">
+                        {/* Profile Picture with clickable overlay and hidden input */}
+                        <div className="flex justify-center mb-6 flex-col items-center">
+                          <label className="relative cursor-pointer group">
+                            <img
+                              src={formData.profile_picture || "/default-avatar.png"}
+                              alt="Profile Picture"
+                              className="rounded-full w-24 h-24 object-cover border-2 border-gray-200 group-hover:opacity-80 transition"
+                            />
+                            {isEditing && (
+                              <>
+                                <span className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-md group-hover:bg-blue-600 transition group-hover:text-white">
+                                  <Edit className="w-5 h-5 text-blue-600 group-hover:text-white" />
+                                </span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleProfilePictureChange}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  tabIndex={-1}
+                                />
+                              </>
+                            )}
+                          </label>
+                        </div>
+
                         {/* Personal Information */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
@@ -263,21 +387,6 @@ export default function Admin_ProfilePage() {
                             onChange={handleChange}
                             disabled={!isEditing}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
-                          />
-                        </div>
-
-                        {/* Bio */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Bio
-                          </label>
-                          <textarea
-                            name="bio"
-                            value={formData.bio}
-                            onChange={handleChange}
-                            disabled={!isEditing}
-                            rows={4}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors resize-none"
                           />
                         </div>
 

@@ -86,14 +86,40 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
   admin: [
     { name: "Attendence", path: "/admin/admin_attendence" },
     { name: "Students", path: "/admin/admin_students" },
+    { name: "Teachers", path: "/admin/admin_teachers" },
     { name: "Approvals", path: "/admin/admin_approval" },
     { name: "Calender", path: "/admin/admin_calender" },
     { name: "Notice", path: "/admin/admin_notice" },
     { name: "Raise Issues", path: "/admin/admin_issues" },
-    { name: "All Feilds", path: "/admin/admin_feilds" },
     { name: "Profile", path: "/admin/admin_profile" },
   ],
 };
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return decodeURIComponent(match[2]);
+  return null;
+}
+
+function parseJwt(token: string): any | null {
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
 
 export default function DashboardLayout({ children, role }: Props) {
   const router = useRouter();
@@ -101,20 +127,91 @@ export default function DashboardLayout({ children, role }: Props) {
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("userInfo");
-      if (storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          setUserEmail(parsedUser.email || "Unknown User");
-        } catch {
-          setUserEmail("Unknown User");
+    async function fetchUserDetails() {
+      if (typeof window !== "undefined") {
+        const storedUser = localStorage.getItem("userInfo");
+        let tokenRole: string | null = null;
+        const token = getCookie("token");
+        if (token) {
+          // Attempt to parse JWT token to get role
+          const parsed = parseJwt(token);
+          if (parsed && typeof parsed.role === "string") {
+            tokenRole = parsed.role.toLowerCase();
+          } else {
+            // If token is not JWT or role not found in payload, fallback to plain token string as role if it matches known roles
+            const lowerToken = token.toLowerCase();
+            if (["management", "principal", "teachers", "students", "admin", "parents"].includes(lowerToken)) {
+              tokenRole = lowerToken;
+            }
+          }
+        }
+
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            const email = parsedUser.email;
+            setUserEmail(email || "Unknown User");
+
+            if (email) {
+              try {
+                // Use tokenRole if available, else fallback to prop role
+                const effectiveRole = tokenRole || role.toLowerCase();
+                // If effectiveRole not in roleLinksMap keys, fallback to role prop
+                const roleForApi = Object.keys(roleLinksMap).includes(effectiveRole) ? effectiveRole : role.toLowerCase();
+                // For admin, use singular endpoint; for others, use plural
+                const isAdmin = roleForApi === 'admin';
+                const endpoint = `https://globaltechsoftwaresolutions.cloud/school-api/api/${roleForApi}s/${email}/`
+                const response = await fetch(endpoint);
+                if (response.ok) {
+                  const data = await response.json();
+                  const userDetails = data.user_details || {};
+                  const fullname = data.fullname || userDetails.fullname || null;
+                  const roleFromApi = userDetails.role || null;
+                  const profilePic = data.profile_picture || userDetails.profile_picture || null;
+
+                  // Use role from API if valid, else fallback to tokenRole or prop role
+                  let finalRole = roleFromApi ? roleFromApi.toLowerCase() : (tokenRole || role.toLowerCase());
+
+                  setUserName(fullname || (email.split("@")[0] || "User"));
+                  setUserRole(finalRole.toUpperCase());
+                  setProfilePicture(profilePic || null);
+                } else {
+                  // fallback if fetch fails
+                  setUserName(email.split("@")[0] || "User");
+                  setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
+                  setProfilePicture(null);
+                }
+              } catch {
+                setUserName(email.split("@")[0] || "User");
+                setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
+                setProfilePicture(null);
+              }
+            } else {
+              setUserName("Unknown User");
+              setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
+              setProfilePicture(null);
+            }
+          } catch {
+            setUserEmail("Unknown User");
+            setUserName("Unknown User");
+            setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
+            setProfilePicture(null);
+          }
+        } else {
+          setUserEmail(null);
+          setUserName(null);
+          setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
+          setProfilePicture(null);
         }
       }
     }
-  }, []);
+    fetchUserDetails();
+  }, [role]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -132,17 +229,18 @@ export default function DashboardLayout({ children, role }: Props) {
       <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-72 bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-lg flex-col z-20">
         <div className="p-6 flex items-center gap-4 border-b border-blue-700">
           <Image
-            src="/default-profile.png"
+            src={profilePicture || "/default-profile.png"}
             alt="Profile"
             width={64}
             height={64}
+            unoptimized
             className="rounded-full border-2 border-white shadow-md object-cover w-16 h-16"
           />
-          <div className="flex flex-col">
-            <p className="text-lg font-semibold text-white">
-              {userEmail ? userEmail : "Welcome"}
+          <div className="flex flex-col min-w-0">
+            <p className="text-lg font-semibold text-white truncate max-w-[150px] overflow-hidden">
+              {userName ? userName : "Welcome"}
             </p>
-            <p className="text-sm text-blue-200">{role.toUpperCase()}</p>
+            <p className="text-sm text-blue-200 truncate max-w-[150px] overflow-hidden">{userRole ? userRole.toUpperCase() : role.toUpperCase()}</p>
           </div>
         </div>
 
@@ -185,17 +283,18 @@ export default function DashboardLayout({ children, role }: Props) {
 
             <div className="p-4 flex flex-col items-center gap-2 border-b border-blue-700 mt-12">
               <Image
-                src="/default-profile.png"
+                src={profilePicture || "/default-profile.png"}
                 alt="Profile"
                 width={56}
                 height={56}
+                unoptimized
                 className="rounded-full border-2 border-white shadow-md object-cover w-14 h-14"
               />
-              <div className="text-center">
-                <p className="text-md font-semibold text-white">
-                  {userEmail ? userEmail : "Welcome"}
+              <div className="text-center min-w-0">
+                <p className="text-md font-semibold text-white truncate max-w-[150px] overflow-hidden">
+                  {userName ? userName : "Welcome"}
                 </p>
-                <p className="text-xs text-blue-200 uppercase">{role.toUpperCase()}</p>
+                <p className="text-xs text-blue-200 uppercase truncate max-w-[150px] overflow-hidden">{userRole ? userRole.toUpperCase() : role.toUpperCase()}</p>
               </div>
             </div>
 
