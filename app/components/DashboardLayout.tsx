@@ -75,6 +75,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Tasks", path: "/students/students_tasks" },
     { name: "Attendance", path: "/students/students_attendance" },
     { name: "Assignment", path: "/students/students_assignment" },
+    { name: "TimeTable", path: "/students/students_timetable" },
     { name: "Leaves", path: "/students/students_leaves" },
     { name: "Marks", path: "/students/students_marks" },
     { name: "Calender", path: "/students/students_calender" },
