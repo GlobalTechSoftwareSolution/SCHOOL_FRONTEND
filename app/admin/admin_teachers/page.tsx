@@ -1,352 +1,287 @@
 "use client"
 import DashboardLayout from '@/app/components/DashboardLayout'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
+import { FiSearch, FiFilter, FiUser, FiMail, FiPhone, FiCalendar, FiBook, FiAward, FiMapPin, FiDroplet, FiUsers, FiX } from 'react-icons/fi'
+
+const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/teachers/"
+
+interface Subject {
+  id: number
+  subject_name: string
+  subject_code: string
+  description: string
+}
+
+interface Teacher {
+  email: string
+  fullname: string
+  teacher_id: string
+  phone: string
+  date_of_birth: string
+  gender: string
+profile_picture?: string  
+  date_joined: string
+  qualification: string
+  experience_years: string
+  department_name: string
+  subject_list: Subject[]
+  user_details: {
+    role: string
+    is_active: boolean
+    is_approved: boolean
+    is_staff: boolean
+    created_at: string
+    updated_at: string
+  }
+  residential_address?: string | null
+  nationality?: string | null
+  blood_group?: string | null
+  emergency_contact_name?: string | null
+  emergency_contact_relationship?: string | null
+  emergency_contact_no?: string | null
+}
 
 const Admin_TeachersPage = () => {
-  const [teachers, setTeachers] = useState([
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@university.edu',
-      department: 'Computer Science',
-      subjects: ['Data Structures', 'Algorithms'],
-      joinDate: '2022-08-15',
-      status: 'active',
-      phone: '+1 (555) 123-4567',
-      office: 'CS-301',
-      qualifications: ['PhD Computer Science', 'MSc Software Engineering'],
-      type: 'full-time',
-      classes: 4
-    },
-    {
-      id: 2,
-      name: 'Prof. Michael Chen',
-      email: 'michael.chen@university.edu',
-      department: 'Mathematics',
-      subjects: ['Calculus', 'Linear Algebra'],
-      joinDate: '2021-01-10',
-      status: 'active',
-      phone: '+1 (555) 987-6543',
-      office: 'MATH-205',
-      qualifications: ['PhD Mathematics', 'MSc Applied Mathematics'],
-      type: 'full-time',
-      classes: 5
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Davis',
-      email: 'emily.davis@university.edu',
-      department: 'Physics',
-      subjects: ['Quantum Mechanics', 'Thermodynamics'],
-      joinDate: '2023-03-20',
-      status: 'on-leave',
-      phone: '+1 (555) 456-7890',
-      office: 'PHYS-102',
-      qualifications: ['PhD Physics', 'MSc Nuclear Physics'],
-      type: 'full-time',
-      classes: 3
-    },
-    {
-      id: 4,
-      name: 'Prof. Robert Wilson',
-      email: 'robert.wilson@university.edu',
-      department: 'Computer Science',
-      subjects: ['Web Development', 'Database Systems'],
-      joinDate: '2020-09-05',
-      status: 'active',
-      phone: '+1 (555) 234-5678',
-      office: 'CS-304',
-      qualifications: ['MSc Computer Science', 'BSc Software Engineering'],
-      type: 'part-time',
-      classes: 2
-    }
-  ])
-
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedDepartment, setSelectedDepartment] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [departmentFilter, setDepartmentFilter] = useState('all')
 
-  const [newTeacher, setNewTeacher] = useState({
-    name: '',
-    email: '',
-    department: '',
-    subjects: '',
-    phone: '',
-    office: '',
-    qualifications: '',
-    type: 'full-time'
-  })
-
-  const departments = ['all', 'Computer Science', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Engineering']
-  const statusOptions = ['all', 'active', 'on-leave', 'inactive']
-
-  const filteredTeachers = teachers.filter(teacher => {
-    const matchesSearch = teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         teacher.department.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesDepartment = selectedDepartment === 'all' || teacher.department === selectedDepartment
-    const matchesStatus = selectedStatus === 'all' || teacher.status === selectedStatus
-
-    return matchesSearch && matchesDepartment && matchesStatus
-  })
-
-  const handleAddTeacher = (e: React.FormEvent) => {
-    e.preventDefault()
-    const teacher = {
-      id: teachers.length + 1,
-      name: newTeacher.name,
-      email: newTeacher.email,
-      department: newTeacher.department,
-      subjects: newTeacher.subjects.split(',').map(s => s.trim()),
-      phone: newTeacher.phone,
-      office: newTeacher.office,
-      qualifications: newTeacher.qualifications.split(',').map(q => q.trim()),
-      type: newTeacher.type,
-      joinDate: new Date().toISOString().split('T')[0],
-      status: 'active',
-      classes: 0
+  // ✅ Fetch Teachers from API
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        setLoading(true)
+        const res = await axios.get(API_URL)
+        setTeachers(res.data)
+        setFilteredTeachers(res.data)
+      } catch (err) {
+        console.error(err)
+        setError("Failed to load teacher data.")
+      } finally {
+        setLoading(false)
+      }
     }
-    setTeachers([...teachers, teacher])
-    setNewTeacher({
-      name: '',
-      email: '',
-      department: '',
-      subjects: '',
-      phone: '',
-      office: '',
-      qualifications: '',
-      type: 'full-time'
-    })
-    setShowAddForm(false)
-  }
 
-  const toggleTeacherStatus = (id: number) => {
-    setTeachers(teachers.map(teacher => 
-      teacher.id === id 
-        ? { 
-            ...teacher, 
-            status: teacher.status === 'active' ? 'inactive' : 'active' 
-          }
-        : teacher
-    ))
-  }
+    fetchTeachers()
+  }, [])
 
-  const deleteTeacher = (id: number) => {
-    setTeachers(teachers.filter(teacher => teacher.id !== id))
-  }
+  // Filter teachers based on search and filters
+  useEffect(() => {
+    let filtered = teachers
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      active: 'bg-green-100 text-green-800 border-green-200',
-      'on-leave': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      inactive: 'bg-red-100 text-red-800 border-red-200'
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(teacher =>
+        teacher.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        teacher.teacher_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        teacher.department_name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     }
-    return `px-3 py-1 rounded-full text-sm font-medium border ${styles[status as keyof typeof styles]}`
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(teacher =>
+        statusFilter === 'active' ? teacher.user_details.is_active : !teacher.user_details.is_active
+      )
+    }
+
+    // Department filter
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter(teacher =>
+        teacher.department_name === departmentFilter
+      )
+    }
+
+    setFilteredTeachers(filtered)
+  }, [searchTerm, statusFilter, departmentFilter, teachers])
+
+  const departments = Array.from(new Set(teachers.map(teacher => teacher.department_name)))
+
+  if (loading) {
+    return (
+      <DashboardLayout role="admin">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-lg text-gray-600">Loading teachers...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
-  const getTypeBadge = (type: string) => {
-    return type === 'full-time' 
-      ? 'bg-blue-100 text-blue-800 border border-blue-200 px-3 py-1 rounded-full text-sm font-medium'
-      : 'bg-purple-100 text-purple-800 border border-purple-200 px-3 py-1 rounded-full text-sm font-medium'
-  }
-
-  const stats = {
-    total: teachers.length,
-    active: teachers.filter(t => t.status === 'active').length,
-    onLeave: teachers.filter(t => t.status === 'on-leave').length,
-    fullTime: teachers.filter(t => t.type === 'full-time').length
+  if (error) {
+    return (
+      <DashboardLayout role="admin">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center text-red-500 max-w-md">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h3 className="text-xl font-semibold mb-2">Unable to Load Data</h3>
+            <p>{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
     <DashboardLayout role="admin">
-      <div className="p-6 space-y-6">
+      <div className="min-h-screen bg-gray-50 p-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Teacher Management</h1>
-            <p className="text-gray-600 mt-2">Manage faculty members and their information</p>
-          </div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
-          >
-            <span>+</span>
-            Add New Teacher
-          </button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-6 rounded-xl shadow border">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <span className="text-2xl">👨‍🏫</span>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-                <div className="text-gray-600">Total Teachers</div>
-              </div>
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="mb-4 lg:mb-0">
+              <h1 className="text-3xl font-bold text-gray-900">Teacher Management</h1>
+              <p className="text-gray-600 mt-2">Manage all teacher profiles and academic details</p>
             </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow border border-l-4 border-l-green-500">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <span className="text-2xl">✅</span>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stats.active}</div>
-                <div className="text-gray-600">Active</div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow border border-l-4 border-l-yellow-500">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-yellow-100 rounded-lg">
-                <span className="text-2xl">🌴</span>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stats.onLeave}</div>
-                <div className="text-gray-600">On Leave</div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow border border-l-4 border-l-blue-500">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <span className="text-2xl">💼</span>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stats.fullTime}</div>
-                <div className="text-gray-600">Full Time</div>
-              </div>
+            <div className="flex items-center space-x-4">
+              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                {filteredTeachers.length} {filteredTeachers.length === 1 ? 'Teacher' : 'Teachers'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Filters and Search */}
-        <div className="bg-white p-6 rounded-xl shadow border">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
+        <div className="mb-8 bg-white rounded-2xl shadow-sm border p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search teachers by name, email, or department..."
+                placeholder="Search teachers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
-            <div className="flex gap-3">
-              <select
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {departments.map(dept => (
-                  <option key={dept} value={dept}>
-                    {dept === 'all' ? 'All Departments' : dept}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {statusOptions.map(status => (
-                  <option key={status} value={status}>
-                    {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+
+            {/* Department Filter */}
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            >
+              <option value="all">All Departments</option>
+              {departments.map(dept => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Teachers Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTeachers.map((teacher) => (
-            <div key={teacher.id} className="bg-white rounded-xl shadow-lg border overflow-hidden">
-              <div className="p-6">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{teacher.name}</h3>
-                    <p className="text-gray-600 text-sm">{teacher.department}</p>
+        {/* Teacher Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredTeachers.map((teacher, index) => (
+            <div
+              key={teacher.teacher_id}
+              onClick={() => setSelectedTeacher(teacher)}
+              className="group cursor-pointer bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl hover:border-blue-200 transition-all duration-300 overflow-hidden"
+            >
+              {/* Header with Avatar and Status */}
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    {teacher.profile_picture ? (
+  <img
+    src={teacher.profile_picture}
+
+    alt={teacher.fullname}
+    className="w-12 h-12 rounded-xl object-cover border border-gray-200"
+  />
+) : (
+  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-semibold text-lg">
+    {teacher.fullname.split(' ').map(n => n[0]).join('')}
+  </div>
+)}
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {teacher.fullname}
+                      </h3>
+                      <p className="text-sm text-gray-500">ID: {teacher.teacher_id}</p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <span className={getStatusBadge(teacher.status)}>
-                      {teacher.status}
-                    </span>
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                    teacher.user_details.is_active
+                      ? 'bg-green-50 text-green-700 border-green-200'
+                      : 'bg-red-50 text-red-700 border-red-200'
+                  }`}>
+                    {teacher.user_details.is_active ? 'Active' : 'Inactive'}
                   </div>
                 </div>
 
-                {/* Contact Info */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>📧</span>
-                    <span>{teacher.email}</span>
+                {/* Quick Info */}
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <FiMail className="w-4 h-4 mr-2 text-gray-400" />
+                    <span className="truncate">{teacher.email}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>📞</span>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <FiPhone className="w-4 h-4 mr-2 text-gray-400" />
                     <span>{teacher.phone}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>🏢</span>
-                    <span>{teacher.office}</span>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <FiBook className="w-4 h-4 mr-2 text-gray-400" />
+                    <span>{teacher.department_name}</span>
                   </div>
                 </div>
+              </div>
 
-                {/* Subjects and Type */}
+              {/* Subjects and Footer */}
+              <div className="p-6">
                 <div className="mb-4">
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {teacher.subjects.map((subject, index) => (
-                      <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                        {subject}
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Subjects</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {teacher.subject_list.slice(0, 3).map((subject, i) => (
+                      <span
+                        key={i}
+                        className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-medium"
+                      >
+                        {subject.subject_name}
                       </span>
                     ))}
-                  </div>
-                  <span className={getTypeBadge(teacher.type)}>
-                    {teacher.type}
-                  </span>
-                </div>
-
-                {/* Qualifications */}
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Qualifications</h4>
-                  <div className="space-y-1">
-                    {teacher.qualifications.map((qual, index) => (
-                      <div key={index} className="text-xs text-gray-600 flex items-center gap-1">
-                        <span>🎓</span>
-                        {qual}
-                      </div>
-                    ))}
+                    {teacher.subject_list.length > 3 && (
+                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-lg text-xs">
+                        +{teacher.subject_list.length - 3} more
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Footer */}
-                <div className="flex justify-between items-center pt-4 border-t">
-                  <div className="text-sm text-gray-500">
-                    Joined: {teacher.joinDate}
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div className="flex items-center">
+                    <FiCalendar className="w-4 h-4 mr-1" />
+                    Joined {new Date(teacher.date_joined).getFullYear()}
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => toggleTeacherStatus(teacher.id)}
-                      className={`px-3 py-1 text-sm rounded ${
-                        teacher.status === 'active' 
-                          ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
-                          : 'bg-green-500 hover:bg-green-600 text-white'
-                      }`}
-                    >
-                      {teacher.status === 'active' ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => deleteTeacher(teacher.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm rounded"
-                    >
-                      Delete
-                    </button>
+                  <div className="flex items-center">
+                    <FiAward className="w-4 h-4 mr-1" />
+                    {teacher.experience_years} yrs
                   </div>
                 </div>
               </div>
@@ -354,160 +289,144 @@ const Admin_TeachersPage = () => {
           ))}
         </div>
 
+        {/* Empty State */}
         {filteredTeachers.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">👨‍🏫</div>
-            <h3 className="text-lg font-semibold text-gray-600">No teachers found</h3>
-            <p className="text-gray-500 mt-2">Try adjusting your search or add a new teacher</p>
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">👨‍🏫</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No teachers found</h3>
+            <p className="text-gray-600 max-w-md mx-auto">
+              {searchTerm || statusFilter !== 'all' || departmentFilter !== 'all' 
+                ? 'Try adjusting your search or filters to find what you are looking for.'
+                : 'No teachers are currently registered in the system.'}
+            </p>
           </div>
         )}
 
-        {/* Add Teacher Modal */}
-        {showAddForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Add New Teacher</h2>
+        {/* Modal for Full Teacher Details */}
+        {selectedTeacher && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-purple-700 p-6 text-white">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center space-x-4">
+                   {selectedTeacher.profile_picture ? (
+  <img
+    src={selectedTeacher.profile_picture}
+
+    alt={selectedTeacher.fullname}
+    className="w-16 h-16 rounded-xl object-cover border-2 border-white"
+  />
+) : (
+  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-xl flex items-center justify-center text-white font-semibold text-2xl">
+    {selectedTeacher.fullname.split(' ').map(n => n[0]).join('')}
+  </div>
+)}
+
+                    <div>
+                      <h2 className="text-2xl font-bold">{selectedTeacher.fullname}</h2>
+                      <p className="text-blue-100">Teacher ID: {selectedTeacher.teacher_id}</p>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setShowAddForm(false)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                    onClick={() => setSelectedTeacher(null)}
+                    className="text-white hover:text-blue-200 transition-colors text-2xl p-2"
                   >
-                    ✕
+                    <FiX />
                   </button>
                 </div>
+              </div>
 
-                <form onSubmit={handleAddTeacher} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={newTeacher.name}
-                        onChange={(e) => setNewTeacher({...newTeacher, name: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter full name"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={newTeacher.email}
-                        onChange={(e) => setNewTeacher({...newTeacher, email: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter email address"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Department *
-                      </label>
-                      <select
-                        required
-                        value={newTeacher.department}
-                        onChange={(e) => setNewTeacher({...newTeacher, department: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select Department</option>
-                        {departments.filter(d => d !== 'all').map(dept => (
-                          <option key={dept} value={dept}>{dept}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Employment Type
-                      </label>
-                      <select
-                        value={newTeacher.type}
-                        onChange={(e) => setNewTeacher({...newTeacher, type: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="full-time">Full Time</option>
-                        <option value="part-time">Part Time</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        value={newTeacher.phone}
-                        onChange={(e) => setNewTeacher({...newTeacher, phone: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Office Location
-                      </label>
-                      <input
-                        type="text"
-                        value={newTeacher.office}
-                        onChange={(e) => setNewTeacher({...newTeacher, office: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter office location"
-                      />
+              {/* Modal Content */}
+              <div className="p-6 space-y-6">
+                {/* Personal Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <FiUser className="w-5 h-5 mr-2 text-blue-600" />
+                      Personal Information
+                    </h3>
+                    <div className="space-y-3">
+                      <InfoRow label="Email" value={selectedTeacher.email} icon={<FiMail />} />
+                      <InfoRow label="Phone" value={selectedTeacher.phone} icon={<FiPhone />} />
+                      <InfoRow label="Gender" value={selectedTeacher.gender} />
+                      <InfoRow label="Date of Birth" value={selectedTeacher.date_of_birth} />
+                      <InfoRow label="Nationality" value={selectedTeacher.nationality || 'N/A'} />
+                      <InfoRow label="Blood Group" value={selectedTeacher.blood_group || 'N/A'} icon={<FiDroplet />} />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Subjects (comma separated) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={newTeacher.subjects}
-                      onChange={(e) => setNewTeacher({...newTeacher, subjects: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., Data Structures, Algorithms, Web Development"
-                    />
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <FiBook className="w-5 h-5 mr-2 text-green-600" />
+                      Professional Details
+                    </h3>
+                    <div className="space-y-3">
+                      <InfoRow label="Department" value={selectedTeacher.department_name} />
+                      <InfoRow label="Qualification" value={selectedTeacher.qualification} />
+                      <InfoRow label="Experience" value={`${selectedTeacher.experience_years} years`} />
+                      <InfoRow label="Date Joined" value={selectedTeacher.date_joined} />
+                      <InfoRow 
+                        label="Status" 
+                        value={
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            selectedTeacher.user_details.is_active
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {selectedTeacher.user_details.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        } 
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Qualifications (comma separated)
-                    </label>
-                    <textarea
-                      value={newTeacher.qualifications}
-                      onChange={(e) => setNewTeacher({...newTeacher, qualifications: e.target.value})}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., PhD Computer Science, MSc Software Engineering"
-                    />
+                {/* Subjects */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Subjects Taught</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {selectedTeacher.subject_list.map((subject, i) => (
+                      <div key={i} className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                        <h4 className="font-semibold text-blue-900">{subject.subject_name}</h4>
+                        <p className="text-sm text-blue-700">Code: {subject.subject_code}</p>
+                        {subject.description && (
+                          <p className="text-xs text-blue-600 mt-2">{subject.description}</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
+                </div>
 
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      type="submit"
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex-1"
-                    >
-                      Add Teacher
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddForm(false)}
-                      className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex-1"
-                    >
-                      Cancel
-                    </button>
+                {/* Emergency Contact */}
+                {selectedTeacher.emergency_contact_name && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <FiUsers className="w-5 h-5 mr-2 text-red-600" />
+                      Emergency Contact
+                    </h3>
+                    <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <InfoRow label="Name" value={selectedTeacher.emergency_contact_name} />
+                        <InfoRow label="Relationship" value={selectedTeacher.emergency_contact_relationship || 'N/A'} />
+                        <InfoRow label="Contact No" value={selectedTeacher.emergency_contact_no || 'N/A'} />
+                      </div>
+                    </div>
                   </div>
-                </form>
+                )}
+
+                {/* Residential Address */}
+                {selectedTeacher.residential_address && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <FiMapPin className="w-5 h-5 mr-2 text-purple-600" />
+                      Residential Address
+                    </h3>
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <p className="text-gray-700">{selectedTeacher.residential_address}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -516,5 +435,16 @@ const Admin_TeachersPage = () => {
     </DashboardLayout>
   )
 }
+
+// Helper component for info rows
+const InfoRow = ({ label, value, icon }: { label: string; value: any; icon?: React.ReactNode }) => (
+  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+    <span className="text-sm font-medium text-gray-600 flex items-center">
+      {icon && <span className="mr-2">{icon}</span>}
+      {label}
+    </span>
+    <span className="text-sm text-gray-900 text-right">{value}</span>
+  </div>
+)
 
 export default Admin_TeachersPage

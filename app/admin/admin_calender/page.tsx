@@ -6,7 +6,6 @@ const Admin_calender = () => {
   return (
     <div>
       <DashboardLayout role='admin'>
-
       <Googlecalender />
       </DashboardLayout>
     </div>

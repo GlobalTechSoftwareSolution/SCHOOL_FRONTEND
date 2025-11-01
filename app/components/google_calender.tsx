@@ -48,7 +48,7 @@ const HolidayCalendar: React.FC = () => {
         setIsLoading(true);
         setError(null);
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/accounts/holidays/`
+          `https://globaltechsoftwaresolutions.cloud/school-api/api/holidays/`
         );
         if (!res.ok) throw new Error("Failed to fetch holidays");
         const data = await res.json();
