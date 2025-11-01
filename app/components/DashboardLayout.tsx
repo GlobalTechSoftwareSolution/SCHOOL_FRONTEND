@@ -62,7 +62,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Attendance", path: "/teachers/teachers_attendance" },
     { name: "Assignment", path: "/teachers/teachers_assignment" },
     { name: "Monthly Report", path: "/teachers/teachers_monthly_report" },
-    { name: "Marks", path: "/teachers/teachers_marks" },
+    { name: "Marks sheet", path: "/teachers/teachers_marks" },
     { name: "Calender", path: "/teachers/teachers_calender" },
     { name: "Notice", path: "/teachers/teachers_notice" },
     { name: "Raise Issues", path: "/teachers/teachers_issues" },
@@ -163,9 +163,9 @@ export default function DashboardLayout({ children, role }: Props) {
                 const effectiveRole = tokenRole || role.toLowerCase();
                 // If effectiveRole not in roleLinksMap keys, fallback to role prop
                 const roleForApi = Object.keys(roleLinksMap).includes(effectiveRole) ? effectiveRole : role.toLowerCase();
-                // For admin, use singular endpoint; for others, use plural
-                const isAdmin = roleForApi === 'admin';
-                const endpoint = `https://globaltechsoftwaresolutions.cloud/school-api/api/${roleForApi}s/${email}/`
+                // For admin, use singular endpoint; for others, use singular (no plural 's')
+                const endpoint = `https://globaltechsoftwaresolutions.cloud/school-api/api/${roleForApi}/${email}/`
+                console.log("Fetching user from:", endpoint);
                 const response = await fetch(endpoint);
                 if (response.ok) {
                   const data = await response.json();
