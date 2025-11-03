@@ -63,7 +63,7 @@ const StudentAssignment = () => {
       },
       {
         id: 3,
-        title: 'Operating Systems - Process Scheduling',
+        title: 'os  - Process Scheduling',
         subject: 'Operating Systems',
         code: 'CS203',
         teacher: 'Dr. Wilson',

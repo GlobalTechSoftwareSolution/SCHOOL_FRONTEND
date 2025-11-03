@@ -18,7 +18,7 @@ const page = () => {
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg transform hover:scale-105 transition-all duration-300">
             <div className="absolute top-4 right-4 w-12 h-12 bg-white/20 rounded-full backdrop-blur-sm"></div>
             <p className="text-blue-100 text-sm font-medium">Attendance</p>
-            <p className="mt-2 text-4xl font-bold">92%</p>
+            <p className="mt-2 text-4xl font-bold">100%</p>
             <div className="flex items-center mt-3">
               <div className="w-full bg-white/30 rounded-full h-2">
                 <div className="bg-white h-2 rounded-full" style={{ width: '92%' }}></div>
