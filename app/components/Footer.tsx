@@ -44,7 +44,7 @@ const Footer = () => {
       ]
     },
     {
-      title: "Student Life",
+      title: "Student",
       links: [
         { name: "Student Portal", href: "/footer_links/student_life/student" },
         { name: "Clubs & Organizations", href: "/footer_links/student_life/clubs" },

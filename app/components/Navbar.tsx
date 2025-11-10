@@ -31,6 +31,8 @@ const Navbar = () => {
 
   const navItems = [
     { name: "Home", href: "/" },
+    { name: "About", href: "/about" },
+    { name: "Activities", href: "/activities" },
     {
       name: "Features",
       href: "/features",
@@ -38,10 +40,8 @@ const Navbar = () => {
         { name: "Academic Management", icon: BookOpen, href: "/nav_features/academics" },
         { name: "Student Portal", icon: GraduationCap, href: "/nav_features/students" },
         { name: "Faculty Hub", icon: Users, href: "/nav_features/faculty" },
-        { name: "Admin Dashboard", icon: Settings, href: "/nav_features/admin" },
       ],
     },
-    { name: "About", href: "/about" },
     { name: "Contact", href: "/contact" },
   ];
 

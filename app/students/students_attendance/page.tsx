@@ -13,6 +13,7 @@ interface AttendanceRecord {
   status: "Present" | "Absent" | "Late" | string;
   marked_by_role?: string;
   remarks?: string;
+  section?: string;
 }
 
 const AttendancePage = () => {
@@ -54,17 +55,55 @@ const AttendancePage = () => {
         setLoading(true);
         setError("");
 
-        const response = await axios.get(API_URL);
-        const allRecords: AttendanceRecord[] = response.data;
+        console.log("📊 Fetching attendance for:", storedEmail);
 
-        const filteredRecords =
-          storedRole === "Admin"
-            ? allRecords
-            : allRecords.filter(
-                (rec) =>
-                  rec.student &&
-                  rec.student.toLowerCase() === storedEmail.toLowerCase()
-              );
+        // Get student details first to get section info and student name
+        let studentSection = "";
+        let studentName = "";
+        try {
+          const studentRes = await axios.get(`https://globaltechsoftwaresolutions.cloud/school-api/api/students/?email=${encodeURIComponent(storedEmail)}`);
+          const studentRecord = Array.isArray(studentRes.data) ? studentRes.data[0] : studentRes.data;
+          
+          if (studentRecord) {
+            studentSection = studentRecord.section || "";
+            studentName = studentRecord.fullname || studentRecord.name || "";
+            console.log("🎓 Student details:", { name: studentName, section: studentSection });
+          }
+        } catch (studentErr) {
+          console.warn("Could not fetch student details:", studentErr);
+        }
+
+        // Fetch all attendance records and filter
+        const response = await axios.get(API_URL);
+        const allRecords: AttendanceRecord[] = response.data || [];
+
+        console.log("📋 Total attendance records:", allRecords.length);
+        console.log("🔍 Sample attendance records:", allRecords.slice(0, 2));
+
+        // Filter records for the current student by name and section
+        const filteredRecords = allRecords.filter((record) => {
+          if (!record) return false;
+          
+          console.log("🔍 Checking record:", {
+            id: record.id,
+            student_name: record.student_name,
+            section: record.section,
+            nameMatch: record.student_name?.toLowerCase() === studentName.toLowerCase()
+          });
+          
+          // Match by student name (exact match)
+          const nameMatch = record.student_name?.toLowerCase() === studentName.toLowerCase();
+          
+          // If we have section info, also filter by section
+          if (studentSection && record.section) {
+            const sectionMatch = record.section.toLowerCase() === studentSection.toLowerCase();
+            return nameMatch && sectionMatch;
+          }
+          
+          return nameMatch;
+        });
+
+        console.log("✅ Found", filteredRecords.length, "records for student:", storedEmail);
 
         if (filteredRecords.length === 0) {
           setError("No attendance records found for your account.");
@@ -72,8 +111,8 @@ const AttendancePage = () => {
 
         setAttendanceData(filteredRecords);
       } catch (err) {
-        console.error("Error fetching attendance:", err);
-        setError("Failed to fetch attendance data.");
+        console.error("❌ Error fetching attendance:", err);
+        setError("Failed to fetch attendance data. Please try again.");
       } finally {
         setLoading(false);
       }

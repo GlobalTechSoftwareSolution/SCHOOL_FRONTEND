@@ -5,477 +5,591 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
+interface Timetable {
+  id: number;
+  subject_name: string;
+  teacher_name: string;
+  class_name: string;
+  section: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  room_number: string;
+}
+
 interface Attendance {
   id: number;
-  student_name: string;
   date: string;
   status: string;
   remarks: string;
-  marked_by_role: string;
-  created_at: string;
-  student: string;
+  student?: string;
+  student_name: string;
+  marked_by_role?: string;
+  section?: string;
 }
 
-interface TimetableEntry {
-  day: string;
-  subjects: { time: string; subject: string; teacher: string }[];
+interface Student {
+  email: string;
+  name: string;
+  fullname?: string;
+  class_name: string;
+  section: string;
 }
 
-const StudentAttendancePage = () => {
-  const [attendanceData, setAttendanceData] = useState<Attendance[]>([]);
-  const [timetableData, setTimetableData] = useState<TimetableEntry[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [filteredTimetable, setFilteredTimetable] = useState<TimetableEntry | null>(null);
-  const [loggedUserEmail, setLoggedUserEmail] = useState<string | null>(null);
+const Student_TImetable = () => {
+  const [userData, setUserData] = useState<Student | null>(null);
+  const [timetable, setTimetable] = useState<Timetable[]>([]);
+  const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [filteredTimetable, setFilteredTimetable] = useState<Timetable[]>([]);
+  const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [error, setError] = useState<string | null>(null);
 
-  const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/";
+  const STUDENT_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/students/";
+  const TIMETABLE_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/timetable/";
+  const ATTENDANCE_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/";
 
-  // ✅ Fetch logged-in user email from localStorage.userInfo
+  // ✅ Load student info from localStorage
   useEffect(() => {
-    try {
-      const userInfo = localStorage.getItem("userInfo");
-      if (userInfo) {
-        const parsed = JSON.parse(userInfo);
-        setLoggedUserEmail(parsed.email);
-      } else {
-        console.warn("No userInfo found in localStorage");
-      }
-    } catch (error) {
-      console.error("Error reading userInfo from localStorage:", error);
-    }
-  }, []);
-
-  // ✅ Fetch attendance data for that email
-  useEffect(() => {
-    if (!loggedUserEmail) return;
-    const fetchAttendance = async () => {
+    const fetchStudentInfo = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(API_URL);
-        const allData: Attendance[] = response.data;
+        const userInfo = localStorage.getItem("userInfo");
+        const userData = localStorage.getItem("userData");
+        
+        if (!userInfo && !userData) {
+          setError("No logged-in user found.");
+          setLoading(false);
+          return;
+        }
 
-        // Filter attendance for logged-in student email
-        const filtered = allData.filter((att) => att.student === loggedUserEmail);
-        setAttendanceData(filtered);
-      } catch (error) {
-        console.error("Error fetching attendance:", error);
+        // Try to get email from multiple sources
+        let email = "";
+        if (userInfo) {
+          const parsed = JSON.parse(userInfo);
+          email = parsed.email;
+        } else if (userData) {
+          const parsed = JSON.parse(userData);
+          email = parsed.email;
+        }
+
+        console.log("📧 Logged in student:", email);
+
+        if (email) {
+          const response = await axios.get(`${STUDENT_API}${email}/`);
+          console.log("🎓 Student API Response:", response.data);
+          setUserData(response.data);
+        } else {
+          setError("No email found in user data.");
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch student info:", err);
+        setError("Failed to fetch student info.");
       } finally {
         setLoading(false);
       }
     };
-    fetchAttendance();
-  }, [loggedUserEmail]);
 
-  // ✅ Static timetable data (weekly)
-  useEffect(() => {
-    const timetable: TimetableEntry[] = [
-      {
-        day: "Monday",
-        subjects: [
-          { time: "9:00 - 10:00", subject: "Mathematics", teacher: "Mr. Sharma" },
-          { time: "10:00 - 11:00", subject: "Science", teacher: "Ms. Priya" },
-          { time: "11:30 - 12:30", subject: "English", teacher: "Mr. Raj" },
-          { time: "1:30 - 2:30", subject: "Computer Science", teacher: "Mr. Deepak" },
-        ],
-      },
-      {
-        day: "Tuesday",
-        subjects: [
-          { time: "9:00 - 10:00", subject: "Social Studies", teacher: "Mr. Amit" },
-          { time: "10:00 - 11:00", subject: "Mathematics", teacher: "Mr. Sharma" },
-          { time: "11:30 - 12:30", subject: "Hindi", teacher: "Ms. Ritu" },
-          { time: "1:30 - 2:30", subject: "Physical Education", teacher: "Coach Singh" },
-        ],
-      },
-      {
-        day: "Wednesday",
-        subjects: [
-          { time: "9:00 - 10:00", subject: "Computer Science", teacher: "Mr. Deepak" },
-          { time: "10:00 - 11:00", subject: "Science Lab", teacher: "Ms. Priya" },
-          { time: "11:30 - 12:30", subject: "Mathematics", teacher: "Mr. Sharma" },
-          { time: "1:30 - 2:30", subject: "Art & Craft", teacher: "Ms. Anjali" },
-        ],
-      },
-      {
-        day: "Thursday",
-        subjects: [
-          { time: "9:00 - 10:00", subject: "Mathematics", teacher: "Mr. Sharma" },
-          { time: "10:00 - 11:00", subject: "Social Studies", teacher: "Mr. Amit" },
-          { time: "11:30 - 12:30", subject: "English Literature", teacher: "Mr. Raj" },
-          { time: "1:30 - 2:30", subject: "Music", teacher: "Ms. Meera" },
-        ],
-      },
-      {
-        day: "Friday",
-        subjects: [
-          { time: "9:00 - 10:00", subject: "English", teacher: "Mr. Raj" },
-          { time: "10:00 - 11:00", subject: "Science", teacher: "Ms. Priya" },
-          { time: "11:30 - 12:30", subject: "Mathematics", teacher: "Mr. Sharma" },
-          { time: "1:30 - 2:30", subject: "General Knowledge", teacher: "Mr. Amit" },
-        ],
-      },
-    ];
-    setTimetableData(timetable);
-    
-    // Set initial timetable for current day
-    const today = new Date();
-    const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
-    const dayTimetable = timetable.find((entry) => entry.day === dayName);
-    setFilteredTimetable(dayTimetable || null);
+    fetchStudentInfo();
   }, []);
 
-  // ✅ When date is clicked on calendar, show timetable for that weekday
+  // ✅ Load timetable
+  useEffect(() => {
+    const fetchTimetable = async () => {
+      if (!userData?.class_name || !userData?.section) return;
+
+      try {
+        const response = await axios.get(
+          `${TIMETABLE_API}?class_name=${userData.class_name}&section=${userData.section}`
+        );
+        console.log("✅ Timetable API Response:", response.data);
+        const timetableData = Array.isArray(response.data) ? response.data : [response.data];
+        setTimetable(timetableData);
+      } catch (err) {
+        console.error("❌ Failed to load timetable:", err);
+        setError("Failed to load timetable.");
+      }
+    };
+
+    fetchTimetable();
+  }, [userData]);
+
+  // ✅ Load attendance data
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      if (!userData?.email) return;
+
+      try {
+        console.log("📊 Fetching attendance for:", userData.email);
+        
+        // Fetch all attendance records and filter by student name and section
+        const response = await axios.get(ATTENDANCE_API);
+        const allRecords: Attendance[] = response.data || [];
+        
+        console.log("📋 Total attendance records:", allRecords.length);
+
+        // Get student name for matching
+        const studentName = userData.fullname || userData.name || "";
+        const studentSection = userData.section || "";
+
+        // Filter records for the current student by name and section
+        const filteredRecords = allRecords.filter((record) => {
+          if (!record) return false;
+          
+          // Match by student name (exact match)
+          const nameMatch = record.student_name?.toLowerCase() === studentName.toLowerCase();
+          
+          // If we have section info, also filter by section
+          if (studentSection && record.section) {
+            const sectionMatch = record.section.toLowerCase() === studentSection.toLowerCase();
+            return nameMatch && sectionMatch;
+          }
+          
+          return nameMatch;
+        });
+
+        console.log("✅ Found", filteredRecords.length, "attendance records for student:", studentName);
+        setAttendance(filteredRecords);
+      } catch (err) {
+        console.error("❌ Failed to load attendance:", err);
+        setError("Failed to load attendance data.");
+      }
+    };
+
+    fetchAttendance();
+  }, [userData]);
+
+  // ✅ When a date is clicked on calendar
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
+
+    // filter timetable by weekday
     const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
-    const dayTimetable = timetableData.find((entry) => entry.day === dayName);
-    setFilteredTimetable(dayTimetable || null);
+    const filtered = timetable.filter(
+      (t) => t.day_of_week.toLowerCase() === dayName.toLowerCase()
+    );
+    setFilteredTimetable(filtered);
+
+    // match attendance - use local date format to avoid timezone issues
+    const dateStr = date.toLocaleDateString("en-CA"); // YYYY-MM-DD format in local timezone
+    const matchedAttendance = attendance.find((a) => a.date === dateStr);
+    setSelectedAttendance(matchedAttendance || null);
+    
+    console.log("📅 Date clicked:", date.toLocaleDateString());
+    console.log("🔍 Looking for attendance with date:", dateStr);
+    console.log("📋 Found attendance:", matchedAttendance);
   };
 
-  // ✅ Calculate attendance summary
-  const presentCount = attendanceData.filter((att) => att.status === "Present").length;
-  const absentCount = attendanceData.filter((att) => att.status === "Absent").length;
-  const totalCount = attendanceData.length;
-  const attendancePercentage =
-    totalCount > 0 ? ((presentCount / totalCount) * 100).toFixed(1) : 0;
-
-  // Custom calendar tile content to show attendance status
+  // ✅ Highlight attendance on calendar
   const tileContent = ({ date, view }: { date: Date; view: string }) => {
-    if (view !== 'month') return null;
-    
-    const dateStr = date.toISOString().split('T')[0];
-    const attendance = attendanceData.find(att => att.date === dateStr);
-    
-    if (attendance) {
+    if (view !== "month") return null;
+    const dateStr = date.toLocaleDateString("en-CA"); // YYYY-MM-DD format in local timezone
+    const att = attendance.find((a) => a.date === dateStr);
+    if (att) {
       return (
-        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
-          attendance.status === "Present" ? "bg-green-500" : "bg-red-500"
-        }`}></div>
+        <div
+          className={`w-3 h-3 rounded-full mx-auto mt-1 ${
+            att.status.toLowerCase() === "present" ? "bg-green-500" : "bg-red-500"
+          }`}
+        ></div>
       );
     }
     return null;
   };
 
-  // Get subject color
+  // Calculate attendance stats
+  const totalDays = attendance.length;
+  const presentDays = attendance.filter(a => a.status.toLowerCase() === "present").length;
+  const attendancePercentage = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+
   const getSubjectColor = (subject: string) => {
-    const colors: { [key: string]: string } = {
-      "Mathematics": "from-blue-500 to-blue-600",
-      "Science": "from-green-500 to-green-600",
-      "English": "from-purple-500 to-purple-600",
-      "Computer Science": "from-orange-500 to-orange-600",
-      "Social Studies": "from-amber-500 to-amber-600",
-      "Hindi": "from-red-500 to-red-600",
-      "Science Lab": "from-emerald-500 to-emerald-600",
-      "Physical Education": "from-lime-500 to-lime-600",
-      "Art & Craft": "from-pink-500 to-pink-600",
-      "English Literature": "from-violet-500 to-violet-600",
-      "Music": "from-rose-500 to-rose-600",
-      "General Knowledge": "from-cyan-500 to-cyan-600"
-    };
-    return colors[subject] || "from-gray-500 to-gray-600";
+    const colors = [
+      "from-blue-500 to-cyan-500",
+      "from-purple-500 to-pink-500",
+      "from-green-500 to-emerald-500",
+      "from-orange-500 to-amber-500",
+      "from-red-500 to-rose-500",
+      "from-indigo-500 to-blue-500",
+    ];
+    const index = subject.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "present": return "✅";
+      case "absent": return "❌";
+      case "late": return "⏰";
+      default: return "📝";
+    }
   };
 
   if (loading) {
     return (
       <DashboardLayout role="students">
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading your attendance data...</p>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="text-lg font-medium text-gray-700">Loading your dashboard...</div>
+            <p className="text-gray-500 mt-2">Getting everything ready for you</p>
+          </div>
         </div>
-      </div>
       </DashboardLayout>
     );
   }
 
   return (
     <DashboardLayout role="students">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-blue-100">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white text-2xl">📊</span>
-                </div>
-                Attendance & Timetable
-              </h1>
-              {loggedUserEmail && (
-                <p className="text-gray-600 mt-2">
-                  Welcome, <span className="font-semibold text-blue-600">{loggedUserEmail}</span>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Enhanced Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Welcome to Time Table Dashboard
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Track your classes, attendance, and academic schedule
+            </p>
+            {userData && (
+              <div className="mt-4 bg-white/80 backdrop-blur-sm rounded-2xl p-4 inline-block">
+                <p className="text-gray-700 font-medium">
+                  {userData.name} • {userData.class_name} - {userData.section}
                 </p>
-              )}
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-8 text-center">
+              <div className="text-red-600 font-semibold text-lg mb-2">⚠️ Error</div>
+              <div className="text-red-500">{error}</div>
+            </div>
+          )}
+
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+                  <span className="text-xl">🕒</span>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 font-medium">Weekly Classes</div>
+                  <div className="text-2xl font-bold text-gray-900">{timetable.length}</div>
+                  <div className="text-xs text-gray-500">
+                    Across {new Set(timetable.map(t => t.day_of_week)).size} days
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                  <span className="text-xl">📚</span>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 font-medium">Subjects</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {new Set(timetable.map(t => t.subject_name)).size}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Unique subjects
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Calendar Section */}
+            <div className="lg:col-span-2">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50 mb-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">📅 Academic Calendar</h2>
+                  <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    Select a date to view details
+                  </div>
+                </div>
+                <Calendar
+                  onClickDay={handleDateClick}
+                  value={selectedDate}
+                  tileContent={tileContent}
+                  className="rounded-2xl border-0 w-full react-calendar-custom bg-white/50 backdrop-blur-sm"
+                />
+              </div>
+
+              {/* Timetable Section */}
+             {/* Timetable Section */}
+<div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-xl font-bold text-gray-900">
+      🕒 Daily Schedule - {selectedDate.toLocaleDateString("en-US", { 
+        weekday: "long", 
+        year: "numeric", 
+        month: "long", 
+        day: "numeric" 
+      })}
+    </h2>
+    <div className="flex items-center gap-4">
+      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+        {filteredTimetable.length} {filteredTimetable.length === 1 ? 'class' : 'classes'} today
+      </span>
+      {filteredTimetable.length > 0 && (
+        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+          {filteredTimetable.length} periods
+        </span>
+      )}
+    </div>
+  </div>
+  
+  {filteredTimetable.length > 0 ? (
+    <div className="space-y-4">
+      {/* Class Summary */}
+      <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl p-4 text-white">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="font-bold text-lg">📚 Today's Class Summary</h3>
+            <p className="text-blue-100 text-sm">
+              You have {filteredTimetable.length} classes scheduled
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold">{filteredTimetable.length}</div>
+            <div className="text-blue-100 text-sm">Total Classes</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Classes List */}
+      <div className="space-y-4">
+        {filteredTimetable
+          .sort((a, b) => a.start_time.localeCompare(b.start_time))
+          .map((item, index) => (
+          <div 
+            key={item.id} 
+            className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 hover:shadow-lg transition-all duration-300 group"
+          >
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center justify-center">
+                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-r ${getSubjectColor(item.subject_name)} flex items-center justify-center text-white font-bold text-lg`}>
+                      {index + 1}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {item.subject_name}
+                      </h3>
+                      <span className="px-2 py-1 bg-white text-xs font-medium rounded-full border border-blue-200">
+                        Period {index + 1}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-sm">by {item.teacher_name}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4 text-sm">
+                <div className="bg-white rounded-xl p-3 text-center min-w-24">
+                  <div className="text-gray-500 text-xs">Start Time</div>
+                  <div className="font-semibold text-gray-900">{item.start_time}</div>
+                </div>
+                <div className="bg-white rounded-xl p-3 text-center min-w-24">
+                  <div className="text-gray-500 text-xs">End Time</div>
+                  <div className="font-semibold text-gray-900">{item.end_time}</div>
+                </div>
+                <div className="bg-white rounded-xl p-3 text-center min-w-20">
+                  <div className="text-gray-500 text-xs">Room</div>
+                  <div className="font-semibold text-gray-900">{item.room_number}</div>
+                </div>
+              </div>
             </div>
             
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full lg:w-auto">
-              <div className="bg-gradient-to-r from-green-50 to-emerald-100 rounded-xl p-4 border border-green-200 text-center min-w-[120px]">
-                <div className="text-2xl font-bold text-green-600">{presentCount}</div>
-                <div className="text-sm text-green-800 font-medium">Present</div>
-              </div>
-              <div className="bg-gradient-to-r from-red-50 to-rose-100 rounded-xl p-4 border border-red-200 text-center min-w-[120px]">
-                <div className="text-2xl font-bold text-red-600">{absentCount}</div>
-                <div className="text-sm text-red-800 font-medium">Absent</div>
-              </div>
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-100 rounded-xl p-4 border border-blue-200 text-center min-w-[120px]">
-                <div className="text-2xl font-bold text-blue-600">{totalCount}</div>
-                <div className="text-sm text-blue-800 font-medium">Total</div>
-              </div>
-              <div className="bg-gradient-to-r from-purple-50 to-violet-100 rounded-xl p-4 border border-purple-200 text-center min-w-[120px]">
-                <div className="text-2xl font-bold text-purple-600">{attendancePercentage}%</div>
-                <div className="text-sm text-purple-800 font-medium">Percentage</div>
+            {/* Class Duration Info */}
+            <div className="mt-4 pt-4 border-t border-blue-200">
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>🕐 Class Duration: {item.start_time} - {item.end_time}</span>
+                <span>📍 {item.room_number}</span>
               </div>
             </div>
           </div>
-        </div>
+        ))}
+      </div>
 
-        {/* Tabs Navigation */}
-        <div className="bg-white rounded-2xl shadow-lg p-2 mb-8 border border-blue-100">
-          <div className="flex space-x-2">
-            {["overview", "calendar", "timetable", "history"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                  activeTab === tab
-                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {tab === "overview" && "📈 Overview"}
-                {tab === "calendar" && "📅 Calendar"}
-                {tab === "timetable" && "🕒 Timetable"}
-                {tab === "history" && "📋 History"}
-              </button>
-            ))}
+      {/* Daily Summary */}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
+        <h3 className="font-bold text-gray-900 mb-3">📊 Daily Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="bg-white rounded-xl p-3">
+            <div className="text-2xl font-bold text-blue-600">{filteredTimetable.length}</div>
+            <div className="text-xs text-gray-500">Total Classes</div>
           </div>
-        </div>
-
-        {!loggedUserEmail ? (
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">⚠️</span>
+          <div className="bg-white rounded-xl p-3">
+            <div className="text-2xl font-bold text-purple-600">
+              {new Set(filteredTimetable.map(t => t.subject_name)).size}
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Authentication Required</h3>
-            <p className="text-gray-600">Please log in to view your attendance records.</p>
+            <div className="text-xs text-gray-500">Subjects</div>
           </div>
-        ) : (
-          <>
-            {/* Overview Tab */}
-            {activeTab === "overview" && (
-              <div className="grid lg:grid-cols-2 gap-8">
-                {/* Calendar */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-blue-100">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                      <span className="text-white text-lg">📅</span>
+          <div className="bg-white rounded-xl p-3">
+            <div className="text-2xl font-bold text-green-600">
+              {new Set(filteredTimetable.map(t => t.teacher_name)).size}
+            </div>
+            <div className="text-xs text-gray-500">Teachers</div>
+          </div>
+          <div className="bg-white rounded-xl p-3">
+            <div className="text-2xl font-bold text-orange-600">
+              {new Set(filteredTimetable.map(t => t.room_number)).size}
+            </div>
+            <div className="text-xs text-gray-500">Rooms</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="text-center py-12">
+      <div className="text-6xl mb-4">🎉</div>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">No classes scheduled</h3>
+      <p className="text-gray-600 mb-4">Enjoy your free day! No classes are scheduled for {selectedDate.toLocaleDateString("en-US", { weekday: "long" })}.</p>
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 inline-block">
+        <p className="text-yellow-700 text-sm">💡 This could be a holiday or weekend</p>
+      </div>
+    </div>
+  )}
+</div>
+
+            </div>
+
+            {/* Right Column - Attendance & Quick Info */}
+            <div className="lg:col-span-1 space-y-8">
+              
+              {/* Attendance Status */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">🧾 Attendance Status</h2>
+                
+                {selectedAttendance ? (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
+                    <div className="text-center mb-4">
+                      <div className="text-4xl mb-2">
+                        {getStatusIcon(selectedAttendance.status)}
+                      </div>
+                      <div className={`text-2xl font-bold ${
+                        selectedAttendance.status.toLowerCase() === "present" 
+                          ? "text-green-600" 
+                          : "text-red-600"
+                      }`}>
+                        {selectedAttendance.status}
+                      </div>
+                      <div className="text-gray-600 text-sm mt-1">
+                        {new Date(selectedAttendance.date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
                     </div>
-                    Attendance Calendar
-                  </h2>
-                  <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 border border-gray-200">
-                    <Calendar
-                      onClickDay={handleDateClick}
-                      value={selectedDate}
-                      tileContent={tileContent}
-                      className="border-0 w-full custom-calendar"
-                    />
+                    
+                    {selectedAttendance.remarks && (
+                      <div className="bg-white rounded-xl p-4 mt-4 border border-gray-200">
+                        <div className="text-sm text-gray-500 mb-1">Remarks</div>
+                        <div className="text-gray-700 italic">"{selectedAttendance.remarks}"</div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-center gap-6 mt-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-600">Present</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span className="text-gray-600">Absent</span>
-                    </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-6xl mb-4">📅</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Record</h3>
+                    <p className="text-gray-600 text-sm">
+                      Select a date to view attendance details
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Stats */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">📈 Quick Stats</h2>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
+                    <span className="text-gray-700">Total Classes</span>
+                    <span className="font-bold text-blue-600">{timetable.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                    <span className="text-gray-700">Present Days</span>
+                    <span className="font-bold text-green-600">{presentDays}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
+                    <span className="text-gray-700">Subjects</span>
+                    <span className="font-bold text-purple-600">
+                      {new Set(timetable.map(t => t.subject_name)).size}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-orange-50 rounded-xl">
+                    <span className="text-gray-700">Teachers</span>
+                    <span className="font-bold text-orange-600">
+                      {new Set(timetable.map(t => t.teacher_name)).size}
+                    </span>
                   </div>
                 </div>
+              </div>
 
-                {/* Today's Timetable */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-blue-100">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                      <span className="text-white text-lg">🕒</span>
-                    </div>
-                    Today's Schedule
-                  </h2>
-                  {filteredTimetable ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold">
-                          {filteredTimetable.day}
-                        </div>
-                        <span className="text-gray-600">{selectedDate?.toLocaleDateString()}</span>
+              {/* Upcoming Classes */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">⏰ Today's Classes</h2>
+                <div className="space-y-3">
+                  {filteredTimetable.slice(0, 3).map((item, index) => (
+                    <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold text-sm">
+                        {index + 1}
                       </div>
-                      {filteredTimetable.subjects.map((subj, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-4 rounded-xl border bg-gradient-to-r ${getSubjectColor(subj.subject)} text-white shadow-lg transform hover:scale-105 transition-all duration-200`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-bold text-lg">{subj.subject}</h3>
-                              <p className="text-white/90 text-sm">{subj.teacher}</p>
-                            </div>
-                            <span className="bg-white/20 px-3 py-1 rounded-lg text-sm font-medium backdrop-blur-sm">
-                              {subj.time}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-2xl">📚</span>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 text-sm">{item.subject_name}</div>
+                        <div className="text-xs text-gray-500">{item.start_time} - {item.end_time}</div>
                       </div>
-                      <p className="text-gray-600">No classes scheduled for today.</p>
+                    </div>
+                  ))}
+                  {filteredTimetable.length === 0 && (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      No classes today
                     </div>
                   )}
                 </div>
               </div>
-            )}
 
-            {/* Calendar Tab */}
-            {activeTab === "calendar" && (
-              <div className="bg-white rounded-2xl shadow-lg p-8 border border-blue-100">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Monthly Attendance Calendar</h2>
-                <div className="max-w-4xl mx-auto">
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-6 border border-blue-200">
-                    <Calendar
-                      onClickDay={handleDateClick}
-                      value={selectedDate}
-                      tileContent={tileContent}
-                      className="border-0 w-full custom-calendar text-lg"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Timetable Tab */}
-            {activeTab === "timetable" && (
-              <div className="bg-white rounded-2xl shadow-lg p-8 border border-blue-100">
-                <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Weekly Timetable</h2>
-                <div className="grid gap-6">
-                  {timetableData.map((daySchedule, index) => (
-                    <div key={daySchedule.day} className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border border-blue-200">
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                          <span className="text-white font-bold">{index + 1}</span>
-                        </div>
-                        {daySchedule.day}
-                      </h3>
-                      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {daySchedule.subjects.map((subject, idx) => (
-                          <div
-                            key={idx}
-                            className={`p-4 rounded-xl border bg-gradient-to-r ${getSubjectColor(subject.subject)} text-white shadow-lg transform hover:scale-105 transition-all duration-200`}
-                          >
-                            <div className="space-y-2">
-                              <h4 className="font-bold text-lg">{subject.subject}</h4>
-                              <p className="text-white/90 text-sm">{subject.teacher}</p>
-                              <div className="bg-white/20 px-2 py-1 rounded-lg text-sm font-medium backdrop-blur-sm text-center">
-                                {subject.time}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* History Tab */}
-            {activeTab === "history" && (
-              <div className="bg-white rounded-2xl shadow-lg p-8 border border-blue-100">
-                <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Attendance History</h2>
-                {attendanceData.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Marked By</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Remarks</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {attendanceData.map((attendance) => (
-                          <tr key={attendance.id} className="hover:bg-blue-50 transition-colors duration-150">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
-                                  <span className="text-blue-600 font-bold">📅</span>
-                                </div>
-                                <span className="font-medium text-gray-900">{attendance.date}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                                attendance.status === "Present"
-                                  ? "bg-green-100 text-green-800 border border-green-200"
-                                  : "bg-red-100 text-red-800 border border-red-200"
-                              }`}>
-                                {attendance.status === "Present" ? "✅ Present" : "❌ Absent"}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                              {attendance.marked_by_role}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-700">
-                              {attendance.remarks || (
-                                <span className="text-gray-400 italic">No remarks</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <span className="text-4xl">📊</span>
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">No Attendance Records</h3>
-                    <p className="text-gray-600">Your attendance records will appear here once marked.</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Custom Calendar Styles */}
       <style jsx>{`
-        .custom-calendar .react-calendar__tile--active {
+        .react-calendar-custom .react-calendar__tile--active {
           background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
           color: white !important;
-          border-radius: 12px;
         }
-        .custom-calendar .react-calendar__tile:enabled:hover,
-        .custom-calendar .react-calendar__tile:enabled:focus {
-          background: #e0e7ff !important;
-          border-radius: 12px;
+        .react-calendar-custom .react-calendar__tile--now {
+          background: #fbbf24 !important;
+          color: white !important;
         }
-        .custom-calendar .react-calendar__navigation button:enabled:hover,
-        .custom-calendar .react-calendar__navigation button:enabled:focus {
-          background: #e0e7ff !important;
-          border-radius: 12px;
+        .react-calendar-custom .react-calendar__navigation button {
+          color: #4b5563;
+          font-weight: 600;
+        }
+        .react-calendar-custom .react-calendar__tile {
+          border-radius: 8px;
+          margin: 2px;
         }
       `}</style>
-    </div>
     </DashboardLayout>
   );
 };
 
-export default StudentAttendancePage;
+export default Student_TImetable;

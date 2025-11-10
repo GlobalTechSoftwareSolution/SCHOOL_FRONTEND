@@ -1,11 +1,14 @@
+import DashboardLayout from '@/app/components/DashboardLayout'
 import React from 'react'
+import RaiseIssues from '@/app/components/raise_issues'
 
-const page = () => {
+const Principals_Issues = () => {
   return (
-    <div>
-      this is principal Issue
-    </div>
+    <DashboardLayout role ='principal'>
+     
+      <RaiseIssues />
+    </DashboardLayout>
   )
 }
 
-export default page
+export default Principals_Issues

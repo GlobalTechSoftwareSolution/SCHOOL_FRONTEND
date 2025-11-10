@@ -1,10 +1,12 @@
+import DashboardLayout from '@/app/components/DashboardLayout'
 import React from 'react'
+import All_reports from '@/app/components/all_reports'
 
 const page = () => {
   return (
-    <div>
-      this is management reports
-    </div>
+    <DashboardLayout role ='management'>
+      <All_reports />
+    </DashboardLayout>
   )
 }
 

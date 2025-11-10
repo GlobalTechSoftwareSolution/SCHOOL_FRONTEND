@@ -1,546 +1,443 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
-import { User, Mail, Phone, Calendar, MapPin, Save, Edit, Camera, Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useState } from "react";
+import { Loader2, Edit, Save, Camera, Phone, Calendar, MapPin, User, Mail, Globe, Heart, Shield, Home } from "lucide-react";
 import DashboardLayout from "@/app/components/DashboardLayout";
+import { motion } from "framer-motion";
 
-// Memoized InputField component with proper typing
-type InputFieldProps = {
-  label: string;
-  name: string;
-  value: string;
-  icon?: React.ElementType;
-  type?: string;
-  disabled?: boolean;
-  className?: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+type Student = {
+  email: string;
+  fullname: string;
+  student_id: string;
+  phone: string;
+  date_of_birth: string;
+  gender: string;
+  admission_date: string;
+  class_name: string;
+  section: string;
+  profile_picture: string;
+  residential_address: string | null;
+  emergency_contact_name: string;
+  emergency_contact_relationship: string;
+  emergency_contact_no: string;
+  nationality: string;
+  blood_group: string;
+  parent: string;
 };
 
-const InputField: React.FC<InputFieldProps> = React.memo(
-  ({
-    label,
-    name,
-    value,
-    icon: Icon,
-    type = "text",
-    disabled = false,
-    className = "",
-    onChange,
-  }) => {
-    return (
-      <div className={className}>
-        <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center space-x-2">
-          {Icon && <Icon className="w-4 h-4 text-blue-600" />}
-          <span>{label}</span>
-        </label>
-        {type === "select" ? (
-          <select
-            name={name}
-            value={value}
-            onChange={onChange}
-            disabled={disabled}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white disabled:bg-gray-100 disabled:text-gray-500"
-          >
-            <option value="">Select</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        ) : (
-          <input
-            type={type}
-            name={name}
-            value={value}
-            onChange={onChange}
-            disabled={disabled}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white disabled:bg-gray-100 disabled:text-gray-500"
-          />
-        )}
-      </div>
-    );
-  }
-);
-
-export default function Student_ProfilePage() {
-  const [formData, setFormData] = useState({
-    student_id: "",
-    fullname: "",
-    email: "",
-    phone: "",
-    class_name: "",
-    class_enrolled: "",
-    date_of_birth: "",
-    admission_date: "",
-    gender: "",
-    address: "",
-    profile_picture: "/default-avatar.png",
-    emergency_contact_name: "",
-    emergency_contact_relationship: "",
-    emergency_contact_no: "",
-    nationality: "",
-    blood_group: "",
-    parent: "",
-    residential_address: "",
-  });
+export default function Student_Profile() {
+  const [student, setStudent] = useState<Student | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
+  const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/students/";
+
+  // ✅ Fetch student details
   useEffect(() => {
-    const loadStudentData = async () => {
-      setIsLoading(true);
+    const fetchStudent = async () => {
       try {
-        const token = localStorage.getItem("authToken");
-        const email = localStorage.getItem("userEmail");
+        setLoading(true);
+        // Get email from multiple localStorage sources
+        const userInfo = localStorage.getItem("userInfo");
+        const userData = localStorage.getItem("userData");
         
-        if (!token && !email) {
-          if (typeof window !== "undefined") {
-            window.location.href = "/login";
-          }
+        let email = "";
+        if (userInfo) {
+          const parsed = JSON.parse(userInfo);
+          email = parsed.email;
+        } else if (userData) {
+          const parsed = JSON.parse(userData);
+          email = parsed.email;
+        }
+
+        if (!email) {
+          console.error("No email found in localStorage");
           return;
         }
-        
-        if (!email) return;
 
-        const apiUrl = `https://globaltechsoftwaresolutions.cloud/school-api/api/students/${email}/`;
-        const res = await fetch(apiUrl, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!res.ok) {
-          throw new Error("Failed to fetch student info");
-        }
+        const response = await fetch(`${API_URL}${email}/`);
+        if (!response.ok) throw new Error("Failed to fetch student");
 
-        const data = await res.json();
-
-        const processed = {
-          student_id: data.student_id ?? "",
-          fullname: data.fullname ?? "",
-          email: data.email ?? data.user_details?.email ?? "",
-          phone: data.phone ?? "",
-          class_name: data.class_name ?? "",
-          admission_date: data.admission_date ?? "",
-          date_of_birth: data.date_of_birth ?? "",
-          gender: data.gender ?? "",
-          profile_picture: data.profile_picture || "/default-avatar.png",
-          parent: data.parent_name && data.parent_name.trim() !== "" ? data.parent_name : data.parent ?? "",
-          address: data.residential_address ?? "",
-          nationality: data.nationality ?? "",
-          blood_group: data.blood_group ?? "",
-          emergency_contact_name: data.emergency_contact_name ?? "",
-          emergency_contact_no: data.emergency_contact_no ?? "",
-          emergency_contact_relationship: data.emergency_contact_relationship ?? "",
-          residential_address: data.residential_address ?? "",
-          class_enrolled: data.class_name ?? "",
-        };
-        setFormData(processed);
+        const data = await response.json();
+        setStudent(data);
       } catch (err) {
-        console.error("Error loading data:", err);
+        console.error("Fetch error:", err);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    loadStudentData();
+    fetchStudent();
   }, []);
 
-  // Simplified handleChange without useCallback to avoid stale closures
+  // ✅ Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (!student) return;
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setStudent({ ...student, [name]: value });
   };
 
+  // ✅ Handle profile picture upload
   const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
+    if (!student || !e.target.files?.length) return;
+
     const file = e.target.files[0];
-    const previewUrl = URL.createObjectURL(file);
     setUploadingImage(true);
-    
-    setFormData(prev => ({ ...prev, profile_picture: previewUrl }));
 
     try {
-      const formDataPatch = new FormData();
-      formDataPatch.append("profile_picture", file);
-      const email = localStorage.getItem("userEmail") || formData.email;
-      const apiUrl = `https://globaltechsoftwaresolutions.cloud/school-api/api/students/${email}/`;
-      
-      const response = await fetch(apiUrl, {
+      const formData = new FormData();
+      formData.append("profile_picture", file);
+
+      const res = await fetch(`${API_URL}${student.email}/`, {
         method: "PATCH",
-        body: formDataPatch,
+        body: formData,
       });
-      
-      if (!response.ok) {
-        throw new Error("Failed to upload profile picture");
-      }
-      
-      const updated = await response.json();
-      setFormData(prev => ({
-        ...prev,
-        profile_picture: updated.profile_picture || prev.profile_picture,
-      }));
+
+      if (!res.ok) throw new Error("Image upload failed");
+
+      const updated = await res.json();
+      setStudent((prev) => (prev ? { ...prev, profile_picture: updated.profile_picture } : null));
     } catch (err) {
-      console.error("Error uploading image:", err);
+      console.error(err);
     } finally {
       setUploadingImage(false);
     }
   };
 
+  // ✅ Save edits (PATCH request)
   const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("student_id", formData.student_id);
-      formDataToSend.append("fullname", formData.fullname);
-      formDataToSend.append("phone", formData.phone);
-      formDataToSend.append("address", formData.address);
-      formDataToSend.append("gender", formData.gender);
-      formDataToSend.append("date_of_birth", formData.date_of_birth);
-      formDataToSend.append("class_name", formData.class_name);
-      formDataToSend.append("class_enrolled", formData.class_enrolled);
-      formDataToSend.append("admission_date", formData.admission_date);
-      formDataToSend.append("emergency_contact_name", formData.emergency_contact_name);
-      formDataToSend.append("emergency_contact_relationship", formData.emergency_contact_relationship);
-      formDataToSend.append("emergency_contact_no", formData.emergency_contact_no);
-      formDataToSend.append("nationality", formData.nationality);
-      formDataToSend.append("blood_group", formData.blood_group);
-      formDataToSend.append("parent", formData.parent);
-      formDataToSend.append("residential_address", formData.residential_address);
+    if (!student) return;
+    setSaving(true);
 
-      const email = localStorage.getItem("userEmail") || formData.email;
-      const apiUrl = `https://globaltechsoftwaresolutions.cloud/school-api/api/students/${email}/`;
-      
-      const res = await fetch(apiUrl, {
+    try {
+      const res = await fetch(`${API_URL}${student.email}/`, {
         method: "PATCH",
-        body: formDataToSend,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(student),
       });
-      
-      if (!res.ok) {
-        throw new Error("Failed to update student data");
-      }
-      
+
+      if (!res.ok) throw new Error("Failed to update student");
+
       const updated = await res.json();
-      setFormData(prev => ({
-        ...prev,
-        ...updated,
-      }));
+      setStudent(updated);
       setIsEditing(false);
+      
+      // Show success popup
+      setShowSuccessPopup(true);
+      
+      // Auto hide after 3 seconds
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+      }, 3000);
+      
     } catch (err) {
-      console.error("Error saving data:", err);
+      console.error("Save error:", err);
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  if (isLoading) {
+  // ✅ Cancel editing
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  if (loading) {
     return (
       <DashboardLayout role="students">
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex justify-center items-center">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="text-gray-600 text-lg">Loading student profile...</p>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+          <div className="text-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+            </motion.div>
+            <p className="text-gray-600 text-lg">Loading your profile...</p>
           </div>
         </div>
       </DashboardLayout>
     );
   }
 
+  if (!student) {
+    return (
+      <DashboardLayout role="students">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Profile Not Found</h3>
+            <p className="text-gray-600">Unable to load student profile. Please try again.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="students">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-        <div className="max-w-6xl mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Header */}
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
             className="text-center mb-8"
           >
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent mb-2">
-              Student Profile
-            </h1>
-            <p className="text-gray-600 text-lg">Manage your personal information and preferences</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Student Profile</h1>
+            <p className="text-gray-600">Manage your personal and academic information</p>
           </motion.div>
 
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            {/* Header Section */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-8 py-6 text-white">
-              <div className="flex justify-between items-center flex-wrap gap-4">
-                <div>
-                  <h2 className="text-2xl font-bold">{formData.fullname}</h2>
-                  <p className="text-blue-100">{formData.student_id} • {formData.class_name}</p>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="bg-white text-blue-600 px-6 py-3 rounded-xl hover:bg-blue-50 transition-all duration-200 font-semibold flex items-center space-x-2 shadow-lg"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span>{isEditing ? "Cancel Editing" : "Edit Profile"}</span>
-                </motion.button>
-              </div>
-            </div>
-
-            <div className="p-8 space-y-8">
-              {/* Profile Picture Section */}
-              <div className="flex flex-col items-center">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="relative group"
-                >
-                  <div className="relative">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            {/* Profile Card */}
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-1"
+            >
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center">
+                {/* Profile Image */}
+                <div className="relative inline-block mb-4">
+                  <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 p-1.5">
                     <img
-                      src={formData.profile_picture}
+                      src={student.profile_picture || "/default-avatar.png"}
                       alt="Profile"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl"
+                      className="w-full h-full rounded-2xl object-cover border-4 border-white shadow-lg"
                     />
-                    {uploadingImage && (
-                      <div className="absolute inset-0 bg-blue-600 bg-opacity-50 rounded-full flex items-center justify-center">
-                        <Loader2 className="w-8 h-8 text-white animate-spin" />
-                      </div>
-                    )}
                   </div>
-                  
-                  {isEditing && (
-                    <label className="absolute bottom-2 right-2 bg-blue-600 text-white p-3 rounded-full shadow-lg cursor-pointer transition-all duration-200 hover:bg-blue-700 hover:scale-110">
-                      <Camera className="w-5 h-5" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfilePictureChange}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                    </label>
+                  {uploadingImage && (
+                    <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    </div>
                   )}
-                </motion.div>
-                <div className="text-center mt-4">
-                  <h3 className="text-xl font-semibold text-gray-800">{formData.fullname}</h3>
-                  <p className="text-gray-600">{formData.email}</p>
-                </div>
-              </div>
-
-              {/* Personal Information Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Personal Information</h3>
-                  
-                  <InputField
-                    label="Student ID"
-                    name="student_id"
-                    value={formData.student_id}
-                    icon={User}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Full Name"
-                    name="fullname"
-                    value={formData.fullname}
-                    icon={User}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Email"
-                    name="email"
-                    value={formData.email}
-                    icon={Mail}
-                    disabled={true}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Phone"
-                    name="phone"
-                    value={formData.phone}
-                    icon={Phone}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Date of Birth"
-                    name="date_of_birth"
-                    value={formData.date_of_birth}
-                    icon={Calendar}
-                    type="date"
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Gender"
-                    name="gender"
-                    value={formData.gender}
-                    type="select"
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Academic Information</h3>
-                  
-                  <InputField
-                    label="Class Name"
-                    name="class_name"
-                    value={formData.class_name}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Class Enrolled"
-                    name="class_enrolled"
-                    value={formData.class_enrolled}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Admission Date"
-                    name="admission_date"
-                    value={formData.admission_date}
-                    icon={Calendar}
-                    type="date"
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Nationality"
-                    name="nationality"
-                    value={formData.nationality}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Blood Group"
-                    name="blood_group"
-                    value={formData.blood_group}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-
-              {/* Address Information */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Address Information</h3>
-                
-                <InputField
-                  label="Address"
-                  name="address"
-                  value={formData.address}
-                  icon={MapPin}
-                  disabled={!isEditing}
-                  onChange={handleChange}
-                />
-                
-                <InputField
-                  label="Residential Address"
-                  name="residential_address"
-                  value={formData.residential_address}
-                  disabled={!isEditing}
-                  onChange={handleChange}
-                />
-              </div>
-
-              {/* Emergency Contact */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Emergency Contact</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <InputField
-                    label="Contact Name"
-                    name="emergency_contact_name"
-                    value={formData.emergency_contact_name}
-                    icon={User}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Relationship"
-                    name="emergency_contact_relationship"
-                    value={formData.emergency_contact_relationship}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                  
-                  <InputField
-                    label="Contact Number"
-                    name="emergency_contact_no"
-                    value={formData.emergency_contact_no}
-                    icon={Phone}
-                    disabled={!isEditing}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-
-              {/* Parent Information */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Parent Information</h3>
-                
-                <InputField
-                  label="Parent/Guardian"
-                  name="parent"
-                  value={formData.parent}
-                  icon={User}
-                  disabled={!isEditing}
-                  onChange={handleChange}
-                />
-              </div>
-
-              {/* Save Button */}
-              <AnimatePresence>
-                {isEditing && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="flex justify-end space-x-4 border-t border-gray-200 pt-6 flex-wrap gap-4"
-                  >
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
+                  {isEditing && (
+                    <motion.label 
+                      whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setIsEditing(false)}
-                      className="px-8 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-semibold"
+                      className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-full cursor-pointer shadow-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <input type="file" accept="image/*" className="hidden" onChange={handleProfilePictureChange} />
+                    </motion.label>
+                  )}
+                </div>
+                
+                <h2 className="text-xl font-semibold text-gray-900 mb-1">{student.fullname}</h2>
+                <p className="text-gray-500 text-sm mb-4">ID: {student.student_id}</p>
+                
+                {/* Academic Badge */}
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl p-3 mb-4">
+                  <div className="text-sm font-medium">{student.class_name}</div>
+                  <div className="text-xs opacity-90">Section {student.section}</div>
+                </div>
+
+                {/* Edit Toggle Button */}
+                {!isEditing ? (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setIsEditing(true)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit Profile
+                  </motion.button>
+                ) : (
+                  <div className="space-y-2">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      {saving ? "Saving..." : "Save Changes"}
+                    </motion.button>
+                    <button
+                      onClick={handleCancel}
+                      className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 rounded-xl font-medium transition-colors"
                     >
                       Cancel
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl hover:from-blue-700 hover:to-indigo-800 transition-all duration-200 font-semibold flex items-center space-x-2 disabled:opacity-50"
-                    >
-                      {isSaving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                      <span>{isSaving ? "Saving..." : "Save Changes"}</span>
-                    </motion.button>
-                  </motion.div>
+                    </button>
+                  </div>
                 )}
-              </AnimatePresence>
-            </div>
+              </div>
+            </motion.div>
+
+            {/* Profile Details */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-3"
+            >
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                
+                {/* Section 1: Personal Information */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <User className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900">Personal Information</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <EnhancedInputField label="Full Name" name="fullname" value={student.fullname} disabled={!isEditing} onChange={handleChange} />
+                    <EnhancedInputField label="Email" name="email" icon={Mail} value={student.email} disabled onChange={handleChange} />
+                    <EnhancedInputField label="Phone" name="phone" icon={Phone} value={student.phone} disabled={!isEditing} onChange={handleChange} />
+                    <EnhancedInputField label="Date of Birth" name="date_of_birth" type="date" value={student.date_of_birth} disabled={!isEditing} onChange={handleChange} />
+                    <EnhancedInputField label="Gender" name="gender" value={student.gender} disabled={!isEditing} onChange={handleChange} />
+                    <EnhancedInputField label="Nationality" name="nationality" icon={Globe} value={student.nationality} disabled={!isEditing} onChange={handleChange} />
+                  </div>
+                </div>
+
+                {/* Section 2: Academic Information */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Shield className="w-4 h-4 text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900">Academic Information</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <EnhancedInputField label="Student ID" name="student_id" value={student.student_id} disabled onChange={handleChange} />
+                    <EnhancedInputField label="Class" name="class_name" value={student.class_name} disabled onChange={handleChange} />
+                    <EnhancedInputField label="Section" name="section" value={student.section} disabled onChange={handleChange} />
+                    <EnhancedInputField label="Admission Date" name="admission_date" type="date" value={student.admission_date} disabled onChange={handleChange} />
+                  </div>
+                </div>
+
+                {/* Section 3: Additional Details */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Heart className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900">Additional Details</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <EnhancedInputField label="Blood Group" name="blood_group" value={student.blood_group} disabled={!isEditing} onChange={handleChange} />
+                    <EnhancedInputField label="Parent/Guardian" name="parent" value={student.parent} disabled={!isEditing} onChange={handleChange} />
+                  </div>
+                </div>
+
+                {/* Section 4: Address & Emergency Contact */}
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <Home className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900">Address & Emergency Contact</h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <EnhancedInputField label="Residential Address" name="residential_address" icon={MapPin} value={student.residential_address || ""} disabled={!isEditing} onChange={handleChange} fullWidth />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <EnhancedInputField label="Emergency Contact Name" name="emergency_contact_name" value={student.emergency_contact_name} disabled={!isEditing} onChange={handleChange} />
+                      <EnhancedInputField label="Relationship" name="emergency_contact_relationship" value={student.emergency_contact_relationship} disabled={!isEditing} onChange={handleChange} />
+                      <EnhancedInputField label="Contact Number" name="emergency_contact_no" value={student.emergency_contact_no} disabled={!isEditing} onChange={handleChange} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
+
+        {/* Success Popup */}
+        {showSuccessPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center"
+            >
+              {/* Success Icon */}
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+
+              {/* Success Message */}
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Profile Updated Successfully!
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Your changes have been saved successfully.
+              </p>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowSuccessPopup(false)}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              >
+                Got it!
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
       </div>
     </DashboardLayout>
   );
 }
+
+type EnhancedInputProps = {
+  label: string;
+  name: string;
+  icon?: React.ElementType;
+  value: string;
+  type?: string;
+  disabled?: boolean;
+  fullWidth?: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+};
+
+const EnhancedInputField: React.FC<EnhancedInputProps> = ({ 
+  label, 
+  name, 
+  icon: Icon, 
+  value, 
+  type = "text", 
+  disabled = false, 
+  fullWidth = false,
+  onChange 
+}) => (
+  <motion.div 
+    whileHover={{ scale: 1.01 }}
+    className={`${fullWidth ? 'col-span-full' : ''}`}
+  >
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      {label}
+    </label>
+    <div className="relative">
+      {Icon && (
+        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+          <Icon className="w-4 h-4" />
+        </div>
+      )}
+      <input
+        type={type}
+        name={name}
+        value={value || ""}
+        disabled={disabled}
+        onChange={onChange}
+        className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
+          disabled 
+            ? "bg-gray-50 text-gray-500 cursor-not-allowed" 
+            : "bg-white text-gray-900 hover:border-gray-400"
+        } ${Icon ? 'pl-10' : ''}`}
+      />
+    </div>
+  </motion.div>
+);

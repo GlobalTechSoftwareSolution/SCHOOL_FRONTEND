@@ -1,10 +1,12 @@
+import DashboardLayout from '@/app/components/DashboardLayout'
 import React from 'react'
+import All_reports from '@/app/components/all_reports'
 
 const page = () => {
   return (
-    <div>
-      tis is proncipal reports
-    </div>
+    <DashboardLayout role ='principal'>
+      <All_reports />
+    </DashboardLayout>
   )
 }
 

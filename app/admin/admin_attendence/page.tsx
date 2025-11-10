@@ -45,29 +45,46 @@ const Attendence_Page = () => {
         return;
       }
 
-      const response = await fetch(
-        "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      let response;
+      try {
+        response = await fetch(
+          "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      } catch (fetchError) {
+        console.error(" Network Error:", fetchError);
+        setError("Network error. Please check your connection and try again.");
+        return;
+      }
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error("❌ API Fetch Error:", response.status, errText);
+        
+        // Handle specific database schema error silently
+        if (response.status === 500 && errText.includes("column school_attendance.sec does not exist")) {
+          console.warn(" Database schema issue detected - attendance feature temporarily unavailable");
+          setAttendance([]);
+          setError("Attendance system is temporarily unavailable due to database maintenance. The backend team has been notified to fix the table structure.");
+          return;
+        }
+        
+        // Handle other errors
+        console.error(" API Fetch Error:", response.status, errText);
         throw new Error(`Failed to fetch attendance: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log("✅ Attendance fetched successfully:", data.length, "records");
+      console.log(" Attendance fetched successfully:", data.length, "records");
       setAttendance(data);
       setError("");
     } catch (err) {
-      console.error("🚨 Attendance Fetch Error:", err);
+      console.error(" Attendance Fetch Error:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch attendance records");
     } finally {
       setLoading(false);
@@ -126,31 +143,57 @@ const Attendence_Page = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <DashboardLayout role="admin">
+        <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
+      </DashboardLayout>
     );
   }
 
   if (error) {
+    const isDatabaseError = error.includes("Database schema issue");
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <div className="flex items-center gap-3 text-red-800">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <h3 className="font-semibold">Error Loading Attendance</h3>
-            <p className="text-sm mt-1">{error}</p>
-            <button
-              onClick={fetchAttendance}
-              className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-            >
-              Retry
-            </button>
+      <DashboardLayout role="admin">
+        <div className={`${isDatabaseError ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'} border rounded-lg p-6`}>
+          <div className={`flex items-center gap-3 ${isDatabaseError ? 'text-yellow-800' : 'text-red-800'}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isDatabaseError ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              )}
+            </svg>
+            <div className="flex-1">
+              <h3 className="font-semibold">
+                {isDatabaseError ? "Attendance System Maintenance" : "Error Loading Attendance"}
+              </h3>
+              <p className="text-sm mt-1">{error}</p>
+              {isDatabaseError && (
+                <p className="text-xs mt-2 text-yellow-600">
+                  This is a backend database issue. The system administrator needs to fix the attendance table structure.
+                </p>
+              )}
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={fetchAttendance}
+                  className={`px-4 py-2 ${isDatabaseError ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-red-600 hover:bg-red-700'} text-white rounded-lg transition`}
+                >
+                  Retry
+                </button>
+                {isDatabaseError && (
+                  <button
+                    onClick={() => setError("")}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+                  >
+                    Dismiss
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 

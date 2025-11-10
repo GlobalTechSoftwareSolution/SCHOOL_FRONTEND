@@ -1,499 +1,523 @@
 "use client";
-import DashboardLayout from '@/app/components/DashboardLayout'
-import React, { useState } from 'react'
+
+import DashboardLayout from "@/app/components/DashboardLayout";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 interface Task {
   id: number;
   title: string;
   description: string;
-  subject: string;
-  priority: string;
   status: string;
-  dueDate: string;
-  createdDate: string;
-  estimatedHours: number;
-  completedHours: number;
-  tags: string[];
-  reminders: string[];
-  attachments: string[];
+  priority: string;
+  due_date: string;
+  created_at: string;
+  updated_at: string;
+  assigned_to_email: string;
+  created_by_email: string;
 }
 
 const StudentTasks = () => {
-  const [activeTab, setActiveTab] = useState('all');
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Mock data for tasks
-  const taskData = {
-    studentInfo: {
-      name: 'John Doe',
-      studentId: 'STU2024001',
-      department: 'Computer Science'
-    },
-    tasks: [
-      {
-        id: 1,
-        title: 'Complete Data Structures Assignment',
-        description: 'Finish the binary tree implementation and write documentation. Submit before deadline.',
-        subject: 'Data Structures',
-        priority: 'high',
-        status: 'pending',
-        dueDate: '2024-02-15',
-        createdDate: '2024-02-10',
-        estimatedHours: 8,
-        completedHours: 0,
-        tags: ['assignment', 'coding', 'documentation'],
-        reminders: ['2024-02-14'],
-        attachments: ['assignment_requirements.pdf']
-      },
-      {
-        id: 2,
-        title: 'Prepare for Database Quiz',
-        description: 'Study chapters 4-6 for the upcoming quiz on SQL and normalization.',
-        subject: 'Database Systems',
-        priority: 'medium',
-        status: 'in-progress',
-        dueDate: '2024-02-12',
-        createdDate: '2024-02-08',
-        estimatedHours: 4,
-        completedHours: 2,
-        tags: ['quiz', 'study', 'sql'],
-        reminders: ['2024-02-11'],
-        attachments: []
-      },
-      {
-        id: 3,
-        title: 'Web Development Project Research',
-        description: 'Research modern web frameworks and prepare a comparison report.',
-        subject: 'Web Technologies',
-        priority: 'medium',
-        status: 'completed',
-        dueDate: '2024-02-08',
-        createdDate: '2024-02-01',
-        estimatedHours: 6,
-        completedHours: 6,
-        tags: ['research', 'project', 'frameworks'],
-        reminders: [],
-        attachments: ['research_guidelines.pdf']
-      },
-      {
-        id: 4,
-        title: 'Machine Learning Paper Review',
-        description: 'Read and summarize the research paper on neural networks.',
-        subject: 'Machine Learning',
-        priority: 'low',
-        status: 'pending',
-        dueDate: '2024-02-20',
-        createdDate: '2024-02-15',
-        estimatedHours: 3,
-        completedHours: 0,
-        tags: ['reading', 'paper', 'neural-networks'],
-        reminders: ['2024-02-18'],
-        attachments: ['research_paper.pdf']
-      },
-      {
-        id: 5,
-        title: 'Operating Systems Lab Report',
-        description: 'Complete lab experiment 3 and write detailed report with observations.',
-        subject: 'Operating Systems',
-        priority: 'high',
-        status: 'in-progress',
-        dueDate: '2024-02-14',
-        createdDate: '2024-02-09',
-        estimatedHours: 5,
-        completedHours: 3,
-        tags: ['lab', 'report', 'experiment'],
-        reminders: ['2024-02-13'],
-        attachments: ['lab_manual.pdf']
-      },
-      {
-        id: 6,
-        title: 'Group Project Meeting Preparation',
-        description: 'Prepare slides and agenda for the weekly group project meeting.',
-        subject: 'Software Engineering',
-        priority: 'medium',
-        status: 'completed',
-        dueDate: '2024-02-09',
-        createdDate: '2024-02-07',
-        estimatedHours: 2,
-        completedHours: 2,
-        tags: ['meeting', 'group-work', 'presentation'],
-        reminders: [],
-        attachments: ['meeting_notes.docx']
+  const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api/tasks/";
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const storedUser = localStorage.getItem("userInfo");
+        const accessToken = localStorage.getItem("accessToken");
+
+        if (!storedUser || !accessToken) {
+          setError("User not logged in.");
+          setLoading(false);
+          return;
+        }
+
+        const user = JSON.parse(storedUser);
+        const email = user?.email;
+
+        if (!email) {
+          setError("Email not found in user data.");
+          setLoading(false);
+          return;
+        }
+
+        // Fetch tasks for the student
+        const response = await axios.get(`${API_BASE}1/`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        const data = response.data;
+        setTasks(Array.isArray(data) ? data : [data]);
+      } catch (err: any) {
+        console.error("Error fetching tasks:", err);
+        setError("Failed to load tasks. Please try again.");
+      } finally {
+        setLoading(false);
       }
-    ]
-  };
+    };
 
-  const filteredTasks = taskData.tasks.filter(task => {
-    if (activeTab === 'all') return true;
-    return task.status === activeTab;
-  });
+    fetchTasks();
+  }, []);
 
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'text-red-600 bg-red-100 border-red-200';
-      case 'medium': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
-      case 'low': return 'text-green-600 bg-green-100 border-green-200';
-      default: return 'text-gray-600 bg-gray-100 border-gray-200';
+    switch (priority.toLowerCase()) {
+      case "high":
+        return "text-red-700 bg-red-50 border border-red-200";
+      case "medium":
+        return "text-amber-700 bg-amber-50 border border-amber-200";
+      case "low":
+        return "text-green-700 bg-green-50 border border-green-200";
+      default:
+        return "text-gray-700 bg-gray-50 border border-gray-200";
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'text-orange-600 bg-orange-100';
-      case 'in-progress': return 'text-blue-600 bg-blue-100';
-      case 'completed': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
+    switch (status.toLowerCase()) {
+      case "todo":
+        return "text-orange-700 bg-orange-50 border border-orange-200";
+      case "completed":
+        return "text-green-700 bg-green-50 border border-green-200";
+      default:
+        return "text-gray-700 bg-gray-50 border border-gray-200";
     }
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return '⏳';
-      case 'in-progress': return '🔄';
-      case 'completed': return '✅';
-      default: return '📄';
+    switch (status.toLowerCase()) {
+      case "todo":
+        return "⏳";
+      case "completed":
+        return "✅";
+      default:
+        return "📄";
     }
   };
 
   const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'high': return '🔴';
-      case 'medium': return '🟡';
-      case 'low': return '🟢';
-      default: return '⚪';
+    switch (priority.toLowerCase()) {
+      case "high":
+        return "🔥";
+      case "medium":
+        return "⚡";
+      case "low":
+        return "💤";
+      default:
+        return "📌";
     }
-  };
-
-  const calculateProgress = (task: Task) => {
-    if (task.status === 'completed') return 100;
-    return (task.completedHours / task.estimatedHours) * 100;
   };
 
   const calculateDaysLeft = (dueDate: string) => {
     const today = new Date();
     const due = new Date(dueDate);
     const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const getDaysLeftColor = (days: number) => {
-    if (days <= 0) return 'text-red-600 bg-red-100';
-    if (days <= 2) return 'text-orange-600 bg-orange-100';
-    if (days <= 5) return 'text-yellow-600 bg-yellow-100';
-    return 'text-green-600 bg-green-100';
+    if (days < 0) return "text-red-700 bg-red-50 border border-red-200";
+    if (days === 0) return "text-orange-700 bg-orange-50 border border-orange-200";
+    if (days <= 2) return "text-amber-700 bg-amber-50 border border-amber-200";
+    if (days <= 5) return "text-yellow-700 bg-yellow-50 border border-yellow-200";
+    return "text-green-700 bg-green-50 border border-green-200";
   };
 
-  const getSubjectColor = (subject: string) => {
-    const colors: Record<string, string> = {
-      'Data Structures': 'bg-blue-100 text-blue-800',
-      'Database Systems': 'bg-green-100 text-green-800',
-      'Web Technologies': 'bg-purple-100 text-purple-800',
-      'Machine Learning': 'bg-red-100 text-red-800',
-      'Operating Systems': 'bg-orange-100 text-orange-800',
-      'Software Engineering': 'bg-indigo-100 text-indigo-800'
-    };
-    return colors[subject] || 'bg-gray-100 text-gray-800';
+  const getDaysLeftText = (days: number) => {
+    if (days < 0) return `${Math.abs(days)} days overdue`;
+    if (days === 0) return "Due today";
+    if (days === 1) return "1 day left";
+    return `${days} days left`;
   };
 
-  // Statistics
-  const stats = {
-    total: taskData.tasks.length,
-    pending: taskData.tasks.filter(t => t.status === 'pending').length,
-    inProgress: taskData.tasks.filter(t => t.status === 'in-progress').length,
-    completed: taskData.tasks.filter(t => t.status === 'completed').length,
-    overdue: taskData.tasks.filter(t => calculateDaysLeft(t.dueDate) < 0 && t.status !== 'completed').length
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setIsModalOpen(true);
   };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const filteredTasks = tasks.filter((task) => {
+    if (activeTab === "all") return true;
+    return task.status.toLowerCase() === activeTab;
+  });
+
+  const getProgressStats = () => {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status.toLowerCase() === 'completed').length;
+    const todo = tasks.filter(t => t.status.toLowerCase() === 'todo').length;
+    
+    return { total, completed, todo };
+  };
+
+  const stats = getProgressStats();
+
+  if (loading) {
+    return (
+      <DashboardLayout role="students">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="text-lg font-medium text-gray-700">Loading your tasks...</div>
+            <p className="text-gray-500 mt-2">Getting everything ready for you</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="students">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <div className="text-red-600 font-semibold text-lg mb-2">Oops! Something went wrong</div>
+            <div className="text-gray-600">{error}</div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <DashboardLayout role='students'>
-      <div className="min-h-screen bg-gray-50 py-6">
+    <DashboardLayout role="students">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          {/* Header Section */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Task Manager</h1>
-            <p className="text-gray-600 mt-2">Organize and track your academic tasks and assignments</p>
+          {/* Enhanced Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              🎯 Student Task Manager
+            </h1>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              Stay organized and track your academic tasks efficiently
+            </p>
           </div>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-gray-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Tasks</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                  <span className="text-xl">📊</span>
                 </div>
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                  <span className="text-gray-600 text-xl">📋</span>
+                <div>
+                  <div className="text-sm text-gray-500 font-medium">Total Tasks</div>
+                  <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
                 </div>
               </div>
             </div>
-
-            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-orange-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+            
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                  <span className="text-xl">✅</span>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <span className="text-orange-600 text-xl">⏳</span>
+                <div>
+                  <div className="text-sm text-gray-500 font-medium">Completed</div>
+                  <div className="text-2xl font-bold text-gray-900">{stats.completed}</div>
                 </div>
               </div>
             </div>
+            
 
-            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-blue-500">
-              <div className="flex items-center justify-between">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mr-4">
+                  <span className="text-xl">⏳</span>
+                </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">In Progress</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.inProgress}</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 text-xl">🔄</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-green-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-green-600 text-xl">✅</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-red-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Overdue</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.overdue}</p>
-                </div>
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <span className="text-red-600 text-xl">⚠️</span>
+                  <div className="text-sm text-gray-500 font-medium">To Do</div>
+                  <div className="text-2xl font-bold text-gray-900">{stats.todo}</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Action Bar */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Your Tasks</h3>
-                <p className="text-gray-600 text-sm">Manage your academic workload efficiently</p>
-              </div>
-              <div className="flex gap-3">
-                <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-xl transition-colors duration-200 flex items-center gap-2">
-                  <span>📥</span>
-                  Export Tasks
-                </button>
-                <button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-colors duration-200 flex items-center gap-2"
-                >
-                  <span>+</span>
-                  Create New Task
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          {/* Enhanced Tabs */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/50">
             <div className="flex flex-wrap gap-2">
-              {['all', 'pending', 'in-progress', 'completed'].map((tab) => (
+              {["all", "todo", "completed"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                  className={`px-6 py-3 text-sm font-medium rounded-xl transition-all flex items-center gap-2 ${
                     activeTab === tab
-                      ? 'bg-blue-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                      : "text-gray-600 bg-gray-100 hover:bg-gray-200"
                   }`}
                 >
-                  {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                  <span className="ml-2 bg-white bg-opacity-20 px-2 py-1 rounded-full text-xs">
-                    {tab === 'all' && stats.total}
-                    {tab === 'pending' && stats.pending}
-                    {tab === 'in-progress' && stats.inProgress}
-                    {tab === 'completed' && stats.completed}
+                  <span>{getStatusIcon(tab === 'all' ? 'all' : tab)}</span>
+                  {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
+                  <span className="px-2 py-1 text-xs bg-white/20 rounded-full">
+                    {tab === "all" 
+                      ? tasks.length 
+                      : tasks.filter(t => t.status.toLowerCase() === tab).length
+                    }
                   </span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Tasks Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Enhanced Tasks Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredTasks.length > 0 ? (
-              filteredTasks.map((task) => (
-                <div 
-                  key={task.id} 
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-200"
-                >
-                  <div className="p-6">
-                    {/* Header */}
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(task.priority)} flex items-center gap-1`}>
+              filteredTasks.map((task) => {
+                const daysLeft = calculateDaysLeft(task.due_date);
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => handleTaskClick(task)}
+                    className="group cursor-pointer transform transition-all duration-300 hover:scale-105"
+                  >
+                    <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-lg border border-white/50 hover:shadow-2xl transition-all duration-300 h-full flex flex-col">
+                      {/* Header with Priority and Days Left */}
+                      <div className="flex justify-between items-start mb-4">
+                        <span
+                          className={`px-3 py-1 text-xs font-semibold rounded-full flex items-center gap-1 ${getPriorityColor(
+                            task.priority
+                          )}`}
+                        >
                           {getPriorityIcon(task.priority)} {task.priority}
                         </span>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(task.status)} flex items-center gap-1`}>
-                          {getStatusIcon(task.status)} {task.status}
+                        <span
+                          className={`px-3 py-1 text-xs font-semibold rounded-full ${getDaysLeftColor(
+                            daysLeft
+                          )}`}
+                        >
+                          {getDaysLeftText(daysLeft)}
                         </span>
                       </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getDaysLeftColor(calculateDaysLeft(task.dueDate))}`}>
-                        {calculateDaysLeft(task.dueDate) > 0 ? `${calculateDaysLeft(task.dueDate)}d left` : 'Overdue'}
-                      </span>
-                    </div>
 
-                    {/* Title and Description */}
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
-                      {task.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                      {task.description}
-                    </p>
+                      {/* Task Title */}
+                      <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors line-clamp-2">
+                        {task.title}
+                      </h3>
 
-                    {/* Subject */}
-                    <div className="mb-4">
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getSubjectColor(task.subject)}`}>
-                        {task.subject}
-                      </span>
-                    </div>
+                      {/* Task Description */}
+                      <p className="text-gray-600 text-sm mb-4 flex-1 line-clamp-3 leading-relaxed">
+                        {task.description}
+                      </p>
 
-                    {/* Progress Bar */}
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs text-gray-600 mb-2">
-                        <span>Progress</span>
-                        <span>{task.completedHours}h / {task.estimatedHours}h</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            task.status === 'completed' ? 'bg-green-500' : 
-                            task.status === 'in-progress' ? 'bg-blue-500' : 'bg-orange-500'
-                          } transition-all duration-500`}
-                          style={{ width: `${calculateProgress(task)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {task.tags.map((tag, index) => (
-                        <span key={index} className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded-full">
-                          #{tag}
+                      {/* Status and Due Date */}
+                      <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-100">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${getStatusColor(
+                            task.status
+                          )}`}
+                        >
+                          {getStatusIcon(task.status)} {task.status.replace('-', ' ')}
                         </span>
-                      ))}
-                    </div>
-
-                    {/* Dates */}
-                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-4">
-                      <div>
-                        <span className="font-medium">Created:</span>
-                        <div>{new Date(task.createdDate).toISOString().split('T')[0]}</div>
+                        <span className="text-xs text-gray-500 font-medium">
+                          Due: {new Date(task.due_date).toLocaleDateString()}
+                        </span>
                       </div>
-                      <div>
-                        <span className="font-medium">Due:</span>
-                        <div>{new Date(task.dueDate).toISOString().split('T')[0]}</div>
-                      </div>
-                    </div>
 
-                    {/* Attachments */}
-                    {task.attachments.length > 0 && (
-                      <div className="mb-4">
-                        <div className="flex items-center gap-1 text-xs text-gray-600 mb-1">
-                          <span>📎</span>
-                          <span>Attachments ({task.attachments.length})</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {task.attachments.map((file, index) => (
-                            <span key={index} className="px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-lg">
-                              {file}
-                            </span>
-                          ))}
+                      {/* Assigned By */}
+                      <div className="mt-3 text-xs text-gray-500 border-t border-gray-100 pt-3">
+                        <div className="flex items-center justify-between">
+                          <span>Assigned by:</span>
+                          <span className="font-medium text-gray-700">{task.created_by_email}</span>
                         </div>
                       </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-4 border-t border-gray-200">
-                      {task.status === 'pending' && (
-                        <button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
-                          Start Task
-                        </button>
-                      )}
-                      {task.status === 'in-progress' && (
-                        <button className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
-                          Mark Complete
-                        </button>
-                      )}
-                      {task.status === 'completed' && (
-                        <button className="flex-1 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors">
-                          Reopen
-                        </button>
-                      )}
-                      <button className="px-3 py-2 text-gray-600 hover:text-gray-800 transition-colors">
-                        ⋮
-                      </button>
+                      {/* Hover Indicator */}
+                      <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <span className="text-blue-600 font-medium text-sm">View Details →</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="col-span-full bg-white rounded-2xl shadow-lg p-12 text-center">
+              <div className="col-span-full bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg p-12 text-center border border-white/50">
                 <div className="text-6xl mb-4">📝</div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">No tasks found</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  No tasks found
+                </h3>
                 <p className="text-gray-600 mb-6">
-                  {activeTab === 'all' 
-                    ? "You don't have any tasks yet. Create your first task to get started!" 
-                    : `No ${activeTab} tasks found.`
-                  }
+                  {activeTab === "all"
+                    ? "You don't have any tasks assigned yet."
+                    : `No ${activeTab.replace('-', ' ')} tasks found.`}
                 </p>
-                <button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-colors duration-200"
-                >
-                  Create Your First Task
-                </button>
+                <div className="text-sm text-gray-500">
+                  Tasks assigned by your teachers will appear here
+                </div>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Quick Stats Footer */}
-          <div className="mt-8 bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Productivity Overview</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600 mb-1">
-                  {Math.round((stats.completed / stats.total) * 100)}%
+        {/* Task Detail Modal */}
+        {isModalOpen && selectedTask && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+            <div 
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-3xl p-6 text-white">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold mb-2">{selectedTask.title}</h2>
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`px-3 py-1 text-sm font-semibold rounded-full bg-white/20 flex items-center gap-1`}>
+                        {getPriorityIcon(selectedTask.priority)} {selectedTask.priority}
+                      </span>
+                      <span className={`px-3 py-1 text-sm font-semibold rounded-full bg-white/20 flex items-center gap-1`}>
+                        {getStatusIcon(selectedTask.status)} {selectedTask.status.replace('-', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={closeModal}
+                    className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors ml-4"
+                  >
+                    ✕
+                  </button>
                 </div>
-                <p className="text-gray-600 text-sm">Completion Rate</p>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600 mb-1">
-                  {taskData.tasks.reduce((total, task) => total + task.completedHours, 0)}h
+
+              <div className="p-6">
+                {/* Task Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <div className="text-sm text-gray-600 mb-1">Due Date</div>
+                    <div className="font-semibold text-gray-900">
+                      {new Date(selectedTask.due_date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </div>
+                    <div className={`text-sm font-medium mt-2 ${getDaysLeftColor(calculateDaysLeft(selectedTask.due_date))} px-2 py-1 rounded-full inline-block`}>
+                      {getDaysLeftText(calculateDaysLeft(selectedTask.due_date))}
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <div className="text-sm text-gray-600 mb-1">Assigned By</div>
+                    <div className="font-semibold text-gray-900">{selectedTask.created_by_email}</div>
+                    <div className="text-sm text-gray-500 mt-2">
+                      Created: {new Date(selectedTask.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-gray-600 text-sm">Total Work Done</p>
+
+                {/* Description */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {selectedTask.description || "No description provided."}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Timeline */}
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Timeline</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">Task Created</div>
+                        <div className="text-sm text-gray-500">{new Date(selectedTask.created_at).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">Due Date</div>
+                        <div className="text-sm text-gray-500">{new Date(selectedTask.due_date).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                    {selectedTask.updated_at !== selectedTask.created_at && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">Last Updated</div>
+                          <div className="text-sm text-gray-500">{new Date(selectedTask.updated_at).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600 mb-1">
-                  {taskData.tasks.filter(t => calculateDaysLeft(t.dueDate) <= 2 && t.status !== 'completed').length}
-                </div>
-                <p className="text-gray-600 text-sm">Upcoming Deadlines</p>
+
+              <div className="flex justify-end p-6 border-t border-gray-200">
+                <button
+                  onClick={closeModal}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+                >
+                  Close Details
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Custom Animations */}
+        <style jsx>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes slideUp {
+            from { 
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to { 
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out;
+          }
+          .animate-slideUp {
+            animation: slideUp 0.4s ease-out;
+          }
+          .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+        `}</style>
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
 
-export default StudentTasks
+export default StudentTasks;

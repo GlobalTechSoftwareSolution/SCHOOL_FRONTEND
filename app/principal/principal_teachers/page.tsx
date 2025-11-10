@@ -1,10 +1,12 @@
+import DashboardLayout from '@/app/components/DashboardLayout'
+import TeachersPage from '@/app/components/All_teachers'
 import React from 'react'
 
 const page = () => {
   return (
-    <div>
-      this is principal teacher
-    </div>
+    <DashboardLayout role='principal'>
+      <TeachersPage />
+    </DashboardLayout>
   )
 }
 

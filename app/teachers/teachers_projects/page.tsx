@@ -1,12 +1,10 @@
-import DashboardLayout from '@/app/components/DashboardLayout'
-import React from 'react'
+import DashboardLayout from "@/app/components/DashboardLayout";
+import All_projects from "@/app/components/All_projects";
 
-const page = () => {
-  return (
-   <DashboardLayout role="teachers">
-      TEACHERS PROJECTS PAGE
-    </DashboardLayout>
-  )
+export default function TeachersProjects() {
+    return (
+        <DashboardLayout role="teachers">
+            <All_projects />
+        </DashboardLayout>  
+    );
 }
-
-export default page

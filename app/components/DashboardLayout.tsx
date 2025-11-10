@@ -16,37 +16,38 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
   parents:[
     { name: "Dashboard", path: "/parents/parents_dashboard" },
     { name: "Attendence", path: "/parents/parents_attendence" },
-    { name: "Reports", path: "/parents/parents_reports" },
+    { name: "Reports", path: "/parents/parents_report" },
     { name: "Fees", path: "/parents/parents_fees" },
     { name: "Activites", path: "/parents/parents_activities" },
-    { name: "Notices", path: "/parents/parents_notices" },
+    { name: "Notices", path: "/parents/parents_notice" },
     { name: "Programs", path: "/parents/parents_programs" },
+    { name: "Profile", path: "/parents/parents_profile" },
   ],
 
   management: [
     { name: "Dashboard", path: "/management/management_dashboard" },
-    { name: "Reports", path: "/management/management_reports" },
+    { name: "Reports", path: "/management/management_report" },
     { name: "Activites", path: "/management/management_activites" },
     { name: "Students", path: "/management/management_students" },
     { name: "Teachers(or)Faculty", path: "/management/management_teachers" },
     { name: "Attendence", path: "/management/management_attendence" },
     { name: "Monthly Report", path: "/management/management_monthly_report" },
     { name: "Finance", path: "/management/management_finance" },
-    { name: "Pendingfees", path: "/management/management_pendingfee" },
+    { name: "Pendingfees", path: "/management/management_pending_fees" },
     { name: "Program", path: "/management/management_programs" },
     { name: "Notice", path: "/management/management_notice" },
     { name: "Transport", path: "/management/management_transport" },
     { name: "Calender", path: "/management/management_calender" },
-    { name: "Raise Issues", path: "/management/management_issues" },
+    { name: "Raise Issues", path: "/management/management_issue" },
     { name: "Profile", path: "/management/management_profile" },
   ],
   principal: [
-    { name: "Dashboard", path: "/principal/principal_dashboards" },
-    { name: "Activites", path: "/principal/principal_activites" },
+    { name: "Dashboard", path: "/principal/principal_dashboard" },
+    { name: "Activites", path: "/principal/principal_activities" },
     { name: "Reports", path: "/principal/principal_reports" },
     { name: "Teachers", path: "/principal/principal_teachers" },
     { name: "Students", path: "/principal/principal_students" },
-    { name: "Attendence", path: "/principal/principal_attendence" },
+    { name: "Attendence", path: "/principal/principal_attendance" },
     { name: "Monthly Report", path: "/principal/principal_monthly_report" },
     { name: "Notice", path: "/principal/principal_notice" },
     { name: "Calender", path: "/principal/principal_calender" },
@@ -57,17 +58,19 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Profile", path: "/principal/principal_profile" },
   ],
   teachers: [
-    { name: "Dashboard", path: "/teacher/teachers_dashboard" },
+    { name: "Dashboard", path: "/teachers/teachers_dashboard" },
     { name: "Leaves", path: "/teachers/teachers_leaves" },
+    { name: "Student Leaves", path: "/teachers/teachers_student_leaves" },
     { name: "Attendance", path: "/teachers/teachers_attendance" },
     { name: "Assignment", path: "/teachers/teachers_assignment" },
     { name: "Monthly Report", path: "/teachers/teachers_monthly_report" },
     { name: "Marks sheet", path: "/teachers/teachers_marks" },
     { name: "Calender", path: "/teachers/teachers_calender" },
     { name: "Notice", path: "/teachers/teachers_notice" },
+    { name: "Program", path: "/teachers/teachers_programs" },
     { name: "Raise Issues", path: "/teachers/teachers_issues" },
-    { name: "Projects", path: "/teachers/teachers_project" },
-    { name: "Issue Documents", path: "/teachers/teachersdocuments" },
+    { name: "Projects", path: "/teachers/teachers_projects" },
+    { name: "Issue Documents", path: "/teachers/teachers_documents" },
     { name: "Profile", path: "/teachers/teachers_profile" },
   ],
   students: [
@@ -82,6 +85,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Notice", path: "/students/students_notice" },
     { name: "Raise Issues", path: "/students/students_issues" },
     { name: "Docs", path: "/students/students_docs" },
+    { name: "Fees", path: "/students/students_fees" },
     { name: "Profile", path: "/students/students_profile" },
   ],
   admin: [
@@ -230,7 +234,7 @@ export default function DashboardLayout({ children, role }: Props) {
       <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-72 bg-gradient-to-b from-blue-600 to-blue-800 text-white shadow-lg flex-col z-20">
         <div className="p-6 flex items-center gap-4 border-b border-blue-700">
           <Image
-            src={profilePicture || "/default-profile.png"}
+            src={profilePicture || "/default-avatar.png"}
             alt="Profile"
             width={64}
             height={64}
@@ -284,7 +288,7 @@ export default function DashboardLayout({ children, role }: Props) {
 
             <div className="p-4 flex flex-col items-center gap-2 border-b border-blue-700 mt-12">
               <Image
-                src={profilePicture || "/default-profile.png"}
+                src={profilePicture || "/default-avatar.png"}
                 alt="Profile"
                 width={56}
                 height={56}

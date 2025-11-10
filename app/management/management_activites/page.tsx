@@ -1,10 +1,13 @@
+import DashboardLayout from '@/app/components/DashboardLayout'
+import Activities from '@/app/components/All_activities'
 import React from 'react'
 
 const page = () => {
   return (
-    <div>
-      this is management activities
-    </div>
+    <DashboardLayout role='management'>
+      <Activities />
+    </DashboardLayout>
+
   )
 }
 

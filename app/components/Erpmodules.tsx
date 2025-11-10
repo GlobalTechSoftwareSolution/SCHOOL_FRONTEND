@@ -45,7 +45,7 @@ const modulesData = {
       Link: "/erpmodules/academics/attendence_information",
     },
     {
-      title: "Lesson Planning",
+      title: "Planning",
       description:
         "Transform the colossal task of lesson planning into a simple, effective, and error-free process. Organize academic sessions systematically.",
       icon: BookOpen,

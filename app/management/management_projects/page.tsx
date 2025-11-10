@@ -1,11 +1,10 @@
-import React from 'react'
+import DashboardLayout from "@/app/components/DashboardLayout";
+import All_projects from "@/app/components/All_projects";
 
-const page = () => {
-  return (
-    <div>
-      this is management projects
-    </div>
-  )
+export default function ManagementProjects() {
+    return (
+        <DashboardLayout role="management">
+            <All_projects />
+        </DashboardLayout>  
+    );
 }
-
-export default page
