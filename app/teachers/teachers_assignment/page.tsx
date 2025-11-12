@@ -37,6 +37,12 @@ const TeachersAssignmentsPage = () => {
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submittedAssignments, setSubmittedAssignments] = useState<any[]>([]);
+  const [showSubmittedAssignments, setShowSubmittedAssignments] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<number | null>(null);
+  const [loadingSubmittedAssignments, setLoadingSubmittedAssignments] = useState(false);
+  const [studentsData, setStudentsData] = useState<any[]>([]);
+  const [classesData, setClassesData] = useState<any[]>([]);
 
   const [newAssignment, setNewAssignment] = useState({
     title: "",
@@ -210,6 +216,53 @@ const TeachersAssignmentsPage = () => {
 
   const isAssignmentOverdue = (dueDate: string, status: string) => {
     return new Date(dueDate) < new Date() && status !== "Completed";
+  };
+
+  // ✅ Fetch Submitted Assignments
+  const fetchSubmittedAssignments = async (assignmentId: number) => {
+    try {
+      setLoadingSubmittedAssignments(true);
+      setSelectedAssignmentId(assignmentId);
+      
+      // Fetch students data if not already loaded
+      if (studentsData.length === 0) {
+        const studentsResponse = await axios.get(`${API_URL.replace('assignments/', 'students/')}`);
+        setStudentsData(studentsResponse.data);
+        console.log("📚 Students data fetched:", studentsResponse.data.length);
+      }
+      
+      // Fetch classes data if not already loaded
+      if (classesData.length === 0) {
+        const classesResponse = await axios.get(`${API_URL.replace('assignments/', 'classes/')}`);
+        setClassesData(classesResponse.data);
+        console.log("🏫 Classes data fetched:", classesResponse.data.length);
+      }
+      
+      const response = await axios.get(`https://globaltechsoftwaresolutions.cloud/school-api/api/submitted_assignments/`);
+      
+      // Filter by assignment ID
+      const assignmentSubmissions = response.data.filter(
+        (item: any) => item.assignment === assignmentId || item.assignment_id === assignmentId
+      );
+      
+      console.log(`📝 Submitted assignments for assignment ${assignmentId}:`, assignmentSubmissions);
+      setSubmittedAssignments(assignmentSubmissions);
+      setShowSubmittedAssignments(true);
+    } catch (err) {
+      console.error("Error fetching submitted assignments:", err);
+      showPopup('error', "Failed to fetch submitted assignments.");
+    } finally {
+      setLoadingSubmittedAssignments(false);
+    }
+  };
+
+  // ✅ Get Student Class by Email
+  const getStudentClass = (studentEmail: string) => {
+    const student = studentsData.find(s => s.email === studentEmail);
+    if (!student) return { class_id: null, class_name: 'Unknown', section: '' };
+    
+    const classInfo = classesData.find(cls => cls.id === student.class_id);
+    return classInfo || { class_id: student.class_id, class_name: 'Unknown', section: '' };
   };
 
   if (loading) {
@@ -451,7 +504,7 @@ const TeachersAssignmentsPage = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
-                            <span>{assignment.class_name} - {assignment.section}</span>
+                            <span>{assignment.class_name} - {assignment.sec}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
@@ -470,6 +523,16 @@ const TeachersAssignmentsPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fetchSubmittedAssignments(assignment.id);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View Submissions
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -666,6 +729,132 @@ const TeachersAssignmentsPage = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Submitted Assignments Modal */}
+        {showSubmittedAssignments && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Submitted Assignments</h2>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Assignment ID: {selectedAssignmentId} • {submittedAssignments.length} submissions
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSubmittedAssignments(false);
+                    setSubmittedAssignments([]);
+                    setSelectedAssignmentId(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                {loadingSubmittedAssignments ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600 font-medium">Loading submitted assignments...</p>
+                  </div>
+                ) : submittedAssignments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Submissions Found</h3>
+                    <p className="text-gray-600">No students have submitted this assignment yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {submittedAssignments.map((submission) => (
+                      <div key={submission.id} className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <Users className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">
+                                  {submission.student_name}
+                                </h4>
+                                <p className="text-sm text-gray-500">
+                                  {submission.student_email}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-3">
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="h-4 w-4" />
+                                <span>Subject: {submission.subject_name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                <span>Class: {getStudentClass(submission.student_email).class_name} - {getStudentClass(submission.student_email).sec}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span>Submitted: {new Date(submission.submission_date).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-3">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                <span>Time: {new Date(submission.submission_date).toLocaleTimeString()}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4" />
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                  submission.is_late ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                                }`}>
+                                  {submission.is_late ? 'Late Submission' : 'On Time'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-3">
+                              <div>
+                                <span className="font-medium text-gray-700">Grade: </span>
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                  submission.grade ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                                }`}>
+                                  {submission.grade || 'Not Graded'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-700">Feedback: </span>
+                                <span className="text-gray-600">
+                                  {submission.feedback || 'No feedback provided'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {submission.submission_file && (
+                              <div className="flex items-center gap-2">
+                                <Download className="h-4 w-4 text-blue-600" />
+                                <a 
+                                  href={submission.submission_file} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+                                >
+                                  Download Submission File
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

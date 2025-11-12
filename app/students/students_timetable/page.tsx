@@ -1,8 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import { motion, AnimatePresence } from "framer-motion";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
 interface Timetable {
@@ -15,224 +16,426 @@ interface Timetable {
   start_time: string;
   end_time: string;
   room_number: string;
+  class_id?: number;
+  subject_code?: string;
+  subject_color?: string;
 }
 
 interface Attendance {
   id: number;
+  user_email?: string;
+  student_name: string;
   date: string;
   status: string;
   remarks: string;
-  student?: string;
-  student_name: string;
-  marked_by_role?: string;
   section?: string;
+  class_id?: number;
+  subject?: string;
 }
 
 interface Student {
+  id: number;
   email: string;
-  name: string;
   fullname?: string;
-  class_name: string;
-  section: string;
+  class_id?: number;
+  roll_number?: string;
+  section?: string;
+  profile_picture?: string;
 }
 
-const Student_TImetable = () => {
-  const [userData, setUserData] = useState<Student | null>(null);
+interface ClassInfo {
+  id: number;
+  class_name: string;
+  section: string;
+  class_teacher_name?: string;
+  class_teacher_email?: string;
+}
+
+interface AttendanceStats {
+  present: number;
+  absent: number;
+  late: number;
+  total: number;
+  percentage: number;
+  streak: number;
+  monthlyTrend: number;
+}
+
+type ViewMode = "calendar" | "timetable" | "attendance" | "analytics";
+
+const Student_Timetable = () => {
+  const [student, setStudent] = useState<Student | null>(null);
+  const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filteredTimetable, setFilteredTimetable] = useState<Timetable[]>([]);
   const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("calendar");
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats>({
+    present: 0,
+    absent: 0,
+    late: 0,
+    total: 0,
+    percentage: 0,
+    streak: 0,
+    monthlyTrend: 0
+  });
+  const [currentWeek, setCurrentWeek] = useState<Date[]>([]);
+  const [hoveredClass, setHoveredClass] = useState<string | null>(null);
 
   const STUDENT_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/students/";
+  const CLASS_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/classes/";
   const TIMETABLE_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/timetable/";
   const ATTENDANCE_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/";
 
-  // ✅ Load student info from localStorage
+  // Color palette for subjects
+  const subjectColors = [
+    "from-purple-500 to-pink-500",
+    "from-blue-500 to-cyan-500",
+    "from-green-500 to-emerald-500",
+    "from-orange-500 to-red-500",
+    "from-indigo-500 to-purple-600",
+    "from-teal-500 to-blue-600",
+    "from-yellow-500 to-orange-500",
+    "from-red-500 to-pink-600"
+  ];
+
+  // Get user info from localStorage safely
+  const getLocalUserInfo = useCallback(() => {
+    try {
+      const localInfo = localStorage.getItem("userInfo") || localStorage.getItem("userData");
+      return localInfo ? JSON.parse(localInfo) : null;
+    } catch (error) {
+      console.error("Error parsing user info:", error);
+      return null;
+    }
+  }, []);
+
+  // Calculate current week dates
+  const calculateCurrentWeek = useCallback((date: Date) => {
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay());
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      week.push(day);
+    }
+    return week;
+  }, []);
+
+  // Calculate attendance statistics
+  const calculateAttendanceStats = useCallback((attendanceData: Attendance[]) => {
+    const present = attendanceData.filter(a => a.status?.toLowerCase() === "present").length;
+    const absent = attendanceData.filter(a => a.status?.toLowerCase() === "absent").length;
+    const late = attendanceData.filter(a => a.status?.toLowerCase() === "late").length;
+    const total = attendanceData.length;
+    const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    // Calculate current streak
+    let streak = 0;
+    const sortedDates = attendanceData
+      .filter(a => a.status?.toLowerCase() === "present")
+      .map(a => new Date(a.date))
+      .sort((a, b) => b.getTime() - a.getTime());
+
+    const today = new Date();
+    for (let i = 0; i < sortedDates.length; i++) {
+      const expectedDate = new Date(today);
+      expectedDate.setDate(today.getDate() - i);
+      if (sortedDates[i]?.toDateString() === expectedDate.toDateString()) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    // Calculate monthly trend (simplified)
+    const currentMonth = new Date().getMonth();
+    const lastMonthAttendance = attendanceData.filter(a => {
+      const date = new Date(a.date);
+      return date.getMonth() === (currentMonth - 1 + 12) % 12;
+    }).filter(a => a.status?.toLowerCase() === "present").length;
+
+    const currentMonthAttendance = attendanceData.filter(a => {
+      const date = new Date(a.date);
+      return date.getMonth() === currentMonth;
+    }).filter(a => a.status?.toLowerCase() === "present").length;
+
+    const monthlyTrend = lastMonthAttendance > 0 
+      ? Math.round(((currentMonthAttendance - lastMonthAttendance) / lastMonthAttendance) * 100)
+      : 0;
+
+    return { present, absent, late, total, percentage, streak, monthlyTrend };
+  }, []);
+
+  // Fetch student and class information
   useEffect(() => {
-    const fetchStudentInfo = async () => {
+    const fetchStudentAndClass = async () => {
       try {
         setLoading(true);
-        const userInfo = localStorage.getItem("userInfo");
-        const userData = localStorage.getItem("userData");
-        
-        if (!userInfo && !userData) {
-          setError("No logged-in user found.");
-          setLoading(false);
-          return;
+        setError(null);
+
+        const userInfo = getLocalUserInfo();
+        if (!userInfo) {
+          throw new Error("Please log in to access your timetable");
         }
 
-        // Try to get email from multiple sources
-        let email = "";
-        if (userInfo) {
-          const parsed = JSON.parse(userInfo);
-          email = parsed.email;
-        } else if (userData) {
-          const parsed = JSON.parse(userData);
-          email = parsed.email;
-        }
+        const email = userInfo.email;
+        console.log("📧 Fetching data for student:", email);
 
-        console.log("📧 Logged in student:", email);
+        // Fetch student data
+        const studentRes = await axios.get(STUDENT_API);
+        const allStudents = studentRes.data || [];
+        const matchedStudent = allStudents.find(
+          (s: any) => s.email?.toLowerCase() === email.toLowerCase()
+        );
 
-        if (email) {
-          const response = await axios.get(`${STUDENT_API}${email}/`);
-          console.log("🎓 Student API Response:", response.data);
-          setUserData(response.data);
-        } else {
-          setError("No email found in user data.");
+        if (!matchedStudent) {
+          throw new Error("Student profile not found in system");
         }
-      } catch (err) {
-        console.error("❌ Failed to fetch student info:", err);
-        setError("Failed to fetch student info.");
+        setStudent(matchedStudent);
+
+        // Fetch class information
+        const classRes = await axios.get(CLASS_API);
+        const matchedClass = classRes.data.find(
+          (cls: any) => cls.id === matchedStudent.class_id
+        );
+        setClassInfo(matchedClass || null);
+
+      } catch (err: any) {
+        console.error("❌ Error loading student data:", err);
+        setError(err.message || "Failed to load student information");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStudentInfo();
-  }, []);
+    fetchStudentAndClass();
+  }, [getLocalUserInfo]);
 
-  // ✅ Load timetable
+  // Fetch timetable data
   useEffect(() => {
     const fetchTimetable = async () => {
-      if (!userData?.class_name || !userData?.section) return;
-
+      if (!student?.class_id) return;
+      
       try {
-        const response = await axios.get(
-          `${TIMETABLE_API}?class_name=${userData.class_name}&section=${userData.section}`
+        const res = await axios.get(TIMETABLE_API);
+        const data = res.data || [];
+        const filtered = data.filter(
+          (t: any) => t.class_id?.toString() === student.class_id?.toString()
         );
-        console.log("✅ Timetable API Response:", response.data);
-        const timetableData = Array.isArray(response.data) ? response.data : [response.data];
-        setTimetable(timetableData);
+        
+        // Sort by day and time
+        const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        const sortedTimetable = filtered.sort((a: any, b: any) => {
+          const dayCompare = dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week);
+          if (dayCompare !== 0) return dayCompare;
+          return a.start_time.localeCompare(b.start_time);
+        });
+
+        // Add colors to subjects
+        const subjects = [...new Set(sortedTimetable.map(t => t.subject_name))];
+        const timetableWithColors = sortedTimetable.map((item, index) => ({
+          ...item,
+          subject_color: subjectColors[index % subjectColors.length]
+        }));
+
+        setTimetable(timetableWithColors);
+        console.log("🕒 Loaded timetable with", timetableWithColors.length, "entries");
       } catch (err) {
-        console.error("❌ Failed to load timetable:", err);
-        setError("Failed to load timetable.");
+        console.error("❌ Failed to fetch timetable:", err);
+        setError("Unable to load timetable data");
       }
     };
 
     fetchTimetable();
-  }, [userData]);
+  }, [student]);
 
-  // ✅ Load attendance data
+  // Fetch attendance data
   useEffect(() => {
     const fetchAttendance = async () => {
-      if (!userData?.email) return;
-
+      if (!student?.email) return;
+      
       try {
-        console.log("📊 Fetching attendance for:", userData.email);
-        
-        // Fetch all attendance records and filter by student name and section
-        const response = await axios.get(ATTENDANCE_API);
-        const allRecords: Attendance[] = response.data || [];
-        
-        console.log("📋 Total attendance records:", allRecords.length);
+        const res = await axios.get(ATTENDANCE_API);
+        const allAttendance = res.data || [];
 
-        // Get student name for matching
-        const studentName = userData.fullname || userData.name || "";
-        const studentSection = userData.section || "";
+        const filtered = allAttendance.filter(
+          (a: any) =>
+            a.user_email?.toLowerCase() === student.email.toLowerCase() ||
+            a.student_email?.toLowerCase() === student.email.toLowerCase()
+        );
 
-        // Filter records for the current student by name and section
-        const filteredRecords = allRecords.filter((record) => {
-          if (!record) return false;
-          
-          // Match by student name (exact match)
-          const nameMatch = record.student_name?.toLowerCase() === studentName.toLowerCase();
-          
-          // If we have section info, also filter by section
-          if (studentSection && record.section) {
-            const sectionMatch = record.section.toLowerCase() === studentSection.toLowerCase();
-            return nameMatch && sectionMatch;
-          }
-          
-          return nameMatch;
-        });
-
-        console.log("✅ Found", filteredRecords.length, "attendance records for student:", studentName);
-        setAttendance(filteredRecords);
+        setAttendance(filtered);
+        setAttendanceStats(calculateAttendanceStats(filtered));
+        console.log("📋 Loaded", filtered.length, "attendance records");
       } catch (err) {
-        console.error("❌ Failed to load attendance:", err);
-        setError("Failed to load attendance data.");
+        console.error("❌ Failed to fetch attendance:", err);
+        setError("Unable to load attendance data");
       }
     };
 
     fetchAttendance();
-  }, [userData]);
+  }, [student, calculateAttendanceStats]);
 
-  // ✅ When a date is clicked on calendar
-  const handleDateClick = (date: Date) => {
+  // ✅ Utility to fix timezone issue (use local date instead of UTC)
+const getLocalDateString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// Initialize current week
+useEffect(() => {
+  setCurrentWeek(calculateCurrentWeek(new Date()));
+}, [calculateCurrentWeek]);
+
+// ✅ Handle date selection (timezone-safe)
+const handleDateClick = useCallback(
+  (date: Date) => {
     setSelectedDate(date);
-
-    // filter timetable by weekday
     const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
+
+    // Filter timetable for selected day
     const filtered = timetable.filter(
       (t) => t.day_of_week.toLowerCase() === dayName.toLowerCase()
     );
     setFilteredTimetable(filtered);
 
-    // match attendance - use local date format to avoid timezone issues
-    const dateStr = date.toLocaleDateString("en-CA"); // YYYY-MM-DD format in local timezone
+    // ✅ Fix: use local date string (no UTC offset issue)
+    const dateStr = getLocalDateString(date);
     const matchedAttendance = attendance.find((a) => a.date === dateStr);
     setSelectedAttendance(matchedAttendance || null);
-    
-    console.log("📅 Date clicked:", date.toLocaleDateString());
-    console.log("🔍 Looking for attendance with date:", dateStr);
-    console.log("📋 Found attendance:", matchedAttendance);
-  };
 
-  // ✅ Highlight attendance on calendar
-  const tileContent = ({ date, view }: { date: Date; view: string }) => {
+    console.log("📅 Selected Date (Local):", dateStr);
+    console.log("🔍 Matched Attendance:", matchedAttendance);
+  },
+  [timetable, attendance]
+);
+
+// ✅ Enhanced calendar tile content (timezone-safe)
+const tileContent = useCallback(
+  ({ date, view }: { date: Date; view: string }) => {
     if (view !== "month") return null;
-    const dateStr = date.toLocaleDateString("en-CA"); // YYYY-MM-DD format in local timezone
+
+    const dateStr = getLocalDateString(date);
     const att = attendance.find((a) => a.date === dateStr);
+
     if (att) {
+      const statusColor =
+        {
+          present: "bg-gradient-to-r from-green-400 to-green-600",
+          absent: "bg-gradient-to-r from-red-400 to-red-600",
+          late: "bg-gradient-to-r from-yellow-400 to-yellow-600",
+        }[att.status.toLowerCase()] || "bg-gray-400";
+
       return (
-        <div
-          className={`w-3 h-3 rounded-full mx-auto mt-1 ${
-            att.status.toLowerCase() === "present" ? "bg-green-500" : "bg-red-500"
-          }`}
-        ></div>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className={`w-3 h-3 rounded-full mx-auto mt-1 ${statusColor} shadow-sm`}
+        />
       );
     }
     return null;
-  };
+  },
+  [attendance]
+);
 
-  // Calculate attendance stats
-  const totalDays = attendance.length;
-  const presentDays = attendance.filter(a => a.status.toLowerCase() === "present").length;
-  const attendancePercentage = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+// Format time for display
+const formatTime = (timeString: string) => {
+  if (!timeString) return "N/A";
+  try {
+    const [hours, minutes] = timeString.split(":");
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  } catch {
+    return timeString;
+  }
+};
 
-  const getSubjectColor = (subject: string) => {
-    const colors = [
-      "from-blue-500 to-cyan-500",
-      "from-purple-500 to-pink-500",
-      "from-green-500 to-emerald-500",
-      "from-orange-500 to-amber-500",
-      "from-red-500 to-rose-500",
-      "from-indigo-500 to-blue-500",
-    ];
-    const index = subject.charCodeAt(0) % colors.length;
-    return colors[index];
-  };
 
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "present": return "✅";
-      case "absent": return "❌";
-      case "late": return "⏰";
-      default: return "📝";
+  // Group timetable by day
+  const timetableByDay = timetable.reduce((acc, item) => {
+    if (!acc[item.day_of_week]) {
+      acc[item.day_of_week] = [];
     }
+    acc[item.day_of_week].push(item);
+    return acc;
+  }, {} as Record<string, Timetable[]>);
+
+  // Get current period
+  const getCurrentPeriod = () => {
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const today = now.toLocaleDateString('en-US', { weekday: 'long' });
+    
+    return timetable.find(item => {
+      if (item.day_of_week !== today) return false;
+      
+      const [startHours, startMinutes] = item.start_time.split(':').map(Number);
+      const [endHours, endMinutes] = item.end_time.split(':').map(Number);
+      const startTime = startHours * 60 + startMinutes;
+      const endTime = endHours * 60 + endMinutes;
+      
+      return currentTime >= startTime && currentTime <= endTime;
+    });
   };
+
+  const currentPeriod = getCurrentPeriod();
 
   if (loading) {
     return (
       <DashboardLayout role="students">
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <div className="text-lg font-medium text-gray-700">Loading your dashboard...</div>
-            <p className="text-gray-500 mt-2">Getting everything ready for you</p>
+            <motion.div
+              animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full mx-auto mb-4"
+            />
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-blue-200 text-lg font-light"
+            >
+              Loading your academic universe...
+            </motion.p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="students">
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="text-8xl mb-6"
+            >
+              🌌
+            </motion.div>
+            <h2 className="text-2xl font-bold text-white mb-4">Orbit Disconnected</h2>
+            <p className="text-blue-200 mb-8">{error}</p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => window.location.reload()}
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-medium transition-all shadow-lg hover:shadow-xl"
+            >
+              Reconnect
+            </motion.button>
           </div>
         </div>
       </DashboardLayout>
@@ -241,355 +444,489 @@ const Student_TImetable = () => {
 
   return (
     <DashboardLayout role="students">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           
-          {/* Enhanced Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Welcome to Time Table Dashboard
-            </h1>
-            <p className="text-gray-600 text-lg">
-              Track your classes, attendance, and academic schedule
-            </p>
-            {userData && (
-              <div className="mt-4 bg-white/80 backdrop-blur-sm rounded-2xl p-4 inline-block">
-                <p className="text-gray-700 font-medium">
-                  {userData.name} • {userData.class_name} - {userData.section}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-8 text-center">
-              <div className="text-red-600 font-semibold text-lg mb-2">⚠️ Error</div>
-              <div className="text-red-500">{error}</div>
-            </div>
-          )}
-
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
-                  <span className="text-xl">🕒</span>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 font-medium">Weekly Classes</div>
-                  <div className="text-2xl font-bold text-gray-900">{timetable.length}</div>
-                  <div className="text-xs text-gray-500">
-                    Across {new Set(timetable.map(t => t.day_of_week)).size} days
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
-                  <span className="text-xl">📚</span>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 font-medium">Subjects</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {new Set(timetable.map(t => t.subject_name)).size}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Unique subjects
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Calendar Section */}
-            <div className="lg:col-span-2">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50 mb-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">📅 Academic Calendar</h2>
-                  <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                    Select a date to view details
-                  </div>
-                </div>
-                <Calendar
-                  onClickDay={handleDateClick}
-                  value={selectedDate}
-                  tileContent={tileContent}
-                  className="rounded-2xl border-0 w-full react-calendar-custom bg-white/50 backdrop-blur-sm"
-                />
-              </div>
-
-              {/* Timetable Section */}
-             {/* Timetable Section */}
-<div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
-  <div className="flex justify-between items-center mb-6">
-    <h2 className="text-xl font-bold text-gray-900">
-      🕒 Daily Schedule - {selectedDate.toLocaleDateString("en-US", { 
-        weekday: "long", 
-        year: "numeric", 
-        month: "long", 
-        day: "numeric" 
-      })}
-    </h2>
-    <div className="flex items-center gap-4">
-      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-        {filteredTimetable.length} {filteredTimetable.length === 1 ? 'class' : 'classes'} today
-      </span>
-      {filteredTimetable.length > 0 && (
-        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-          {filteredTimetable.length} periods
-        </span>
-      )}
-    </div>
-  </div>
-  
-  {filteredTimetable.length > 0 ? (
-    <div className="space-y-4">
-      {/* Class Summary */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl p-4 text-white">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="font-bold text-lg">📚 Today's Class Summary</h3>
-            <p className="text-blue-100 text-sm">
-              You have {filteredTimetable.length} classes scheduled
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold">{filteredTimetable.length}</div>
-            <div className="text-blue-100 text-sm">Total Classes</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Classes List */}
-      <div className="space-y-4">
-        {filteredTimetable
-          .sort((a, b) => a.start_time.localeCompare(b.start_time))
-          .map((item, index) => (
-          <div 
-            key={item.id} 
-            className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 hover:shadow-lg transition-all duration-300 group"
+          {/* Header Section with Glass Morphism */}
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-12"
           >
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex items-center justify-center">
-                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-r ${getSubjectColor(item.subject_name)} flex items-center justify-center text-white font-bold text-lg`}>
-                      {index + 1}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {item.subject_name}
-                      </h3>
-                      <span className="px-2 py-1 bg-white text-xs font-medium rounded-full border border-blue-200">
-                        Period {index + 1}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 text-sm">by {item.teacher_name}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4 text-sm">
-                <div className="bg-white rounded-xl p-3 text-center min-w-24">
-                  <div className="text-gray-500 text-xs">Start Time</div>
-                  <div className="font-semibold text-gray-900">{item.start_time}</div>
-                </div>
-                <div className="bg-white rounded-xl p-3 text-center min-w-24">
-                  <div className="text-gray-500 text-xs">End Time</div>
-                  <div className="font-semibold text-gray-900">{item.end_time}</div>
-                </div>
-                <div className="bg-white rounded-xl p-3 text-center min-w-20">
-                  <div className="text-gray-500 text-xs">Room</div>
-                  <div className="font-semibold text-gray-900">{item.room_number}</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Class Duration Info */}
-            <div className="mt-4 pt-4 border-t border-blue-200">
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <span>🕐 Class Duration: {item.start_time} - {item.end_time}</span>
-                <span>📍 {item.room_number}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Daily Summary */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
-        <h3 className="font-bold text-gray-900 mb-3">📊 Daily Summary</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div className="bg-white rounded-xl p-3">
-            <div className="text-2xl font-bold text-blue-600">{filteredTimetable.length}</div>
-            <div className="text-xs text-gray-500">Total Classes</div>
-          </div>
-          <div className="bg-white rounded-xl p-3">
-            <div className="text-2xl font-bold text-purple-600">
-              {new Set(filteredTimetable.map(t => t.subject_name)).size}
-            </div>
-            <div className="text-xs text-gray-500">Subjects</div>
-          </div>
-          <div className="bg-white rounded-xl p-3">
-            <div className="text-2xl font-bold text-green-600">
-              {new Set(filteredTimetable.map(t => t.teacher_name)).size}
-            </div>
-            <div className="text-xs text-gray-500">Teachers</div>
-          </div>
-          <div className="bg-white rounded-xl p-3">
-            <div className="text-2xl font-bold text-orange-600">
-              {new Set(filteredTimetable.map(t => t.room_number)).size}
-            </div>
-            <div className="text-xs text-gray-500">Rooms</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="text-center py-12">
-      <div className="text-6xl mb-4">🎉</div>
-      <h3 className="text-xl font-bold text-gray-900 mb-2">No classes scheduled</h3>
-      <p className="text-gray-600 mb-4">Enjoy your free day! No classes are scheduled for {selectedDate.toLocaleDateString("en-US", { weekday: "long" })}.</p>
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 inline-block">
-        <p className="text-yellow-700 text-sm">💡 This could be a holiday or weekend</p>
-      </div>
-    </div>
-  )}
-</div>
-
-            </div>
-
-            {/* Right Column - Attendance & Quick Info */}
-            <div className="lg:col-span-1 space-y-8">
-              
-              {/* Attendance Status */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">🧾 Attendance Status</h2>
-                
-                {selectedAttendance ? (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
-                    <div className="text-center mb-4">
-                      <div className="text-4xl mb-2">
-                        {getStatusIcon(selectedAttendance.status)}
-                      </div>
-                      <div className={`text-2xl font-bold ${
-                        selectedAttendance.status.toLowerCase() === "present" 
-                          ? "text-green-600" 
-                          : "text-red-600"
-                      }`}>
-                        {selectedAttendance.status}
-                      </div>
-                      <div className="text-gray-600 text-sm mt-1">
-                        {new Date(selectedAttendance.date).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </div>
-                    </div>
-                    
-                    {selectedAttendance.remarks && (
-                      <div className="bg-white rounded-xl p-4 mt-4 border border-gray-200">
-                        <div className="text-sm text-gray-500 mb-1">Remarks</div>
-                        <div className="text-gray-700 italic">"{selectedAttendance.remarks}"</div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-6xl mb-4">📅</div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Record</h3>
-                    <p className="text-gray-600 text-sm">
-                      Select a date to view attendance details
+            <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-8 mb-6">
+              {classInfo && (
+                <div className="space-y-2">
+                  <p className="text-xl text-gray-700 font-medium">
+                    {classInfo.class_name} • Section {classInfo.section}
+                  </p>
+                  {classInfo.class_teacher_name && (
+                    <p className="text-blue-600 font-semibold">
+                      Class Teacher: {classInfo.class_teacher_name}
                     </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Stats */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">📈 Quick Stats</h2>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
-                    <span className="text-gray-700">Total Classes</span>
-                    <span className="font-bold text-blue-600">{timetable.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
-                    <span className="text-gray-700">Present Days</span>
-                    <span className="font-bold text-green-600">{presentDays}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
-                    <span className="text-gray-700">Subjects</span>
-                    <span className="font-bold text-purple-600">
-                      {new Set(timetable.map(t => t.subject_name)).size}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-orange-50 rounded-xl">
-                    <span className="text-gray-700">Teachers</span>
-                    <span className="font-bold text-orange-600">
-                      {new Set(timetable.map(t => t.teacher_name)).size}
-                    </span>
-                  </div>
+                  )}
+                  {student?.roll_number && (
+                    <p className="text-gray-500 text-sm">
+                      Student ID: {student.roll_number}
+                    </p>
+                  )}
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Upcoming Classes */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">⏰ Today's Classes</h2>
-                <div className="space-y-3">
-                  {filteredTimetable.slice(0, 3).map((item, index) => (
-                    <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 text-sm">{item.subject_name}</div>
-                        <div className="text-xs text-gray-500">{item.start_time} - {item.end_time}</div>
+            {/* Current Period Alert */}
+            {currentPeriod && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-2xl p-4 shadow-lg max-w-md mx-auto"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>
+                  <span className="font-semibold">Live: {currentPeriod.subject_name}</span>
+                  <span className="text-sm">({formatTime(currentPeriod.start_time)} - {formatTime(currentPeriod.end_time)})</span>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+
+          {/* Navigation Tabs with Glass Effect */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 mb-8"
+          >
+            <div className="flex overflow-x-auto">
+              {[
+                { id: "calendar", label: "🌌 Calendar", icon: "📅" },
+                { id: "timetable", label: "🕐 Visual Schedule", icon: "🕒" },
+                { id: "analytics", label: "📈 Insights", icon: "🔍" }
+              ].map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setViewMode(tab.id as ViewMode)}
+                  className={`flex-1 min-w-0 px-6 py-4 font-semibold transition-all duration-300 ${
+                    viewMode === tab.id
+                      ? 'text-white bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                  }`}
+                >
+                  <span className="hidden md:inline">{tab.label}</span>
+                  <span className="md:hidden text-lg">{tab.icon}</span>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={viewMode}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{ duration: 0.5, type: "spring" }}
+            >
+              {/* Calendar View */}
+              {viewMode === "calendar" && (
+                <div className="grid lg:grid-cols-3 gap-8">
+                  {/* Calendar */}
+                  <div className="lg:col-span-2 bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                      <span className="text-3xl">🌌</span>
+                      Academic Calendar
+                    </h2>
+                    <Calendar
+                      onClickDay={handleDateClick}
+                      value={selectedDate}
+                      tileContent={tileContent}
+                      className="rounded-2xl border-0 w-full react-calendar-advanced shadow-inner bg-white/50"
+                    />
+                  </div>
+
+                  {/* Side Panel */}
+                  <div className="space-y-6">
+                    {/* Stats Overview */}
+                    <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        📊 Orbit Statistics
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Mission Success</span>
+                          <span className="font-bold text-green-500 text-lg">
+                            {attendanceStats.present}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Mission Failed</span>
+                          <span className="font-bold text-red-500 text-lg">
+                            {attendanceStats.absent}
+                          </span>
+                        </div>
+                        <div className="pt-4 border-t border-gray-200">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="text-gray-700 font-semibold">Success Rate</span>
+                            <span className="font-bold text-blue-600 text-xl">
+                              {attendanceStats.percentage}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${attendanceStats.percentage}%` }}
+                              transition={{ duration: 1, ease: "easeOut" }}
+                              className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full shadow-lg"
+                            />
+                          </div>
+                        </div>
+                        {attendanceStats.streak > 0 && (
+                          <div className="flex justify-between items-center pt-3">
+                            <span className="text-gray-600">Consecutive Success</span>
+                            <span className="font-bold text-orange-500 flex items-center gap-1">
+                              🔥 {attendanceStats.streak}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                  {filteredTimetable.length === 0 && (
-                    <div className="text-center py-4 text-gray-500 text-sm">
-                      No classes today
+
+                    {/* Selected Date Details */}
+                    <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">
+                        {selectedDate.toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </h3>
+
+                      {/* Classes */}
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                          🚀 Mission Schedule
+                        </h4>
+                        {filteredTimetable.length > 0 ? (
+                          <div className="space-y-3">
+                            {filteredTimetable.map((item, index) => (
+                              <motion.div
+                                key={item.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100 shadow-sm"
+                              >
+                                <div className="font-bold text-blue-900 text-lg">
+                                  {item.subject_name}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  ⏰ {formatTime(item.start_time)} - {formatTime(item.end_time)}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-2">
+                                  👨‍🏫 {item.teacher_name} • 🚪 {item.room_number}
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 text-sm text-center py-4">
+                            No missions scheduled for this date
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Attendance */}
+                      {selectedAttendance && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            ✅ Mission Report
+                          </h4>
+                          <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            className={`p-4 rounded-xl border shadow-sm ${
+                              selectedAttendance.status.toLowerCase() === 'present' 
+                                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
+                                : selectedAttendance.status.toLowerCase() === 'late'
+                                ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200'
+                                : 'bg-gradient-to-r from-red-50 to-pink-50 border-red-200'
+                            }`}
+                          >
+                            <div className="font-bold text-lg capitalize">
+                              {selectedAttendance.status}
+                            </div>
+                            {selectedAttendance.remarks && (
+                              <div className="text-sm text-gray-600 mt-2 italic">
+                                " {selectedAttendance.remarks} "
+                              </div>
+                            )}
+                          </motion.div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Visual Timetable View */}
+              {viewMode === "timetable" && (
+                <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8">
+                  <div className="flex items-center justify-between mb-8">
+                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                      <span className="text-3xl">🕐</span>
+                      Visual Schedule Matrix
+                    </h2>
+                    <div className="text-sm text-gray-600 bg-white/50 px-4 py-2 rounded-full">
+                      {timetable.length} scheduled missions
+                    </div>
+                  </div>
+
+                  {Object.keys(timetableByDay).length > 0 ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {Object.entries(timetableByDay).map(([day, classes]) => (
+                        <motion.div
+                          key={day}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          whileHover={{ scale: 1.02 }}
+                          className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
+                        >
+                          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-4">
+                            <h3 className="font-bold text-lg text-center">{day}</h3>
+                          </div>
+                          <div className="p-4 space-y-3">
+                            {classes.map((classItem) => (
+                              <motion.div
+                                key={classItem.id}
+                                whileHover={{ scale: 1.05 }}
+                                onHoverStart={() => setHoveredClass(classItem.id.toString())}
+                                onHoverEnd={() => setHoveredClass(null)}
+                                className={`p-3 rounded-xl bg-gradient-to-r ${classItem.subject_color} text-white shadow-lg cursor-pointer transform transition-all duration-300 ${
+                                  hoveredClass === classItem.id.toString() ? 'shadow-2xl' : 'shadow-md'
+                                }`}
+                              >
+                                <div className="font-bold text-sm mb-1">
+                                  {classItem.subject_name}
+                                </div>
+                                <div className="text-xs opacity-90">
+                                  {formatTime(classItem.start_time)} - {formatTime(classItem.end_time)}
+                                </div>
+                                <div className="text-xs opacity-80 mt-1">
+                                  {classItem.teacher_name} • {classItem.room_number}
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="text-8xl mb-6"
+                      >
+                        🚀
+                      </motion.div>
+                      <h3 className="text-2xl font-bold text-gray-800 mb-4">Mission Control Quiet</h3>
+                      <p className="text-gray-600 max-w-md mx-auto">
+                        Your class schedule is being prepared. Check back soon for your mission briefings.
+                      </p>
                     </div>
                   )}
                 </div>
-              </div>
+              )}
 
-            </div>
-          </div>
+              {/* Analytics View */}
+              {viewMode === "analytics" && (
+                <div className="grid lg:grid-cols-4 gap-6">
+                  {/* Stats Overview */}
+                  <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {[
+                      { label: "Present", value: attendanceStats.present, color: "from-green-400 to-emerald-500", icon: "✅" },
+                      { label: "Absent", value: attendanceStats.absent, color: "from-red-400 to-pink-500", icon: "❌" },
+                      { label: "Late", value: attendanceStats.late, color: "from-yellow-400 to-orange-500", icon: "⏰" },
+                      { label: "Success Rate", value: `${attendanceStats.percentage}%`, color: "from-blue-400 to-purple-500", icon: "📈" }
+                    ].map((stat, index) => (
+                      <motion.div
+                        key={stat.label}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ scale: 1.05, y: -5 }}
+                        className={`bg-gradient-to-br ${stat.color} text-white rounded-2xl p-6 shadow-xl`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-2xl font-bold">{stat.value}</p>
+                            <p className="text-blue-100 text-sm font-medium">{stat.label}</p>
+                          </div>
+                          <div className="text-2xl">{stat.icon}</div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Detailed Analytics */}
+                  <div className="lg:col-span-4 grid lg:grid-cols-2 gap-6">
+                    {/* Attendance History */}
+                    <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        📋 Mission Log
+                      </h3>
+                      {attendance.length > 0 ? (
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {attendance
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map((record, index) => (
+                              <motion.div
+                                key={record.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-white transition-colors group"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    record.status.toLowerCase() === 'present' ? 'bg-green-400' :
+                                    record.status.toLowerCase() === 'late' ? 'bg-yellow-400' : 'bg-red-400'
+                                  }`} />
+                                  <div>
+                                    <div className="font-semibold text-gray-900">
+                                      {new Date(record.date).toLocaleDateString()}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      {record.subject || 'General Mission'}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${
+                                    record.status.toLowerCase() === 'present' 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : record.status.toLowerCase() === 'late'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {record.status}
+                                  </span>
+                                </div>
+                              </motion.div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="text-6xl mb-4">📊</div>
+                          <p className="text-gray-600">No mission data available yet</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Performance Metrics */}
+                    <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        🎯 Performance Metrics
+                      </h3>
+                      <div className="space-y-6">
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-700 font-medium">Current Streak</span>
+                            <span className="text-2xl font-bold text-orange-500">
+                              {attendanceStats.streak} days
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-gradient-to-r from-orange-400 to-red-500 h-2 rounded-full"
+                              style={{ width: `${Math.min(attendanceStats.streak * 10, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-700 font-medium">Monthly Trend</span>
+                            <span className={`text-lg font-bold ${
+                              attendanceStats.monthlyTrend >= 0 ? 'text-green-500' : 'text-red-500'
+                            }`}>
+                              {attendanceStats.monthlyTrend >= 0 ? '+' : ''}{attendanceStats.monthlyTrend}%
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Compared to last month
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-gray-200">
+                          <h4 className="font-semibold text-gray-800 mb-3">Quick Stats</h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="text-center p-3 bg-blue-50 rounded-lg">
+                              <div className="font-bold text-blue-600">{attendanceStats.present}</div>
+                              <div className="text-gray-600">Present</div>
+                            </div>
+                            <div className="text-center p-3 bg-green-50 rounded-lg">
+                              <div className="font-bold text-green-600">{attendanceStats.percentage}%</div>
+                              <div className="text-gray-600">Rate</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Insights View */}
+              {viewMode === "analytics" && (
+                <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 mt-8">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <span className="text-3xl">🔍</span>
+                    Deep Space Insights
+                  </h2>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Add more insightful components here */}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Custom Calendar Styles */}
-      <style jsx>{`
-        .react-calendar-custom .react-calendar__tile--active {
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
-          color: white !important;
+      <style jsx global>{`
+        .react-calendar-advanced {
+          background: transparent;
         }
-        .react-calendar-custom .react-calendar__tile--now {
-          background: #fbbf24 !important;
-          color: white !important;
+        .react-calendar-advanced .react-calendar__tile--active {
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          color: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
         }
-        .react-calendar-custom .react-calendar__navigation button {
+        .react-calendar-advanced .react-calendar__tile--now {
+          background: linear-gradient(135deg, #fef3c7, #f59e0b);
+          color: #1f2937;
+          border-radius: 12px;
+          font-weight: bold;
+        }
+        .react-calendar-advanced .react-calendar__navigation button {
           color: #4b5563;
           font-weight: 600;
         }
-        .react-calendar-custom .react-calendar__tile {
+        .react-calendar-advanced .react-calendar__tile {
           border-radius: 8px;
-          margin: 2px;
+          transition: all 0.3s ease;
+        }
+        .react-calendar-advanced .react-calendar__tile:hover {
+          background: #e5e7eb;
+          transform: scale(1.05);
         }
       `}</style>
     </DashboardLayout>
   );
 };
 
-export default Student_TImetable;
+export default Student_Timetable;

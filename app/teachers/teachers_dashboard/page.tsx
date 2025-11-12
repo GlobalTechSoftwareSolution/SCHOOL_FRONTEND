@@ -235,7 +235,7 @@ const TeachersDashboard = () => {
 
   const quickActions = [
     { label: "Manage Grades", href: "/teachers/teachers_marks", icon: BarChart3, color: "blue" },
-    { label: "View Students", href: "/teachers/teachers_students", icon: Users, color: "green" },
+    { label: "View Students", href: "/teachers/teachers_monthly_report", icon: Users, color: "green" },
     { label: "Mark Attendance", href: "/teachers/teachers_attendance", icon: UserCheck, color: "orange" },
     { label: "Create Assignment", href: "/teachers/teachers_assignment", icon: FileText, color: "purple" }
   ];

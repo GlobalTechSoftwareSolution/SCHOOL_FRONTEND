@@ -4,20 +4,18 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-// ✅ Added type definition
 interface AttendanceRecord {
   id: number;
   student_name: string;
-  student?: string;
   date: string;
   status: "Present" | "Absent" | "Late" | string;
   marked_by_role?: string;
   remarks?: string;
   section?: string;
+  class_id?: number;
 }
 
 const AttendancePage = () => {
-  // ✅ Added type to useState
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -26,8 +24,7 @@ const AttendancePage = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  const API_URL =
-    "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/";
+  const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -55,61 +52,96 @@ const AttendancePage = () => {
         setLoading(true);
         setError("");
 
-        console.log("📊 Fetching attendance for:", storedEmail);
+        console.log("===================================");
+        console.log("🎓 Fetching attendance for:", storedEmail);
+        console.log("===================================");
 
-        // Get student details first to get section info and student name
-        let studentSection = "";
-        let studentName = "";
-        try {
-          const studentRes = await axios.get(`https://globaltechsoftwaresolutions.cloud/school-api/api/students/?email=${encodeURIComponent(storedEmail)}`);
-          const studentRecord = Array.isArray(studentRes.data) ? studentRes.data[0] : studentRes.data;
-          
-          if (studentRecord) {
-            studentSection = studentRecord.section || "";
-            studentName = studentRecord.fullname || studentRecord.name || "";
-            console.log("🎓 Student details:", { name: studentName, section: studentSection });
-          }
-        } catch (studentErr) {
-          console.warn("Could not fetch student details:", studentErr);
+        // STEP 1️⃣ — Get student details
+        const studentRes = await axios.get(
+          `${API_BASE}/students/?email=${encodeURIComponent(storedEmail)}`
+        );
+        const studentData = Array.isArray(studentRes.data)
+          ? studentRes.data[0]
+          : studentRes.data;
+
+        if (!studentData) {
+          setError("No student data found.");
+          return;
         }
 
-        // Fetch all attendance records and filter
-        const response = await axios.get(API_URL);
-        const allRecords: AttendanceRecord[] = response.data || [];
+        const { fullname, class_id } = studentData;
+        console.log("✅ Student found:", { fullname, class_id });
 
-        console.log("📋 Total attendance records:", allRecords.length);
-        console.log("🔍 Sample attendance records:", allRecords.slice(0, 2));
+        // STEP 2️⃣ — Get class details based on class_id
+        const classRes = await axios.get(`${API_BASE}/classes/`);
+        const classList = classRes.data || [];
 
-        // Filter records for the current student by name and section
-        const filteredRecords = allRecords.filter((record) => {
-          if (!record) return false;
-          
-          console.log("🔍 Checking record:", {
-            id: record.id,
-            student_name: record.student_name,
-            section: record.section,
-            nameMatch: record.student_name?.toLowerCase() === studentName.toLowerCase()
-          });
-          
-          // Match by student name (exact match)
-          const nameMatch = record.student_name?.toLowerCase() === studentName.toLowerCase();
-          
-          // If we have section info, also filter by section
-          if (studentSection && record.section) {
-            const sectionMatch = record.section.toLowerCase() === studentSection.toLowerCase();
-            return nameMatch && sectionMatch;
-          }
-          
-          return nameMatch;
+        const matchedClass = classList.find(
+          (cls: any) => cls.id === class_id
+        );
+
+        if (!matchedClass) {
+          console.warn("⚠️ Class not found for class_id:", class_id);
+        }
+
+        const studentClass = matchedClass?.class_name || "Unknown";
+        const studentSection = matchedClass?.sec || "Unknown";
+
+        console.log("🏫 Matched Class:", {
+          class_name: studentClass,
+          section: studentSection,
         });
 
-        console.log("✅ Found", filteredRecords.length, "records for student:", storedEmail);
+        // STEP 3️⃣ — Fetch attendance data
+        const attendanceRes = await axios.get(`${API_BASE}/attendance/`);
+        const allAttendance: AttendanceRecord[] = attendanceRes.data || [];
+        console.log("📋 Total Attendance Records:", allAttendance.length);
 
-        if (filteredRecords.length === 0) {
-          setError("No attendance records found for your account.");
+        // STEP 4️⃣ — Filter attendance for the student
+const filteredAttendance = allAttendance.filter((rec) => {
+  if (!rec) return false;
+
+  const sameClass = rec.class_id?.toString() === class_id?.toString();
+  const sameSection =
+    rec.section?.toLowerCase() === studentSection.toLowerCase();
+
+  // Sometimes attendance has student_email or user_email
+  const sameEmail =
+    rec.student_email?.toLowerCase() === storedEmail.toLowerCase() ||
+    rec.user_email?.toLowerCase() === storedEmail.toLowerCase();
+
+  // ✅ Priority 1: match by email
+  if (sameEmail) {
+    console.log("📧 Email match found for:", storedEmail, "=> Record ID:", rec.id);
+    return true;
+  }
+
+  // ✅ Priority 2: fallback — match by class & section
+  if (sameClass && (studentSection === "Unknown" || sameSection)) {
+    console.log("🏫 Class/Section match:", {
+      recordId: rec.id,
+      recClass: rec.class_id,
+      recSection: rec.section,
+    });
+    return true;
+  }
+
+  return false;
+});
+
+
+        console.log(
+          "✅ Filtered Attendance Records:",
+          filteredAttendance.length
+        );
+
+        if (filteredAttendance.length === 0) {
+          setError(
+            `No attendance found for class ${studentClass} - ${studentSection}`
+          );
         }
 
-        setAttendanceData(filteredRecords);
+        setAttendanceData(filteredAttendance);
       } catch (err) {
         console.error("❌ Error fetching attendance:", err);
         setError("Failed to fetch attendance data. Please try again.");
@@ -121,7 +153,7 @@ const AttendancePage = () => {
     fetchAttendance();
   }, []);
 
-  // ✅ No more TS errors
+  // Stats
   const presentCount = attendanceData.filter(
     (att) => att.status === "Present"
   ).length;
@@ -142,20 +174,9 @@ const AttendancePage = () => {
   });
 
   const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ];
-
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
@@ -163,222 +184,120 @@ const AttendancePage = () => {
     <DashboardLayout role="students">
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header Section */}
+          {/* HEADER */}
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-blue-100">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <span className="text-white text-2xl">📅</span>
-                  </div>
-                  Attendance Dashboard
-                </h1>
-                {userEmail && (
-                  <p className="text-gray-600 mt-2">
-                    Welcome back,{" "}
-                    <span className="font-semibold text-blue-600">
-                      {userEmail}
-                    </span>
-                    <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                      {userRole}
-                    </span>
-                  </p>
-                )}
+            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                📅
               </div>
+              Attendance Dashboard
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Welcome,{" "}
+              <span className="font-semibold text-blue-600">{userEmail}</span>
+              <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                {userRole}
+              </span>
+            </p>
+          </div>
 
-              {/* Stats Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full md:w-auto">
-                <div className="bg-gradient-to-r from-green-50 to-emerald-100 rounded-xl p-4 border border-green-200 text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {presentCount}
-                  </div>
-                  <div className="text-sm text-green-800 font-medium">
-                    Present
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-red-50 to-rose-100 rounded-xl p-4 border border-red-200 text-center">
-                  <div className="text-2xl font-bold text-red-600">
-                    {absentCount}
-                  </div>
-                  <div className="text-sm text-red-800 font-medium">Absent</div>
-                </div>
-                <div className="bg-gradient-to-r from-blue-50 to-cyan-100 rounded-xl p-4 border border-blue-200 text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {totalCount}
-                  </div>
-                  <div className="text-sm text-blue-800 font-medium">Total</div>
-                </div>
-                <div className="bg-gradient-to-r from-purple-50 to-violet-100 rounded-xl p-4 border border-purple-200 text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {attendancePercentage}%
-                  </div>
-                  <div className="text-sm text-purple-800 font-medium">
-                    Percentage
-                  </div>
-                </div>
-              </div>
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-green-50 p-4 border border-green-200 rounded-xl text-center">
+              <p className="text-2xl font-bold text-green-700">{presentCount}</p>
+              <p className="text-sm font-medium text-green-700">Present</p>
+            </div>
+            <div className="bg-red-50 p-4 border border-red-200 rounded-xl text-center">
+              <p className="text-2xl font-bold text-red-700">{absentCount}</p>
+              <p className="text-sm font-medium text-red-700">Absent</p>
+            </div>
+            <div className="bg-blue-50 p-4 border border-blue-200 rounded-xl text-center">
+              <p className="text-2xl font-bold text-blue-700">{totalCount}</p>
+              <p className="text-sm font-medium text-blue-700">Total</p>
+            </div>
+            <div className="bg-purple-50 p-4 border border-purple-200 rounded-xl text-center">
+              <p className="text-2xl font-bold text-purple-700">
+                {attendancePercentage}%
+              </p>
+              <p className="text-sm font-medium text-purple-700">Percentage</p>
             </div>
           </div>
 
-
-        {/* Filters Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-blue-100">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Filter by Month & Year
-              </label>
-              <div className="flex gap-3">
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                >
-                  {months.map((month, index) => (
-                    <option key={month} value={index + 1}>
-                      {month}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                >
-                  {years.map(year => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Filter Controls */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-blue-100">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className="px-4 py-3 border border-gray-300 rounded-xl"
+              >
+                {months.map((month, index) => (
+                  <option key={month} value={index + 1}>
+                    {month}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="px-4 py-3 border border-gray-300 rounded-xl"
+              >
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="flex justify-center items-center gap-3">
-              <div className="w-6 h-6 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-gray-600 font-medium">Loading your attendance records...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-gradient-to-r from-red-50 to-rose-100 border border-red-200 rounded-2xl p-6 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <span className="text-red-600 text-xl">⚠️</span>
-              </div>
-              <p className="text-red-700 font-medium">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Attendance Table */}
-        {filteredData.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-blue-100">
-            <div className="overflow-x-auto">
+          {/* Attendance Table */}
+          {loading ? (
+            <p className="text-center text-gray-600">Loading attendance...</p>
+          ) : error ? (
+            <div className="text-center text-red-600 font-semibold">{error}</div>
+          ) : filteredData.length > 0 ? (
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-blue-100">
               <table className="w-full">
-                <thead>
-                  <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                      ID
+                <thead className="bg-blue-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-gray-700">ID</th>
+                    <th className="px-6 py-4 text-left text-gray-700">
+                      Student
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                      Student Name
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-gray-700">Date</th>
+                    <th className="px-6 py-4 text-left text-gray-700">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-gray-700">
                       Marked By
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-gray-700">
                       Remarks
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredData.map((att: any) => (
-                    <tr 
-                      key={att.id} 
-                      className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 group-hover:bg-white transition-colors">
-                          {att.id}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {att.student_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                          {att.date}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                          att.status === "Present"
-                            ? "bg-green-100 text-green-800 border border-green-200"
-                            : att.status === "Absent"
-                            ? "bg-red-100 text-red-800 border border-red-200"
-                            : "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                        }`}>
-                          {att.status === "Present" && "✅ "}
-                          {att.status === "Absent" && "❌ "}
-                          {att.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          {att.marked_by_role}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
-                        {att.remarks || (
-                          <span className="text-gray-400 italic">No remarks</span>
-                        )}
+                <tbody>
+                  {filteredData.map((att) => (
+                    <tr key={att.id} className="hover:bg-blue-50">
+                      <td className="px-6 py-4">{att.id}</td>
+                      <td className="px-6 py-4">{att.user_name}</td>
+                      <td className="px-6 py-4">{att.date}</td>
+                      <td className="px-6 py-4">{att.status}</td>
+                      <td className="px-6 py-4">{att.marked_by_role}</td>
+                      <td className="px-6 py-4">
+                        {att.remarks || "—"}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && filteredData.length === 0 && attendanceData.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">📊</span>
+          ) : (
+            <div className="text-center text-gray-500 py-10">
+              No attendance records found.
             </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No records found</h3>
-            <p className="text-gray-500 mb-6">
-              No attendance records found for {months[selectedMonth - 1]} {selectedYear}
-            </p>
-            <button 
-              onClick={() => {
-                setSelectedMonth(new Date().getMonth() + 1);
-                setSelectedYear(new Date().getFullYear());
-              }}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
-            >
-              Show Current Month
-            </button>
-          </div>
-        )}
-
+          )}
         </div>
       </div>
     </DashboardLayout>

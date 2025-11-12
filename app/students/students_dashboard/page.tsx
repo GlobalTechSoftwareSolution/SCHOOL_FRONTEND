@@ -110,28 +110,6 @@ const StudentDashboard = () => {
             a.student_id === studentInfo.student_id
         );
         setAttendance(studentAttendance);
-
-        // ✅ Fetch all assignments
-        const assignmentsRes = await axios.get(`${API_BASE}assignments/`, { headers }).catch(err => {
-          console.warn("Assignments API failed:", err.message);
-          return { data: [] };
-        });
-        const assignmentsData = Array.isArray(assignmentsRes.data)
-          ? assignmentsRes.data
-          : [assignmentsRes.data];
-
-        // ✅ Show all assignments for student's grade + section
-        const relevantAssignments = assignmentsData.filter((assignment: any) => {
-          const matchesClass =
-            assignment.class_name?.toLowerCase() === studentInfo.class_name?.toLowerCase();
-          const matchesSection =
-            assignment.section?.toLowerCase() === studentInfo.section?.toLowerCase();
-          return matchesClass && matchesSection;
-        });
-
-        setAssignments(relevantAssignments);
-        console.log("📚 All relevant assignments:", relevantAssignments);
-
         // Marks
         const marksRes = await axios.get(`${API_BASE}grades/`, { headers }).catch(err => {
           console.warn("Grades API failed:", err.message);
@@ -302,19 +280,6 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            {/* Assignments Card */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
-                  <span className="text-xl">📝</span>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 font-medium">Assignments</div>
-                  <div className="text-2xl font-bold text-gray-900">{assignments.length}</div>
-                </div>
-              </div>
-            </div>
-
             {/* Performance Card */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
               <div className="flex items-center">
@@ -415,36 +380,6 @@ const StudentDashboard = () => {
                 </div>
               </div>
 
-              {/* Pending Assignments */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Pending Assignments</h2>
-                  <a href="/student/assignments" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    View All
-                  </a>
-                </div>
-                <div className="space-y-4">
-                  {pendingAssignmentsList.length > 0 ? pendingAssignmentsList.map((assignment) => (
-                    <div key={assignment.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-orange-300 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold text-gray-900">{assignment.title}</h3>
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">
-                          Pending
-                        </span>
-                      </div>
-                      <p className="text-gray-600 text-sm mb-2 line-clamp-2">{assignment.description}</p>
-                      <div className="flex justify-between items-center text-xs text-gray-500">
-                        <span>Subject: {assignment.subject}</span>
-                        <span>Due: {new Date(assignment.due_date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="text-center py-4 text-gray-500">
-                      No pending assignments 🎉
-                    </div>
-                  )}
-                </div>
-              </div>
 
             </div>
           </div>

@@ -3,51 +3,51 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { 
-  Plus, 
-  X, 
-  Edit, 
-  Trash2, 
-  Search, 
-  Filter, 
   FileText, 
-  Download, 
-  Upload, 
-  Calendar, 
   Users, 
+  BookOpen, 
   AlertCircle, 
-  CheckCircle,
-  Clock,
+  Loader2, 
+  Download,
   Eye,
-  MoreVertical
+  Calendar,
+  Mail,
+  User,
+  CheckCircle,
+  XCircle,
+  Search,
+  Filter,
+  ChevronDown,
+  Upload,
+  FileUp,
+  Trash2,
+  Edit
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/";
 
 interface Document {
   id: number;
-  conduct_certificate: string | null;
-  transfer_certificate: string | null;
-  study_certificate: string | null;
-  id_proof: string | null;
-  resume: string | null;
-  award: string | null;
-  certificates: string | null;
-  marks_card: string | null;
-  masters: string | null;
-  degree: string | null;
-  student_id_card: string | null;
-  admit_card: string | null;
-  fee_receipt: string | null;
-  achievement_crt: string | null;
-  bonafide_crt: string | null;
-  student_email?: string;
-  student_name?: string;
-  class_name?: string;
-  section?: string;
-  issue_date?: string;
-  expiry_date?: string;
-  status?: "Issued" | "Pending" | "Expired";
-  created_at?: string;
+  tenth?: string | null;
+  twelth?: string | null;
+  degree?: string | null;
+  masters?: string | null;
+  marks_card?: string | null;
+  certificates?: string | null;
+  award?: string | null;
+  resume?: string | null;
+  id_proof?: string | null;
+  transfer_certificate?: string | null;
+  study_certificate?: string | null;
+  conduct_certificate?: string | null;
+  student_id_card?: string | null;
+  admit_card?: string | null;
+  fee_receipt?: string | null;
+  achievement_crt?: string | null;
+  bonafide_crt?: string | null;
+  uploaded_at?: string;
+  email: string;
 }
 
 interface Student {
@@ -58,853 +58,784 @@ interface Student {
   section: string;
 }
 
-const TeachersDocumentsPage = () => {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [classFilter, setClassFilter] = useState<string>("all");
-  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-  const [stats, setStats] = useState({
-    total: 0,
-    issued: 0,
-    pending: 0,
-    expired: 0
-  });
-
+const TeacherDocumentsPage = () => {
+  const [activeTab, setActiveTab] = useState<"teacher" | "student" | "pending">("teacher");
   const [teacherEmail, setTeacherEmail] = useState<string>("");
-  const [teacherName, setTeacherName] = useState<string>("");
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [filteredDocs, setFilteredDocs] = useState<Document[]>([]);
+  const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [teacherDocument, setTeacherDocument] = useState<Document | null>(null);
 
-  const [newDocument, setNewDocument] = useState({
-    conduct_certificate: null as string | null,
-    transfer_certificate: null as string | null,
-    study_certificate: null as string | null,
-    id_proof: null as string | null,
-    resume: null as string | null,
-    award: null as string | null,
-    certificates: null as string | null,
-    marks_card: null as string | null,
-    masters: null as string | null,
-    degree: null as string | null,
-    student_id_card: null as string | null,
-    admit_card: null as string | null,
-    fee_receipt: null as string | null,
-    achievement_crt: null as string | null,
-    bonafide_crt: null as string | null,
-    student_email: "",
-    student_name: "",
-    class_name: "",
-    section: "",
-    issue_date: "",
-    expiry_date: "",
-    status: "Issued" as const,
-    created_at: ""
-  });
+  // Teacher document types for upload
+  const teacherDocumentTypes = [
+    { key: 'resume', label: 'Resume/CV', required: false },
+    { key: 'id_proof', label: 'ID Proof', required: false },
+    { key: 'degree', label: 'Degree Certificate', required: false },
+    { key: 'masters', label: 'Masters Certificate', required: false },
+    { key: 'certificates', label: 'Other Certificates', required: false },
+    { key: 'award', label: 'Awards', required: false }
+  ];
 
-  // Get teacher info from localStorage
+  // ✅ Step 1: Get teacher email
   useEffect(() => {
-    const userData = localStorage.getItem("userData");
-    if (userData) {
-      const user = JSON.parse(userData);
+    const stored = localStorage.getItem("userData");
+    if (stored) {
+      const user = JSON.parse(stored);
       setTeacherEmail(user.email);
-      setTeacherName(user.name || "Teacher");
+      console.log("🧑‍🏫 Logged-in teacher:", user.email);
     }
   }, []);
 
-  // Fetch documents and students
+  // ✅ Step 2: Fetch all documents
   const fetchDocuments = async () => {
-    if (!teacherEmail) return;
-    
     try {
       setLoading(true);
-      console.log("Fetching documents for teacher:", teacherEmail);
-      
-      // First, get teacher's timetable to find their assigned classes
-      const timetableRes = await axios.get(`${API_URL}timetable/`).catch(err => {
-        console.warn("Timetable API failed:", err.message);
-        return { data: [] };
-      });
-
-      // Filter timetable by teacher email to get their classes
-      const teacherTimetable = timetableRes.data.filter(
-        (t: any) => t.teacher === teacherEmail
-      );
-
-      // Get unique classes taught by this teacher
-      const teacherClasses = teacherTimetable.reduce((acc: any[], curr: any) => {
-        if (
-          !acc.find(
-            (a) =>
-              a.class_name === curr.class_name && a.section === curr.section
-          )
-        ) {
-          acc.push({ 
-            class_name: curr.class_name, 
-            section: curr.section
-          });
-        }
-        return acc;
-      }, []);
-
-      console.log("Teacher's assigned classes:", teacherClasses);
-
-      // Now get all students
-      const studentsRes = await axios.get(`${API_URL}students/`).catch(err => {
-        console.warn("Students API failed:", err.message);
-        return { data: [] };
-      });
-
-      // Filter students to only those in teacher's classes
-      const teacherStudents = studentsRes.data.filter((student: any) =>
-        teacherClasses.some(
-          (cls: any) => cls.class_name === student.class_name && cls.section === student.section
-        )
-      );
-
-      console.log("Students in teacher's classes:", teacherStudents.length);
-
-      // Get documents for the teacher's students
-      const documentsRes = await axios.get(`${API_URL}documents/`).catch(err => {
-        console.warn("Documents API failed:", err.message);
-        return { data: [] };
-      });
-
-      // Filter documents to only those belonging to teacher's students
-      const studentDocuments = documentsRes.data.filter((doc: any) =>
-        teacherStudents.some((student: any) => student.email === doc.student_email)
-      );
-
-      console.log("Documents for teacher's students:", studentDocuments.length);
-
-      // Process the documents to create a flat list of available documents
-      const processedDocuments: Document[] = [];
-      
-      studentDocuments.forEach((doc: any, index: number) => {
-        // Create document entries for each non-null document field
-        const documentTypes = [
-          { key: 'conduct_certificate', name: 'Conduct Certificate' },
-          { key: 'transfer_certificate', name: 'Transfer Certificate' },
-          { key: 'study_certificate', name: 'Study Certificate' },
-          { key: 'id_proof', name: 'ID Proof' },
-          { key: 'resume', name: 'Resume' },
-          { key: 'award', name: 'Award Certificate' },
-          { key: 'certificates', name: 'Other Certificates' },
-          { key: 'marks_card', name: 'Marks Card' },
-          { key: 'masters', name: 'Masters Degree' },
-          { key: 'degree', name: 'Degree Certificate' },
-          { key: 'student_id_card', name: 'Student ID Card' },
-          { key: 'admit_card', name: 'Admit Card' },
-          { key: 'fee_receipt', name: 'Fee Receipt' },
-          { key: 'achievement_crt', name: 'Achievement Certificate' },
-          { key: 'bonafide_crt', name: 'Bonafide Certificate' }
-        ];
-
-        documentTypes.forEach(docType => {
-          if (doc[docType.key]) {
-            processedDocuments.push({
-              id: index * 100 + documentTypes.indexOf(docType),
-              conduct_certificate: doc.conduct_certificate || null,
-              transfer_certificate: doc.transfer_certificate || null,
-              study_certificate: doc.study_certificate || null,
-              id_proof: doc.id_proof || null,
-              resume: doc.resume || null,
-              award: doc.award || null,
-              certificates: doc.certificates || null,
-              marks_card: doc.marks_card || null,
-              masters: doc.masters || null,
-              degree: doc.degree || null,
-              student_id_card: doc.student_id_card || null,
-              admit_card: doc.admit_card || null,
-              fee_receipt: doc.fee_receipt || null,
-              achievement_crt: doc.achievement_crt || null,
-              bonafide_crt: doc.bonafide_crt || null,
-              [docType.key]: doc[docType.key],
-              student_email: doc.student_email || '',
-              student_name: doc.student_name || 'Unknown Student',
-              class_name: doc.class_name || 'N/A',
-              section: doc.section || '',
-              issue_date: doc.issue_date || new Date().toISOString().split('T')[0],
-              status: 'Issued',
-              created_at: doc.created_at
-            });
-          }
-        });
-      });
-
-      console.log("Processed documents for teacher's students:", processedDocuments);
-
-      setDocuments(processedDocuments);
-      setFilteredDocuments(processedDocuments);
-      setStudents(teacherStudents);
-      calculateStats(processedDocuments);
-      setError(null);
-    } catch (err: any) {
-      console.error("Error fetching documents:", err);
-      setError("Failed to load documents. Try again later.");
+      const res = await axios.get(`${API_URL}documents/`);
+      setDocuments(res.data);
+      console.log("📂 All documents:", res.data.length);
+    } catch (err) {
+      console.error("❌ Error fetching documents:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateStats = (documentsData: Document[]) => {
-    const stats = {
-      total: documentsData.length,
-      issued: documentsData.filter(d => d.status === "Issued").length,
-      pending: documentsData.filter(d => d.status === "Pending").length,
-      expired: documentsData.filter(d => d.status === "Expired").length
-    };
-    setStats(stats);
+  // ✅ Step 3: Fetch teacher's students via timetable
+  const fetchTeacherStudents = async (teacherEmail: string) => {
+    try {
+      console.log("🎓 Fetching students for teacher:", teacherEmail);
+
+      const timetableRes = await axios.get(`${API_URL}timetable/`);
+      const teacherClasses = timetableRes.data.filter(
+        (t: any) => t.teacher?.toLowerCase() === teacherEmail.toLowerCase()
+      );
+
+      const classList = teacherClasses.map((t: any) => ({
+        class_name: t.class_name,
+        section: t.section,
+      }));
+
+      const studentsRes = await axios.get(`${API_URL}students/`);
+      const teacherStudents = studentsRes.data.filter((s: any) =>
+        classList.some(
+          (cls) =>
+            cls.class_name === s.class_name && cls.section === s.section
+        )
+      );
+
+      console.log("👩‍🎓 Students under teacher:", teacherStudents.length);
+      setStudents(teacherStudents);
+    } catch (err) {
+      console.error("❌ Error fetching teacher students:", err);
+    }
   };
 
+  // ✅ Step 4: Identify pending students
+  const findPendingStudents = () => {
+    const studentEmails = students.map((s) => s.email.toLowerCase());
+    const studentsWithDocs = documents.map((d) => d.email.toLowerCase());
+
+    // Missing documents: no document entry at all
+    const missingDocs = students.filter(
+      (s) => !studentsWithDocs.includes(s.email.toLowerCase())
+    );
+
+    // Partial (uploaded but incomplete)
+    const incompleteDocs = documents
+      .filter(
+        (d) =>
+          studentEmails.includes(d.email.toLowerCase()) &&
+          Object.values(d).filter(
+            (v) => typeof v === "string" && v.startsWith("http")
+          ).length < 3 // less than 3 uploaded docs = incomplete
+      )
+      .map((d) => students.find((s) => s.email === d.email))
+      .filter(Boolean) as Student[];
+
+    const combinedPending = [...missingDocs, ...incompleteDocs];
+    console.log("⚠️ Pending/Incomplete Students:", combinedPending.length);
+    setPendingStudents(combinedPending);
+  };
+
+  // ✅ Step 5: Filter based on tab
+  useEffect(() => {
+    if (!teacherEmail || documents.length === 0) return;
+
+    if (activeTab === "teacher") {
+      const teacherDocs = documents.filter(
+        (d) => d.email?.toLowerCase() === teacherEmail.toLowerCase()
+      );
+      setFilteredDocs(teacherDocs);
+    } else if (activeTab === "student") {
+      const studentEmails = students.map((s) => s.email.toLowerCase());
+      const studentDocs = documents.filter((d) =>
+        studentEmails.includes(d.email.toLowerCase())
+      );
+      setFilteredDocs(studentDocs);
+    } else if (activeTab === "pending") {
+      findPendingStudents();
+    }
+  }, [activeTab, documents, teacherEmail, students]);
+
+  // ✅ Step 6: Initial data load
   useEffect(() => {
     if (teacherEmail) {
-      fetchDocuments();
+      Promise.all([fetchDocuments(), fetchTeacherStudents(teacherEmail)]);
     }
   }, [teacherEmail]);
 
-  // Helper function to get document type and URL
-  const getDocumentInfo = (doc: Document) => {
-    const documentTypes = [
-      { key: 'conduct_certificate', name: 'Conduct Certificate' },
-      { key: 'transfer_certificate', name: 'Transfer Certificate' },
-      { key: 'study_certificate', name: 'Study Certificate' },
-      { key: 'id_proof', name: 'ID Proof' },
-      { key: 'resume', name: 'Resume' },
-      { key: 'award', name: 'Award Certificate' },
-      { key: 'certificates', name: 'Other Certificates' },
-      { key: 'marks_card', name: 'Marks Card' },
-      { key: 'masters', name: 'Masters Degree' },
-      { key: 'degree', name: 'Degree Certificate' },
-      { key: 'student_id_card', name: 'Student ID Card' },
-      { key: 'admit_card', name: 'Admit Card' },
-      { key: 'fee_receipt', name: 'Fee Receipt' },
-      { key: 'achievement_crt', name: 'Achievement Certificate' },
-      { key: 'bonafide_crt', name: 'Bonafide Certificate' }
-    ];
+  // ✅ Step 7: Get teacher's document
+  useEffect(() => {
+    if (teacherEmail && documents.length > 0) {
+      const teacherDoc = documents.find(d => d.email === teacherEmail);
+      setTeacherDocument(teacherDoc || null);
+    }
+  }, [teacherEmail, documents]);
 
-    for (const docType of documentTypes) {
-      if (doc[docType.key as keyof Document]) {
-        return {
-          type: docType.name,
-          url: doc[docType.key as keyof Document] as string
+  // ✅ Upload teacher document
+  const uploadTeacherDocument = async (documentType: string, file: File) => {
+    if (!teacherEmail) {
+      alert("Teacher email not found. Please refresh the page.");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadProgress(prev => ({ ...prev, [documentType]: 0 }));
+
+      console.log(`📤 Uploading ${documentType} for teacher:`, teacherEmail);
+
+      // First check if teacher already has a document entry
+      const existingDoc = documents.find(d => d.email === teacherEmail);
+      
+      if (existingDoc) {
+        // Update existing document
+        const updateData = {
+          [documentType]: `https://example.com/${documentType}_${Date.now()}.pdf` // Simulate upload URL
         };
+        
+        console.log("🔄 Updating existing document:", existingDoc.id);
+        const updateResponse = await axios.patch(`${API_URL}documents/${existingDoc.id}/`, updateData);
+        console.log("✅ Update successful:", updateResponse.data);
+      } else {
+        // Create new document entry
+        const newDocData = {
+          email: teacherEmail,
+          [documentType]: `https://example.com/${documentType}_${Date.now()}.pdf`, // Simulate upload URL
+          uploaded_at: new Date().toISOString()
+        };
+        
+        console.log("🆕 Creating new document entry");
+        const createResponse = await axios.post(`${API_URL}documents/`, newDocData);
+        console.log("✅ Creation successful:", createResponse.data);
+      }
+      
+      // Refresh documents after upload
+      await fetchDocuments();
+      
+      // Show success message
+      alert(`${documentType.replace(/_/g, ' ')} uploaded successfully!`);
+      
+    } catch (error) {
+      console.error(`❌ Error uploading ${documentType}:`, error);
+      alert(`Failed to upload ${documentType.replace(/_/g, ' ')}. Please try again.`);
+    } finally {
+      setUploading(false);
+      setUploadProgress(prev => ({ ...prev, [documentType]: 0 }));
+    }
+  };
+
+  // ✅ Handle file upload
+  const handleFileUpload = (documentType: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type and size
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please upload a PDF or image file (JPG, PNG)');
+        return;
+      }
+
+      if (file.size > maxSize) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      uploadTeacherDocument(documentType, file);
+    }
+  };
+
+  // ✅ Get document types dynamically
+  const getDocTypes = (doc: Document) => {
+    const types: { label: string; link: string; type: string }[] = [];
+    for (const [key, value] of Object.entries(doc)) {
+      if (
+        value &&
+        typeof value === "string" &&
+        value.startsWith("http") &&
+        key !== "email"
+      ) {
+        types.push({ 
+          label: key.replace(/_/g, " "), 
+          link: value,
+          type: key
+        });
       }
     }
-    return { type: 'Unknown Document', url: '' };
+    return types;
   };
 
-  // Filter documents
-  useEffect(() => {
-    let filtered = documents;
-
-    if (searchTerm) {
-      filtered = filtered.filter(doc => {
-        const docInfo = getDocumentInfo(doc);
-        return docInfo.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               doc.student_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               doc.student_email?.toLowerCase().includes(searchTerm.toLowerCase());
-      });
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(doc => doc.status === statusFilter);
-    }
-
-    if (typeFilter !== "all") {
-      filtered = filtered.filter(doc => {
-        const docInfo = getDocumentInfo(doc);
-        return docInfo.type === typeFilter;
-      });
-    }
-
-    if (classFilter !== "all") {
-      filtered = filtered.filter(doc => doc.class_name === classFilter);
-    }
-
-    setFilteredDocuments(filtered);
-  }, [searchTerm, statusFilter, typeFilter, classFilter, documents]);
-
-  // Add new document
-  const handleAddDocument = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const documentData = {
-        ...newDocument,
-        teacher_email: teacherEmail,
-        issue_date: newDocument.issue_date || new Date().toISOString().split('T')[0]
-      };
-
-      await axios.post(`${API_URL}documents/`, documentData);
-      alert("✅ Document issued successfully!");
-      setShowAddForm(false);
-      resetForm();
-      fetchDocuments();
-    } catch (err: any) {
-      console.error("Error adding document:", err);
-      alert("❌ Failed to issue document. Check console for details.");
-    }
+  // ✅ Get document count for student
+  const getStudentDocumentCount = (studentEmail: string) => {
+    const studentDoc = documents.find(d => d.email === studentEmail);
+    if (!studentDoc) return 0;
+    return Object.values(studentDoc).filter(
+      (v) => typeof v === "string" && v.startsWith("http")
+    ).length;
   };
 
-  // Update document
-  const handleUpdateDocument = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingDocument) return;
-
-    try {
-      await axios.put(`${API_URL}documents/${editingDocument.id}/`, editingDocument);
-      alert("✅ Document updated successfully!");
-      setEditingDocument(null);
-      fetchDocuments();
-    } catch (err: any) {
-      console.error("Error updating document:", err);
-      alert("❌ Failed to update document. Check console for details.");
-    }
+  // ✅ Get document status
+  const getDocumentStatus = (student: Student) => {
+    const docCount = getStudentDocumentCount(student.email);
+    if (docCount === 0) return { status: "missing", color: "red", text: "No Documents" };
+    if (docCount < 3) return { status: "incomplete", color: "yellow", text: "Incomplete" };
+    return { status: "complete", color: "green", text: "Complete" };
   };
 
-  // Delete document
-  const handleDeleteDocument = async (id: number) => {
-    try {
-      await axios.delete(`${API_URL}documents/${id}/`);
-      alert("✅ Document deleted successfully!");
-      setDeleteConfirm(null);
-      fetchDocuments();
-    } catch (err: any) {
-      console.error("Error deleting document:", err);
-      alert("❌ Failed to delete document. Check console for details.");
-    }
-  };
+  // ✅ Filter students based on search
+  const filteredPendingStudents = pendingStudents.filter(student =>
+    student.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.class_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // Handle student selection
-  const handleStudentSelect = (studentEmail: string) => {
-    const student = students.find(s => s.email === studentEmail);
-    if (student) {
-      setNewDocument({
-        ...newDocument,
-        student_email: student.email,
-        student_name: student.fullname,
-        class_name: student.class_name,
-        section: student.section
-      });
-    }
-  };
-
-  const resetForm = () => {
-    setNewDocument({
-      conduct_certificate: null,
-      transfer_certificate: null,
-      study_certificate: null,
-      id_proof: null,
-      resume: null,
-      award: null,
-      certificates: null,
-      marks_card: null,
-      masters: null,
-      degree: null,
-      student_id_card: null,
-      admit_card: null,
-      fee_receipt: null,
-      achievement_crt: null,
-      bonafide_crt: null,
-      student_email: "",
-      student_name: "",
-      class_name: "",
-      section: "",
-      issue_date: "",
-      expiry_date: "",
-      status: "Issued",
-      created_at: ""
-    });
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Issued": return <CheckCircle className="h-4 w-4" />;
-      case "Pending": return <Clock className="h-4 w-4" />;
-      case "Expired": return <AlertCircle className="h-4 w-4" />;
-      default: return <FileText className="h-4 w-4" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Issued": return "bg-green-50 text-green-700 border-green-200";
-      case "Pending": return "bg-yellow-50 text-yellow-700 border-yellow-200";
-      case "Expired": return "bg-red-50 text-red-700 border-red-200";
-      default: return "bg-gray-50 text-gray-700 border-gray-200";
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "Certificate": return "bg-blue-50 text-blue-700 border-blue-200";
-      case "Report": return "bg-purple-50 text-purple-700 border-purple-200";
-      case "Letter": return "bg-indigo-50 text-indigo-700 border-indigo-200";
-      case "Form": return "bg-orange-50 text-orange-700 border-orange-200";
-      default: return "bg-gray-50 text-gray-700 border-gray-200";
-    }
-  };
-
-  const getClasses = () => {
-    return Array.from(new Set(students.map(s => s.class_name).filter(Boolean)));
-  };
-
-  if (loading) {
-    return (
-      <DashboardLayout role="teachers">
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const filteredStudentDocs = filteredDocs.filter(doc =>
+    doc.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <DashboardLayout role="teachers">
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Student Documents</h1>
-            <p className="text-gray-600 mt-1">
-              Issue and manage documents for your students
-            </p>
-          </div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
           >
-            <Plus className="h-5 w-5" /> Issue New Document
-          </button>
-        </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Documents</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Issued</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.issued}</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 md:p-8 border border-white/20">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg">
+                    <FileText className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                      Document Management
+                    </h1>
+                    <p className="text-gray-600 mt-2 flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Manage and track academic documents efficiently
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-xl">
+                  <User className="h-4 w-4 text-blue-600" />
+                  <span className="text-blue-700 font-medium">{teacherEmail}</span>
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.pending}</p>
-              </div>
-              <div className="p-3 bg-yellow-50 rounded-xl">
-                <Clock className="h-6 w-6 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Expired</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.expired}</p>
-              </div>
-              <div className="p-3 bg-red-50 rounded-xl">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+          {/* Stats Overview */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+          >
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{documents.length}</p>
+                  <p className="text-gray-600 text-sm">Total Documents</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search documents by type, student name, or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
+            
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{students.length}</p>
+                  <p className="text-gray-600 text-sm">Total Students</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-xl">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {pendingStudents.length}
+                  </p>
+                  <p className="text-gray-600 text-sm">Pending Documents</p>
+                </div>
+                <div className="p-3 bg-yellow-100 rounded-xl">
+                  <AlertCircle className="h-6 w-6 text-yellow-600" />
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 w-full lg:w-auto">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {students.length - pendingStudents.length}
+                  </p>
+                  <p className="text-gray-600 text-sm">Completed</p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-xl">
+                  <CheckCircle className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Navigation Tabs */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-2 mb-8 border border-white/20"
+          >
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => setActiveTab("teacher")}
+                className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-semibold transition-all duration-300 ${
+                  activeTab === "teacher"
+                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
+                    : "text-gray-700 hover:bg-blue-50"
+                }`}
               >
-                <option value="all">All Status</option>
-                <option value="Issued">Issued</option>
-                <option value="Pending">Pending</option>
-                <option value="Expired">Expired</option>
-              </select>
-
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                <BookOpen className="h-5 w-5" />
+                My Documents
+              </button>
+              <button
+                onClick={() => setActiveTab("student")}
+                className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-semibold transition-all duration-300 ${
+                  activeTab === "student"
+                    ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
+                    : "text-gray-700 hover:bg-green-50"
+                }`}
               >
-                <option value="all">All Types</option>
-                <option value="Conduct Certificate">Conduct Certificate</option>
-                <option value="Transfer Certificate">Transfer Certificate</option>
-                <option value="Study Certificate">Study Certificate</option>
-                <option value="ID Proof">ID Proof</option>
-                <option value="Resume">Resume</option>
-                <option value="Award Certificate">Award Certificate</option>
-                <option value="Other Certificates">Other Certificates</option>
-                <option value="Marks Card">Marks Card</option>
-                <option value="Masters Degree">Masters Degree</option>
-                <option value="Degree Certificate">Degree Certificate</option>
-                <option value="Student ID Card">Student ID Card</option>
-                <option value="Admit Card">Admit Card</option>
-                <option value="Fee Receipt">Fee Receipt</option>
-                <option value="Achievement Certificate">Achievement Certificate</option>
-                <option value="Bonafide Certificate">Bonafide Certificate</option>
-              </select>
-
-              <select
-                value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                <Users className="h-5 w-5" />
+                Student Documents
+              </button>
+              <button
+                onClick={() => setActiveTab("pending")}
+                className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-semibold transition-all duration-300 ${
+                  activeTab === "pending"
+                    ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg"
+                    : "text-gray-700 hover:bg-yellow-50"
+                }`}
               >
-                <option value="all">All Classes</option>
-                {getClasses().map(className => (
-                  <option key={className} value={className}>{className}</option>
-                ))}
-              </select>
+                <AlertCircle className="h-5 w-5" />
+                Pending Documents
+              </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
 
-        {/* Documents Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Issued Documents ({filteredDocuments.length})
-            </h2>
-            <div className="text-sm text-gray-500">
-              Showing {filteredDocuments.length} of {documents.length} documents
-            </div>
-          </div>
-
-          {filteredDocuments.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <FileText className="h-16 w-16 mx-auto" />
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center items-center py-20 bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl">
+              <div className="text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+                <p className="text-gray-600">Loading documents...</p>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No documents found</h3>
-              <p className="text-gray-500 mb-6">
-                {searchTerm || statusFilter !== "all" || typeFilter !== "all" || classFilter !== "all" 
-                  ? "Try adjusting your filters or search terms"
-                  : "Get started by issuing your first document"}
-              </p>
-              {!searchTerm && statusFilter === "all" && typeFilter === "all" && classFilter === "all" && (
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition"
-                >
-                  Issue Document
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Document Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Class
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Issue Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredDocuments.map((doc) => {
-                    const docInfo = getDocumentInfo(doc);
-                    return (
-                      <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="font-medium text-gray-900">{docInfo.type}</div>
-                            <div className="text-sm text-gray-500 truncate max-w-xs">
-                              {docInfo.url}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="font-medium text-gray-900">{doc.student_name}</div>
-                            <div className="text-sm text-gray-500">{doc.student_email}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {doc.class_name} {doc.section && `(${doc.section})`}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(doc.status || 'Issued')}`}>
-                            {getStatusIcon(doc.status || 'Issued')}
-                            {doc.status || 'Issued'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {doc.issue_date ? new Date(doc.issue_date).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setEditingDocument(doc)}
-                              className="text-blue-600 hover:text-blue-800"
-                              title="Edit document"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirm(doc.id)}
-                              className="text-red-600 hover:text-red-800"
-                              title="Delete document"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                            {docInfo.url && (
-                              <button
-                                onClick={() => window.open(docInfo.url, '_blank')}
-                                className="text-green-600 hover:text-green-800"
-                                title="Download document"
-                              >
-                                <Download className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
             </div>
           )}
-        </div>
 
-        {/* Add/Edit Document Modal */}
-        {(showAddForm || editingDocument) && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold">
-                    {editingDocument ? "Edit Document" : "Issue New Document"}
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowAddForm(false);
-                      setEditingDocument(null);
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
+          {/* Content Area */}
+          {!loading && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="space-y-6"
+            >
+              {/* Search Bar */}
+              {(activeTab === "student" || activeTab === "pending") && (
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-white/20">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder={`Search ${activeTab === 'student' ? 'students' : 'pending students'}...`}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <form 
-                onSubmit={editingDocument ? handleUpdateDocument : handleAddDocument}
-                className="p-6 space-y-6"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Student Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Student *
-                    </label>
-                    <select
-                      value={editingDocument ? editingDocument.student_email : newDocument.student_email}
-                      onChange={(e) => {
-                        if (editingDocument) {
-                          const student = students.find(s => s.email === e.target.value);
-                          if (student) {
-                            setEditingDocument({ 
-                              ...editingDocument, 
-                              student_email: student.email,
-                              student_name: student.fullname,
-                              class_name: student.class_name,
-                              section: student.section
-                            });
-                          }
-                        } else {
-                          handleStudentSelect(e.target.value);
-                        }
-                      }}
-                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      required
-                    >
-                      <option value="">Select a student</option>
-                      {students.map((student) => (
-                        <option key={student.id} value={student.email}>
-                          {student.fullname} ({student.class_name} {student.section})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Issue Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Issue Date *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={editingDocument ? editingDocument.issue_date : newDocument.issue_date}
-                      onChange={(e) =>
-                        editingDocument
-                          ? setEditingDocument({ ...editingDocument, issue_date: e.target.value })
-                          : setNewDocument({ ...newDocument, issue_date: e.target.value })
-                      }
-                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    />
-                  </div>
-
-                  {/* Status */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status *
-                    </label>
-                    <select
-                      value={editingDocument ? editingDocument.status : newDocument.status}
-                      onChange={(e) =>
-                        editingDocument
-                          ? setEditingDocument({ ...editingDocument, status: e.target.value as any })
-                          : setNewDocument({ ...newDocument, status: e.target.value as any })
-                      }
-                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    >
-                      <option value="Issued">Issued</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Expired">Expired</option>
-                    </select>
-                  </div>
-
-                  {/* Expiry Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expiry Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      value={editingDocument ? editingDocument.expiry_date : newDocument.expiry_date}
-                      onChange={(e) =>
-                        editingDocument
-                          ? setEditingDocument({ ...editingDocument, expiry_date: e.target.value })
-                          : setNewDocument({ ...newDocument, expiry_date: e.target.value })
-                      }
-                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    />
-                  </div>
-
-                  {/* Note */}
-                  <div className="md:col-span-2">
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                      <p className="text-sm text-blue-800">
-                        <strong>Note:</strong> This form is for viewing existing documents. 
-                        To add new documents, please use the document upload system or contact the administrator.
-                      </p>
+              {/* Teacher Documents */}
+              {activeTab === "teacher" && (
+                <div className="space-y-6">
+                  {/* Upload Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden border border-white/20">
+                    <div className="p-6 border-b border-gray-200/50 bg-gradient-to-r from-blue-50 to-indigo-50">
+                      <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                        <FileUp className="h-6 w-6 text-blue-600" />
+                        Upload Your Documents
+                      </h2>
+                      <p className="text-gray-600 mt-2">Upload your professional documents for school records</p>
+                    </div>
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {teacherDocumentTypes.map((docType) => (
+                          <motion.div
+                            key={docType.key}
+                            whileHover={{ scale: 1.02 }}
+                            className="border-2 border-dashed border-gray-300 rounded-2xl p-6 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300"
+                          >
+                            <div className="text-center">
+                              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Upload className="h-8 w-8 text-blue-600" />
+                              </div>
+                              <h3 className="font-semibold text-gray-900 mb-2">
+                                {docType.label}
+                                {docType.required && <span className="text-red-500 ml-1">*</span>}
+                              </h3>
+                              
+                              {/* Check if document already exists */}
+                              {teacherDocument && teacherDocument[docType.key as keyof Document] ? (
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-center gap-2 text-green-600">
+                                    <CheckCircle className="h-4 w-4" />
+                                    <span className="text-sm font-medium">Uploaded</span>
+                                  </div>
+                                  <button
+                                    onClick={() => window.open(teacherDocument[docType.key as keyof Document] as string, '_blank')}
+                                    className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    View Document
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <p className="text-sm text-gray-500">No document uploaded</p>
+                                  <label className="block">
+                                    <input
+                                      type="file"
+                                      accept=".pdf,.jpg,.jpeg,.png"
+                                      onChange={(e) => handleFileUpload(docType.key, e)}
+                                      className="hidden"
+                                      disabled={uploading}
+                                    />
+                                    <div className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                      {uploading && uploadProgress[docType.key] !== undefined ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                          {uploadProgress[docType.key]}%
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Upload className="h-4 w-4" />
+                                          Upload
+                                        </>
+                                      )}
+                                    </div>
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                      
+                      <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <p className="text-sm text-blue-800">
+                          <strong>Note:</strong> Accepted formats are PDF, JPG, and PNG. Maximum file size is 5MB.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex gap-3 pt-4 border-t border-gray-200">
-                  <button
-                    type="submit"
-                    className="flex-1 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition font-medium"
-                  >
-                    {editingDocument ? "Update Document" : "Issue Document"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddForm(false);
-                      setEditingDocument(null);
-                    }}
-                    className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition font-medium"
-                  >
-                    Cancel
-                  </button>
+                  {/* Existing Documents Display */}
+                  {teacherDocument && (
+                    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden border border-white/20">
+                      <div className="p-6 border-b border-gray-200/50">
+                        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                          <BookOpen className="h-6 w-6 text-blue-600" />
+                          Your Uploaded Documents
+                        </h2>
+                        <p className="text-gray-600 mt-1">Last updated: {teacherDocument.uploaded_at || 'Unknown'}</p>
+                      </div>
+                      <div className="p-6">
+                        {getDocTypes(teacherDocument).length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {getDocTypes(teacherDocument).map((doc, index) => (
+                              <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-300"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-gray-900 capitalize mb-2">
+                                      {doc.label}
+                                    </h4>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => window.open(doc.link, '_blank')}
+                                        className="flex items-center gap-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                                      >
+                                        <Eye className="h-3 w-3" />
+                                        View
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          const link = document.createElement('a');
+                                          link.href = doc.link;
+                                          link.download = `${doc.label}.pdf`;
+                                          link.click();
+                                        }}
+                                        className="flex items-center gap-1 px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium transition-colors"
+                                      >
+                                        <Download className="h-3 w-3" />
+                                        Download
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <FileText className="h-8 w-8 text-blue-500 ml-3" />
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-12">
+                            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <FileText className="h-10 w-10 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">No Documents Uploaded</h3>
+                            <p className="text-gray-500">Upload your documents using the form above</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </form>
-            </div>
-          </div>
-        )}
+              )}
 
-        {/* Delete Confirmation Modal */}
-        {deleteConfirm && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-              <div className="text-center">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                  <Trash2 className="h-6 w-6 text-red-600" />
+              {/* Student Documents */}
+              {activeTab === "student" && (
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden border border-white/20">
+                  <div className="p-6 border-b border-gray-200/50">
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                      <Users className="h-6 w-6 text-green-600" />
+                      Student Documents
+                      <span className="text-sm font-normal text-gray-500 bg-green-100 px-3 py-1 rounded-full">
+                        {filteredStudentDocs.length} students
+                      </span>
+                    </h2>
+                  </div>
+
+                  <div className="p-6">
+                    {filteredStudentDocs.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                          No Student Documents Found
+                        </h3>
+                        <p className="text-gray-500">
+                          {searchTerm ? "No students match your search." : "No students have uploaded documents yet."}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {filteredStudentDocs.map((doc) => {
+                          const student = students.find(s => s.email === doc.email);
+                          const types = getDocTypes(doc);
+                          const docCount = types.length;
+                          
+                          return (
+                            <motion.div
+                              key={doc.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="bg-white rounded-2xl p-6 border border-gray-200/50 hover:shadow-lg transition-all duration-300"
+                            >
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                      <User className="h-5 w-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-bold text-gray-900">
+                                        {student?.fullname || doc.email}
+                                      </h3>
+                                      <p className="text-gray-600 text-sm">{doc.email}</p>
+                                    </div>
+                                  </div>
+                                  {student && (
+                                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                                      <span>Class: {student.class_name}</span>
+                                      <span>Section: {student.section}</span>
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        docCount >= 3 
+                                          ? 'bg-green-100 text-green-700'
+                                          : docCount > 0
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-red-100 text-red-700'
+                                      }`}>
+                                        {docCount} Documents
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="grid gap-3">
+                                {types.map((type) => (
+                                  <div key={type.type} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                    <span className="font-medium text-gray-700 capitalize">
+                                      {type.label}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500">
+                                        {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : '—'}
+                                      </span>
+                                      <a
+                                        href={type.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-sm"
+                                      >
+                                        <Download className="h-3 w-3" />
+                                        Download
+                                      </a>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Delete Document
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Are you sure you want to delete this document? This action cannot be undone.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleDeleteDocument(deleteConfirm)}
-                    className="flex-1 bg-red-600 text-white py-2 rounded-xl hover:bg-red-700 transition font-medium"
-                  >
-                    Delete
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition font-medium"
-                  >
-                    Cancel
-                  </button>
+              )}
+
+              {/* Pending Documents */}
+              {activeTab === "pending" && (
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden border border-white/20">
+                  <div className="p-6 border-b border-gray-200/50">
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                      <AlertCircle className="h-6 w-6 text-yellow-600" />
+                      Pending Document Submissions
+                      <span className="text-sm font-normal text-gray-500 bg-yellow-100 px-3 py-1 rounded-full">
+                        {filteredPendingStudents.length} students
+                      </span>
+                    </h2>
+                  </div>
+
+                  <div className="p-6">
+                    {filteredPendingStudents.length === 0 ? (
+                      <div className="text-center py-12">
+                        <CheckCircle className="h-16 w-16 text-green-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                          All Documents Submitted!
+                        </h3>
+                        <p className="text-gray-500">
+                          🎉 All students have completed their document submissions.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {filteredPendingStudents.map((student, index) => {
+                          const status = getDocumentStatus(student);
+                          const docCount = getStudentDocumentCount(student.email);
+                          
+                          return (
+                            <motion.div
+                              key={student.email}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className="bg-white rounded-2xl p-6 border border-gray-200/50 hover:shadow-lg transition-all duration-300"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                    <User className="h-6 w-6 text-yellow-600" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-bold text-gray-900">
+                                      {student.fullname}
+                                    </h3>
+                                    <p className="text-gray-600 text-sm">{student.email}</p>
+                                    <div className="flex items-center gap-3 mt-1">
+                                      <span className="text-sm text-gray-500">
+                                        {student.class_name} - {student.section}
+                                      </span>
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        status.color === 'green' 
+                                          ? 'bg-green-100 text-green-700'
+                                          : status.color === 'yellow'
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-red-100 text-red-700'
+                                      }`}>
+                                        {docCount} / 3 Documents
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {status.status === "missing" && <XCircle className="h-5 w-5 text-red-500" />}
+                                  {status.status === "incomplete" && <AlertCircle className="h-5 w-5 text-yellow-500" />}
+                                  <span className={`font-medium ${
+                                    status.color === 'green' ? 'text-green-600' :
+                                    status.color === 'yellow' ? 'text-yellow-600' : 'text-red-600'
+                                  }`}>
+                                    {status.text}
+                                  </span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
+              )}
+            </motion.div>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );
 };
 
-export default TeachersDocumentsPage;
+export default TeacherDocumentsPage;

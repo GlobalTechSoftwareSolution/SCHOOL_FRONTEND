@@ -449,12 +449,12 @@ const TeachersStudentLeavePage = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class & Section</th>
+                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class & Section</th> */}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Range</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th> */}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -463,10 +463,10 @@ const TeachersStudentLeavePage = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">{leave.student_name || 'N/A'}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap flex flex-col-2">
+                        {/* <td className="px-6 py-4 whitespace-nowrap flex flex-col-2">
                           <div className="text-sm text-gray-900 ml-2">{leave.class_name || 'N/A'}</div>
                           <div className="text-sm text-gray-500 ml-3">{leave.section || 'N/A'}</div>
-                        </td>
+                        </td> */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">{leave.leave_type || 'N/A'}</div>
                         </td>
@@ -498,7 +498,7 @@ const TeachersStudentLeavePage = () => {
                             {leave.status || 'Pending'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        {/* <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                           <button
                             onClick={() => {
                               setSelectedLeave(leave);
@@ -513,7 +513,7 @@ const TeachersStudentLeavePage = () => {
                           >
                             Review
                           </button>
-                        </td>
+                        </td> */}
                       </tr>
                     ))}
                   </tbody>
@@ -569,10 +569,10 @@ const TeachersStudentLeavePage = () => {
                     <label className="text-sm font-medium text-gray-500">Student Name</label>
                     <p className="text-lg font-semibold text-gray-900">{selectedLeave.student_name || 'N/A'}</p>
                   </div>
-                  <div>
+                  {/* <div>
                     <label className="text-sm font-medium text-gray-500">Class & Section</label>
                     <p className="text-lg font-semibold text-gray-900">{selectedLeave.class_name || 'N/A'} • {selectedLeave.section || 'N/A'}</p>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Leave Details */}

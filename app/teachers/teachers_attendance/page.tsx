@@ -1,625 +1,696 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import {
-  Search,
-  Filter,
-  Calendar,
   User,
-  Users,
   CheckCircle,
   XCircle,
   Clock,
-  Download,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  MoreVertical,
-  FileText,
-  TrendingUp,
-  AlertCircle
+  Loader2,
+  School,
+  Calendar,
+  Users,
+  BarChart3,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
-const TeachersAttendancePage = () => {
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [classFilter, setClassFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("");
-  const [expandedRecord, setExpandedRecord] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState("newest");
-  const [attendanceType, setAttendanceType] = useState<'teacher' | 'student'>('teacher');
-  const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
+const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api/";
 
-  const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/";
+interface AttendanceRecord {
+  id: number;
+  user_email: string;
+  user_name: string;
+  date: string;
+  check_in?: string;
+  status?: string;
+}
 
-  const fetchTeacherAttendance = async (teacherEmail: string) => {
-    try {
-      console.log("🔍 Fetching teacher attendance for:", teacherEmail);
-      const response = await axios.get(API_URL);
-      const allAttendance = response.data;
-      
-      console.log("📊 All attendance records:", allAttendance.length);
-      console.log("📋 Sample record:", allAttendance[0]);
+interface Student {
+  id: number;
+  fullname: string;
+  email: string;
+  class_id: number;
+  markedStatus?: string | null;
+}
 
-      // Filter records marked by this teacher
-      const teacherAttendance = allAttendance.filter(
-        (record: any) =>
-          record.marked_by_role === "Teacher" &&
-          record.marked_by_email === teacherEmail
-      );
+export default function AttendancePage() {
+  const [teacherEmail, setTeacherEmail] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [view, setView] = useState<"teacher" | "students" | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedClass, setSelectedClass] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-      console.log("✅ Teacher attendance records found:", teacherAttendance.length);
-      console.log("📝 Teacher records:", teacherAttendance);
-
-      return teacherAttendance;
-    } catch (error) {
-      console.error("Error fetching teacher attendance:", error);
-      throw error;
-    }
-  };
-
-  const fetchStudentAttendance = async (teacherEmail: string) => {
-    try {
-      console.log("🔍 Fetching student attendance for teacher:", teacherEmail);
-      
-      // First, get teacher's classes from timetable
-      const timetableResponse = await axios.get(
-        "https://globaltechsoftwaresolutions.cloud/school-api/api/timetable/"
-      );
-      console.log("📚 Timetable data:", timetableResponse.data.length, "records");
-      
-      const teacherTimetable = timetableResponse.data.filter(
-        (item: any) => item.teacher === teacherEmail
-      );
-      console.log("👨‍🏫 Teacher's timetable entries:", teacherTimetable.length);
-      console.log("📋 Teacher timetable:", teacherTimetable);
-      
-      // Get unique classes taught by this teacher
-      const uniqueClasses = Array.from(
-        new Map(
-          teacherTimetable.map((t: any) => [
-            `${t.class_name}-${t.section || "N/A"}`,
-            { class_name: t.class_name, section: t.section || "N/A" },
-          ])
-        ).values()
-      );
-      
-      console.log("🎯 Teacher's unique classes:", uniqueClasses);
-      setTeacherClasses(uniqueClasses);
-
-      // Fetch all attendance records
-      const response = await axios.get(API_URL);
-      const allAttendance = response.data;
-      console.log("📊 All attendance records:", allAttendance.length);
-      console.log("📋 Sample attendance record:", allAttendance[0]);
-
-      // Filter attendance for students in teacher's classes
-      const teacherClassesSet = new Set();
-      
-      uniqueClasses.forEach((cls: any) => {
-        // Add multiple variations of class names to the set
-        teacherClassesSet.add(`${cls.class_name}-${cls.section}`);
-        teacherClassesSet.add(`${cls.class_name}`);
-        
-        // If class_name contains "Grade", also add without "Grade"
-        if (cls.class_name.includes('Grade ')) {
-          const classWithoutGrade = cls.class_name.replace('Grade ', '');
-          teacherClassesSet.add(`${classWithoutGrade}-${cls.section}`);
-          teacherClassesSet.add(`${classWithoutGrade}`);
-        }
-        
-        // If class_name is like "10", also add "Grade 10"
-        if (!cls.class_name.includes('Grade') && /^\d+$/.test(cls.class_name)) {
-          teacherClassesSet.add(`Grade ${cls.class_name}-${cls.section}`);
-          teacherClassesSet.add(`Grade ${cls.class_name}`);
-        }
-      });
-      
-      console.log("🔍 Teacher classes set (all variations):", Array.from(teacherClassesSet));
-
-      const studentAttendance = allAttendance.filter((record: any) => {
-        const recordClassKey = `${record.class_name}-${record.section || "N/A"}`;
-        const gradeClassKey = `Grade ${record.class_name}-${record.section || "N/A"}`;
-        
-        // Also try matching with different variations
-        const classVariations = [
-          recordClassKey,
-          gradeClassKey,
-          `${record.class_name}`, // Just class name
-          `Grade ${record.class_name}`, // Grade + class name
-        ];
-        
-        console.log(`🔍 Checking record: ${record.student_name} - Class: "${record.class_name}", Section: "${record.section || "N/A"}"`);
-        console.log(`📋 Trying variations:`, classVariations);
-        console.log(`🎯 Against teacher classes:`, Array.from(teacherClassesSet));
-        
-        const matches = classVariations.some(variation => teacherClassesSet.has(variation));
-        
-        if (matches) {
-          console.log(`✅ Match found: ${record.student_name} - ${recordClassKey}`);
-        } else {
-          console.log(`❌ No match for: ${record.student_name} - ${recordClassKey}`);
-        }
-        
-        return matches;
-      });
-
-      console.log("✅ Student attendance records found:", studentAttendance.length);
-      console.log("📝 Student records:", studentAttendance);
-
-      return studentAttendance;
-    } catch (error) {
-      console.error("Error fetching student attendance:", error);
-      throw error;
-    }
-  };
-
+  // ✅ Load teacher info from localStorage
   useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        console.log("🚀 Starting attendance fetch, type:", attendanceType);
+    try {
+      const userData = localStorage.getItem("userData");
+      const userInfo = localStorage.getItem("userInfo");
+      const accessToken = localStorage.getItem("accessToken");
 
-        // Get teacher info from localStorage
-        const storedUser = localStorage.getItem("userData");
-        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-        const teacherEmail = parsedUser?.email;
+      const parsedData = userData ? JSON.parse(userData) : null;
+      const parsedInfo = userInfo ? JSON.parse(userInfo) : null;
 
-        console.log("👤 Teacher email from localStorage:", teacherEmail);
-        console.log("📦 Full user data:", parsedUser);
+      const email =
+        parsedData?.email ||
+        parsedInfo?.email ||
+        localStorage.getItem("userEmail");
 
-        if (!teacherEmail) {
-          setError("No teacher email found in local storage.");
-          setLoading(false);
-          return;
-        }
+      if (email) setTeacherEmail(email);
+      if (accessToken) setToken(accessToken);
+    } catch (error) {
+      console.error("❌ Error parsing user info:", error);
+    }
+  }, []);
 
-        let attendanceRecords;
-        if (attendanceType === 'teacher') {
-          console.log("📊 Fetching teacher attendance mode");
-          attendanceRecords = await fetchTeacherAttendance(teacherEmail);
-        } else {
-          console.log("👨‍🎓 Fetching student attendance mode");
-          attendanceRecords = await fetchStudentAttendance(teacherEmail);
-        }
+  // ✅ Use direct axios calls (same as working marks system)
 
-        console.log("🎯 Final attendance records to display:", attendanceRecords.length);
-        setAttendanceData(attendanceRecords);
-      } catch (err: any) {
-        console.error("❌ Error fetching attendance:", err);
-        setError("Failed to fetch attendance data.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAttendance();
-  }, [attendanceType]);
-
-  // Calculate statistics
-  const stats = {
-    totalRecords: attendanceData.length,
-    present: attendanceData.filter(item => item.status === "Present").length,
-    absent: attendanceData.filter(item => item.status === "Absent").length,
-    presentPercentage: attendanceData.length > 0 ? 
-      Math.round((attendanceData.filter(item => item.status === "Present").length / attendanceData.length) * 100) : 0
-  };
-
-  // Filter and sort data
-  const filteredData = attendanceData
-    .filter(item => {
-      const matchesSearch = 
-        item.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.class_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.remarks?.toLowerCase().includes(searchTerm.toLowerCase());
+  // ✅ Fetch teacher's specific attendance for selected date
+  const fetchTeacherAttendance = async (date?: string) => {
+    if (!teacherEmail) return;
+    setLoading(true);
+    try {
+      const targetDate = date || selectedDate;
+      const res = await axios.get(`${API_BASE}/attendance/`);
       
-      const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-      const matchesClass = classFilter === "all" || item.class_name === classFilter;
-      const matchesDate = !dateFilter || item.date === dateFilter;
+      // Filter by teacher email AND selected date
+      const teacherRecords = res.data.filter(
+        (record: any) =>
+          (record.user_email?.toLowerCase() === teacherEmail.toLowerCase() ||
+          record.user_email?.toLowerCase().includes(teacherEmail.split("@")[0])) &&
+          record.date === targetDate
+      );
+      setAttendance(teacherRecords);
+      setMessage("");
+    } catch (error) {
+      console.error("❌ Failed to load teacher attendance:", error);
+      setMessage("Failed to load teacher attendance.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      return matchesSearch && matchesStatus && matchesClass && matchesDate;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        case "oldest":
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
-        case "student":
-          return a.student_name.localeCompare(b.student_name);
-        case "class":
-          return a.class_name.localeCompare(b.class_name);
-        default:
-          return 0;
+  // ✅ Fetch classes taught by teacher
+  const fetchTeacherClasses = async () => {
+    if (!teacherEmail) return;
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/classes/?teacher=${teacherEmail}`);
+
+      const teacherNameFromEmail = teacherEmail
+        .split("@")[0]
+        .replace(".", " ")
+        .toLowerCase();
+
+      const teacherClasses = res.data.filter(
+        (cls: any) =>
+          cls.class_teacher_name?.toLowerCase()?.trim() ===
+          teacherNameFromEmail.trim()
+      );
+
+      setClasses(teacherClasses);
+
+      if (teacherClasses.length === 1) {
+        setSelectedClass(teacherClasses[0].id);
+        fetchStudentsWithAttendance(teacherClasses[0].id, selectedDate);
       }
-    });
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Present":
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case "Absent":
-        return <XCircle className="h-5 w-5 text-red-600" />;
-      default:
-        return <Clock className="h-5 w-5 text-yellow-600" />;
+    } catch (error) {
+      console.error("❌ Failed to load teacher classes:", error);
+      setMessage("Failed to load teacher classes.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Present":
-        return "bg-green-50 text-green-700 border-green-200";
-      case "Absent":
-        return "bg-red-50 text-red-700 border-red-200";
-      default:
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+  // ✅ Fetch students for selected class with their attendance for the selected date
+  const fetchStudentsWithAttendance = async (classId: number, date: string) => {
+    setSelectedClass(classId);
+    setLoading(true);
+    try {
+      // Fetch students
+      let res = await axios.get(`${API_BASE}/students/?class_id=${classId}`);
+      if (!res.data.length) {
+        res = await axios.get(`${API_BASE}/students/?class_id__id=${classId}`);
+      }
+      
+      const studentsData: Student[] = res.data;
+      
+      // Fetch attendance for these students on the selected date
+      const attendancePromises = studentsData.map(async (student) => {
+        try {
+          const attendanceRes = await axios.get(
+            `${API_BASE}/attendance/?user_email=${student.email}&date=${date}`
+          );
+          
+          if (attendanceRes.data && attendanceRes.data.length > 0) {
+            return {
+              ...student,
+              markedStatus: attendanceRes.data[0].status
+            };
+          }
+          // Return student with null status if no attendance record exists
+          return { ...student, markedStatus: null };
+        } catch (error) {
+          console.error(`❌ Failed to fetch attendance for ${student.email}:`, error);
+          return { ...student, markedStatus: null };
+        }
+      });
+
+      const studentsWithAttendance = await Promise.all(attendancePromises);
+      setStudents(studentsWithAttendance);
+      
+    } catch (error) {
+      console.error("❌ Failed to load students:", error);
+      setMessage("Failed to load students.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusBgColor = (status: string) => {
-    switch (status) {
-      case "Present":
-        return "bg-green-500";
-      case "Absent":
-        return "bg-red-500";
-      default:
-        return "bg-yellow-500";
-    }
+  // ✅ Safe attendance marking (prevents IntegrityError) - FIXED VERSION
+  const markAttendance = async (studentEmail) => {
+  if (!teacherEmail || !selectedClass) return;
+
+  const student = students.find((s) => s.email === studentEmail);
+  if (!student) return;
+
+  const payload = {
+    user_email: student.email,
+    user_name: student.fullname,
+    class_id: selectedClass,
+    date: selectedDate,
+    role: "Student",
+    check_in: new Date().toTimeString().split(" ")[0], // current time
   };
 
-  if (loading) {
-    return (
-      <DashboardLayout role="teachers">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading attendance records...</p>
-          </div>
-        </div>
-      </DashboardLayout>
+  console.log("📝 Sending attendance payload:", payload);
+
+  try {
+    const response = await axios.post(`${API_BASE}attendance/mark/`, payload);
+
+console.log(`✅ ${student.fullname} marked as ${response.data.status}`);
+
+    // The server decides Present/Absent internally
+    const actualStatus = response.data.status || "Auto-Determined";
+
+    // Update local state to reflect actual server status
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.email === student.email ? { ...s, markedStatus: actualStatus } : s
+      )
     );
-  }
 
-  if (error) {
-    return (
-      <DashboardLayout role="teachers">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-medium"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    setMessage(`✅ ${student.fullname} marked as ${actualStatus}`);
+
+  } catch (error) {
+    console.error("❌ Failed to mark attendance:", error);
+    setMessage("❌ Failed to mark attendance.");
   }
+};
+
+  // ✅ Handle date change for students view
+  const handleDateChange = (newDate: string) => {
+    setSelectedDate(newDate);
+    if (selectedClass) {
+      fetchStudentsWithAttendance(selectedClass, newDate);
+    }
+  };
+
+  // ✅ Handle date change for teacher view
+  const handleTeacherDateChange = (newDate: string) => {
+    setSelectedDate(newDate);
+    fetchTeacherAttendance(newDate);
+  };
+
+  // 🔁 Handle view switching
+  useEffect(() => {
+    if (!teacherEmail) return;
+    if (view === "teacher") {
+      fetchTeacherAttendance(selectedDate);
+    } else if (view === "students") {
+      fetchTeacherClasses();
+    }
+  }, [view, teacherEmail]);
+
+  // 🔁 Refresh students data when selectedDate changes for students view
+  useEffect(() => {
+    if (view === "students" && selectedClass) {
+      fetchStudentsWithAttendance(selectedClass, selectedDate);
+    }
+  }, [selectedDate, selectedClass]);
+
+  // 🧩 Render attendance status (for teacher view)
+  const renderStatus = (status: string) => {
+    switch (status) {
+      case "Present":
+        return (
+          <span className="bg-green-100 text-green-700 px-3 py-2 rounded-full flex items-center gap-2 font-medium">
+            <CheckCircle className="w-4 h-4" /> Present
+          </span>
+        );
+      case "Absent":
+        return (
+          <span className="bg-red-100 text-red-700 px-3 py-2 rounded-full flex items-center gap-2 font-medium">
+            <XCircle className="w-4 h-4" /> Absent
+          </span>
+        );
+      default:
+        return (
+          <span className="bg-yellow-100 text-yellow-700 px-3 py-2 rounded-full flex items-center gap-2 font-medium">
+            <Clock className="w-4 h-4" /> Leave
+          </span>
+        );
+    }
+  };
+
+  // 📊 Calculate attendance stats
+  const getAttendanceStats = () => {
+    const present = students.filter(s => s.markedStatus === 'Present').length;
+    const absent = students.filter(s => s.markedStatus === 'Absent').length;
+    const leave = students.filter(s => s.markedStatus === 'Leave').length;
+    const notMarked = students.filter(s => s.markedStatus === null).length;
+    const total = students.length;
+    
+    return { present, absent, leave, notMarked, total };
+  };
+
+  const stats = getAttendanceStats();
 
   return (
     <DashboardLayout role="teachers">
-      <div className="min-h-screen bg-gray-50/30 p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Attendance Records</h1>
-              <p className="text-gray-600 mt-2">
-                {attendanceType === 'teacher' 
-                  ? 'View attendance records you have marked'
-                  : 'View attendance records for students in your classes'
-                }
-              </p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100"
+          >
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <School className="w-8 h-8 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-800">
+                    📊 Attendance Management
+                  </h1>
+                  {teacherEmail && (
+                    <p className="text-gray-600 mt-1">
+                      Logged in as <span className="font-semibold text-blue-600">{teacherEmail}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Date Picker */}
+              <div className="flex items-center gap-4 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                <label className="text-blue-700 font-semibold whitespace-nowrap">
+                  Selected Date:
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    const newDate = e.target.value;
+                    setSelectedDate(newDate);
+                    if (view === "teacher") {
+                      handleTeacherDateChange(newDate);
+                    } else if (view === "students" && selectedClass) {
+                      handleDateChange(newDate);
+                    }
+                  }}
+                  className="border border-blue-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  max={new Date().toISOString().split('T')[0]} // Can't select future dates
+                />
+              </div>
             </div>
-            <div className="mt-4 sm:mt-0 flex items-center gap-3">
-              <button className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-medium">
-                <Download className="h-4 w-4" />
-                Export
-              </button>
-            </div>
-          </div>
-          
-          {/* Attendance Type Toggle Buttons */}
-          <div className="mt-6 flex items-center gap-2 bg-gray-100 p-1 rounded-xl w-fit">
-            <button
-              onClick={() => setAttendanceType('teacher')}
-              className={`px-6 py-3 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${
-                attendanceType === 'teacher'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+          </motion.div>
+
+          {/* View Selection Cards */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"
+          >
+            <div
+              onClick={() => setView("teacher")}
+              className={`p-6 rounded-2xl cursor-pointer transition-all duration-300 border-2 ${
+                view === "teacher"
+                  ? "bg-blue-600 text-white border-blue-600 shadow-lg scale-105"
+                  : "bg-white text-gray-800 border-gray-200 hover:border-blue-300 hover:shadow-md"
               }`}
             >
-              <User className="h-4 w-4" />
-              Teacher Attendance
-            </button>
-            <button
-              onClick={() => setAttendanceType('student')}
-              className={`px-6 py-3 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${
-                attendanceType === 'student'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-xl ${
+                  view === "teacher" ? "bg-blue-500" : "bg-blue-100 text-blue-600"
+                }`}>
+                  <User className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">My Attendance</h3>
+                  <p className={view === "teacher" ? "text-blue-100" : "text-gray-600"}>
+                    View your attendance records for any date
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setView("students")}
+              className={`p-6 rounded-2xl cursor-pointer transition-all duration-300 border-2 ${
+                view === "students"
+                  ? "bg-green-600 text-white border-green-600 shadow-lg scale-105"
+                  : "bg-white text-gray-800 border-gray-200 hover:border-green-300 hover:shadow-md"
               }`}
             >
-              <Users className="h-4 w-4" />
-              Student Attendance
-            </button>
-          </div>
-          
-          {/* Show teacher's classes when viewing student attendance */}
-          {attendanceType === 'student' && teacherClasses.length > 0 && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <h3 className="text-sm font-medium text-blue-900 mb-2">Your Classes:</h3>
-              <div className="flex flex-wrap gap-2">
-                {teacherClasses.map((cls: any, index: number) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium"
-                  >
-                    {cls.class_name} - {cls.section}
-                  </span>
-                ))}
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-xl ${
+                  view === "students" ? "bg-green-500" : "bg-green-100 text-green-600"
+                }`}>
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Student Attendance</h3>
+                  <p className={view === "students" ? "text-green-100" : "text-gray-600"}>
+                    Mark and manage student attendance
+                  </p>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+          </motion.div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Records</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.totalRecords}</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <FileText className="h-6 w-6 text-blue-600" />
+          {/* Content Section */}
+          {loading ? (
+            <div className="flex justify-center items-center py-20 bg-white rounded-2xl shadow-lg">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+                <p className="text-gray-600">Loading attendance data...</p>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Present</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.present}</p>
+          ) : view === "teacher" ? (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+            >
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                  <BarChart3 className="w-6 h-6 text-blue-600" />
+                  My Attendance Records for {new Date(selectedDate).toLocaleDateString()}
+                </h2>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Calendar className="w-4 h-4" />
+                  <span>Total Records: {attendance.length}</span>
+                </div>
               </div>
-              <div className="p-3 bg-green-50 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <div className="flex items-center gap-1 mt-3">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-green-600">{stats.presentPercentage}% of total</span>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Absent</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.absent}</p>
-              </div>
-              <div className="p-3 bg-red-50 rounded-xl">
-                <XCircle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Attendance Rate</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.presentPercentage}%</p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-xl">
-                <Users className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search by student name, class, or remarks..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-4 w-full lg:w-auto">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Status</option>
-                <option value="Present">Present</option>
-                <option value="Absent">Absent</option>
-              </select>
-
-
-              <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Filter by date"
-              />
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="student">Student Name</option>
-                <option value="class">Class</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Attendance Records */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {filteredData.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {attendanceData.length === 0 ? "No Attendance Records" : "No Matching Records"}
-              </h3>
-              <p className="text-gray-600 max-w-md mx-auto">
-                {attendanceData.length === 0 
-                  ? "You haven't marked any attendance records yet. Start marking attendance to see records here."
-                  : "Try adjusting your search or filters to find what you're looking for."
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {filteredData.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => setExpandedRecord(expandedRecord === item.id ? null : item.id)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="mt-1">
-                        {getStatusIcon(item.status)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="font-semibold text-gray-900 text-lg">{item.student_name}</h3>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(item.status)}`}>
-                            {item.status}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span>{item.class_name}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            <span>{new Date(item.date).toLocaleDateString('en-US', { 
-                              weekday: 'short', 
-                              year: 'numeric', 
-                              month: 'short', 
-                              day: 'numeric' 
-                            })}</span>
-                          </div>
-                          {item.remarks && (
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              <span className="truncate">{item.remarks}</span>
+              {attendance.length === 0 ? (
+                <div className="text-center py-12">
+                  <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">No attendance records found for you on {new Date(selectedDate).toLocaleDateString()}.</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-gray-200">
+                  <table className="min-w-full">
+                    <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                      <tr>
+                        <th className="p-4 text-left font-semibold">Date</th>
+                        <th className="p-4 text-left font-semibold">Student</th>
+                        <th className="p-4 text-center font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {attendance.map((record, index) => (
+                        <motion.tr
+                          key={record.id || record.user_email}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="p-4 font-medium text-gray-900">
+                            {new Date(record.date).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </td>
+                          <td className="p-4 text-gray-700">{record.user_email}</td>
+                          <td className="p-4">
+                            <div className="flex justify-center">
+                              {renderStatus(record.status || "Present")}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedRecord(expandedRecord === item.id ? null : item.id);
+                          </td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </motion.div>
+          ) : view === "students" ? (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-6"
+            >
+              {/* Class Selection Card */}
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+                      <Users className="w-6 h-6 text-green-600" />
+                      Manage Student Attendance for {new Date(selectedDate).toLocaleDateString()}
+                    </h2>
+                    <p className="text-gray-600">Select a class to mark attendance for students</p>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex items-center gap-3">
+                      <label className="text-gray-700 font-semibold whitespace-nowrap">
+                        Select Class:
+                      </label>
+                      <select
+                        onChange={(e) => {
+                          const classId = Number(e.target.value);
+                          if (classId) {
+                            fetchStudentsWithAttendance(classId, selectedDate);
+                          } else {
+                            setSelectedClass(null);
+                            setStudents([]);
+                          }
                         }}
-                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                        className="border border-gray-300 rounded-lg p-3 min-w-[200px] focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       >
-                        {expandedRecord === item.id ? 
-                          <ChevronUp className="h-4 w-4 text-gray-600" /> : 
-                          <ChevronDown className="h-4 w-4 text-gray-600" />
-                        }
-                      </button>
+                        <option value="">-- Choose a class --</option>
+                        {classes.map((cls) => (
+                          <option key={cls.id} value={cls.id}>
+                            {cls.class_name} - {cls.sec}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* Expanded Details */}
-                  {expandedRecord === item.id && (
-                    <div className="mt-4 pl-9 border-t pt-4">
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-3">Record Details</h4>
-                          <div className="space-y-3 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Student ID:</span>
-                              <span className="text-gray-900 font-medium">{item.student_id || "N/A"}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Marked By:</span>
-                              <span className="text-gray-900 font-medium">You</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Marked Date:</span>
-                              <span className="text-gray-900 font-medium">
-                                {new Date(item.date).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-3">Remarks</h4>
-                          <p className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm">
-                            {item.remarks || "No remarks provided"}
-                          </p>
-                        </div>
+              {/* Statistics Cards */}
+              {selectedClass && students.length > 0 && (
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-green-700">{stats.present}</p>
+                        <p className="text-green-600 text-sm">Present</p>
                       </div>
+                    </div>
+                  </div>
+                  <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                    <div className="flex items-center gap-3">
+                      <XCircle className="w-8 h-8 text-red-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-red-700">{stats.absent}</p>
+                        <p className="text-red-600 text-sm">Absent</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-8 h-8 text-yellow-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-yellow-700">{stats.leave}</p>
+                        <p className="text-yellow-600 text-sm">Leave</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <User className="w-8 h-8 text-gray-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-gray-700">{stats.notMarked}</p>
+                        <p className="text-gray-600 text-sm">Not Marked</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-center gap-3">
+                      <Users className="w-8 h-8 text-blue-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-blue-700">{stats.total}</p>
+                        <p className="text-blue-600 text-sm">Total</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Students Table */}
+              {selectedClass && (
+                <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                  {students.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 text-lg">No students found for this class.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-xl border border-gray-200">
+                      <table className="min-w-full">
+                        <thead className="bg-gradient-to-r from-green-600 to-green-700 text-white">
+                          <tr>
+                            <th className="p-4 text-left font-semibold">Student Information</th>
+                            <th className="p-4 text-center font-semibold">Current Status</th>
+                            <th className="p-4 text-center font-semibold">Attendance Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {students.map((student, index) => (
+                            <motion.tr
+                              key={student.id || student.email}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="hover:bg-gray-50 transition-colors"
+                            >
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <User className="w-5 h-5 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-gray-900">{student.fullname}</p>
+                                    <p className="text-sm text-gray-500">{student.email}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex justify-center">
+                                  {student.markedStatus ? (
+                                    <div className={`px-3 py-2 rounded-full text-sm font-semibold flex items-center gap-2 ${
+                                      student.markedStatus === "Present"
+                                        ? "bg-green-100 text-green-700"
+                                        : student.markedStatus === "Absent"
+                                        ? "bg-red-100 text-red-700"
+                                        : "bg-yellow-100 text-yellow-700"
+                                    }`}>
+                                      {student.markedStatus === "Present" && <CheckCircle className="w-4 h-4" />}
+                                      {student.markedStatus === "Absent" && <XCircle className="w-4 h-4" />}
+                                      {student.markedStatus === "Leave" && <Clock className="w-4 h-4" />}
+                                      {student.markedStatus}
+                                    </div>
+                                  ) : (
+                                    <div className="px-3 py-2 rounded-full text-sm font-semibold bg-gray-100 text-gray-600 flex items-center gap-2">
+                                      <User className="w-4 h-4" />
+                                      Not Marked
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex flex-col items-center gap-3">
+                                  <div className="flex gap-2 flex-wrap justify-center">
+                                    <button
+                                      onClick={() => markAttendance(student.email, "Present")}
+                                      className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                                        student.markedStatus === "Present"
+                                          ? "bg-green-600 text-white shadow-md border-2 border-green-600"
+                                          : "bg-green-100 text-green-700 hover:bg-green-200 border-2 border-green-100"
+                                      }`}
+                                    >
+                                      Present
+                                    </button>
+                                    <button
+                                      onClick={() => markAttendance(student.email, "Absent")}
+                                      className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                                        student.markedStatus === "Absent"
+                                          ? "bg-red-600 text-white shadow-md border-2 border-red-600"
+                                          : "bg-red-100 text-red-700 hover:bg-red-200 border-2 border-red-100"
+                                      }`}
+                                    >
+                                      Absent
+                                    </button>
+                                    <button
+                                      onClick={() => markAttendance(student.email, "Leave")}
+                                      className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                                        student.markedStatus === "Leave"
+                                          ? "bg-yellow-600 text-white shadow-md border-2 border-yellow-600"
+                                          : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-2 border-yellow-100"
+                                      }`}
+                                    >
+                                      Leave
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-white rounded-2xl shadow-lg p-12 text-center"
+            >
+              <School className="w-20 h-20 text-gray-300 mx-auto mb-6" />
+              <h3 className="text-2xl font-bold text-gray-700 mb-3">Welcome to Attendance Management</h3>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Select an option above to view your attendance records or manage student attendance.
+              </p>
+            </motion.div>
+          )}
+
+          {/* Message Display */}
+          {message && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mt-6 p-4 rounded-xl text-center font-semibold ${
+                message.includes('✅') 
+                  ? 'bg-green-100 text-green-700 border border-green-200' 
+                  : 'bg-red-100 text-red-700 border border-red-200'
+              }`}
+            >
+              {message}
+            </motion.div>
           )}
         </div>
-
-        {/* Summary Footer */}
-        {filteredData.length > 0 && (
-          <div className="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-600">
-                  Showing <span className="font-semibold">{filteredData.length}</span> of{" "}
-                  <span className="font-semibold">{attendanceData.length}</span> records
-                </p>
-              </div>
-              <div className="mt-2 sm:mt-0">
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span>Present: {stats.present}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span>Absent: {stats.absent}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );
-};
-
-export default TeachersAttendancePage;
+}
