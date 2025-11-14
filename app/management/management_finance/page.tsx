@@ -40,6 +40,7 @@ const ManagementFinance = () => {
   const [payments, setPayments] = useState<FeePayment[]>([]);
   const [structures, setStructures] = useState<FeeStructure[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [pendingFees, setPendingFees] = useState<any[]>([]);
   const [paidFees, setPaidFees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,23 +53,61 @@ const ManagementFinance = () => {
   const [totalPending, setTotalPending] = useState(0);
   const [transportIncome, setTransportIncome] = useState(0);
 
+  // Overall revenue formatting helpers so large numbers fit in the card
+  const overallRevenue = totalPaid + totalPending;
+  const overallRevenueDisplay = Math.round(overallRevenue).toLocaleString();
+  const overallRevenueDigits = overallRevenueDisplay.replace(/\D/g, "").length;
+
+  const totalCollectedDisplay = totalPaid.toFixed(2).toLocaleString();
+  const totalCollectedDigits = totalCollectedDisplay.replace(/\D/g, "").length;
+
+  const transportIncomeDisplay = transportIncome.toFixed(2).toLocaleString();
+  const transportIncomeDigits = transportIncomeDisplay.replace(/\D/g, "").length;
+
+  let overallRevenueTextClass = "text-2xl sm:text-3xl";
+  if (overallRevenueDigits > 7) {
+    overallRevenueTextClass = "text-xl sm:text-2xl";
+  }
+  if (overallRevenueDigits > 10) {
+    overallRevenueTextClass = "text-lg sm:text-xl";
+  }
+
+  let totalCollectedTextClass = "text-3xl";
+  if (totalCollectedDigits > 7) {
+    totalCollectedTextClass = "text-2xl";
+  }
+  if (totalCollectedDigits > 10) {
+    totalCollectedTextClass = "text-xl";
+  }
+
+  let transportIncomeTextClass = "text-3xl";
+  if (transportIncomeDigits > 7) {
+    transportIncomeTextClass = "text-2xl";
+  }
+  if (transportIncomeDigits > 10) {
+    transportIncomeTextClass = "text-xl";
+  }
+
   useEffect(() => {
     const fetchFinanceData = async () => {
       try {
         setLoading(true);
-        const [paymentsRes, structuresRes, studentsRes] = await Promise.all([
+        const [paymentsRes, structuresRes, studentsRes, classesRes] = await Promise.all([
           axios.get(`${API_BASE}/fee_payments/`),
           axios.get(`${API_BASE}/fee_structures/`),
           axios.get(`${API_BASE}/students/`),
+          axios.get(`${API_BASE}/classes/`),
         ]);
 
         const paymentsData = paymentsRes.data;
         const structuresData = structuresRes.data;
         const studentsData = studentsRes.data;
+        const classesData = classesRes.data || [];
 
         setPayments(paymentsData);
         setStructures(structuresData);
         setStudents(studentsData);
+        setClasses(classesData);
 
         // Match fee_structure IDs to get fee_type and total amount
         // Also match student email to get class_name and section
@@ -79,17 +118,28 @@ const ManagementFinance = () => {
           const student = studentsData.find(
             (s: any) => s.email === pay.student
           );
-          const total = structure ? parseFloat(structure.amount) : 0;
-          const paid = parseFloat(pay.amount_paid);
-          const remaining = total - paid;
+          const classInfo = student?.class_id
+            ? classesData.find((c: any) => c.id === student.class_id)
+            : null;
+
+          // Total from fee structure (treat missing/invalid as 0)
+          const totalRaw = structure?.amount ?? "0";
+          const total = Number(totalRaw) || 0;
+
+          // Paid from payment record (treat missing/invalid as 0)
+          const paidRaw = pay.amount_paid ?? "0";
+          const paid = Number(paidRaw) || 0;
+
+          // Pending = total - paid, never negative
+          const remaining = Math.max(total - paid, 0);
 
           return {
             ...pay,
             fee_type: structure ? structure.fee_type : "Unknown",
             total_amount: total,
-            remaining_amount: remaining > 0 ? remaining : 0,
-            class_name: student ? student.class_name : "Unknown",
-            section: student ? student.section : "Unknown",
+            remaining_amount: remaining,
+            class_name: classInfo?.class_name || "Unknown",
+            section: classInfo?.sec || "Unknown",
             student_full_data: student || null,
           };
         });
@@ -174,21 +224,21 @@ const ManagementFinance = () => {
 
   return (
     <DashboardLayout role="management">
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
+          <div className="text-center mb-8 sm:mb-10">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2 sm:mb-3">
               💰 Finance Dashboard
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-sm sm:text-base lg:text-lg">
               Manage and track all fee payments with beautiful insights
             </p>
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <div className="bg-gradient-to-br from-green-400 to-green-600 p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
+            <div className="bg-gradient-to-br from-green-400 to-green-600 p-4 sm:p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,27 +246,15 @@ const ManagementFinance = () => {
                   </svg>
                 </div>
                 <div className="text-right">
-                  <p className="text-green-100 text-sm">Total Collected</p>
-                  <p className="text-3xl font-bold">₹{totalPaid.toFixed(2)}</p>
+                  <p className="text-green-100 text-xs sm:text-sm">Total Collected</p>
+                  <p className={`${totalCollectedTextClass} font-bold`}>
+                    ₹{totalCollectedDisplay}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-red-400 to-red-600 p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="text-right">
-                  <p className="text-red-100 text-sm">Pending Fees</p>
-                  <p className="text-3xl font-bold">₹{totalPending.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
+            <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-4 sm:p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,30 +262,35 @@ const ManagementFinance = () => {
                   </svg>
                 </div>
                 <div className="text-right">
-                  <p className="text-blue-100 text-sm">Transport Income</p>
-                  <p className="text-3xl font-bold">₹{transportIncome.toFixed(2)}</p>
+                  <p className="text-blue-100 text-xs sm:text-sm">Transport Income</p>
+                  <p className={`${transportIncomeTextClass} font-bold`}>
+                    ₹{transportIncomeDisplay}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-400 to-purple-600 p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
+            <div className="bg-gradient-to-br from-purple-400 to-purple-600 p-4 sm:p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
-                <div className="text-right">
-                  <p className="text-purple-100 text-sm">Overall Revenue</p>
-                  <p className="text-3xl font-bold">₹{(totalPaid + totalPending).toFixed(2)}</p>
+                <div className="text-right max-w-[9rem] sm:max-w-none">
+                  <p className="text-purple-100 text-xs sm:text-sm">Overall Revenue</p>
+                  <p className={`${overallRevenueTextClass} font-bold break-words leading-tight`}
+                  >
+                    ₹{overallRevenueDisplay}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Monthly Chart */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 mb-10">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+          <div className="bg-white rounded-3xl shadow-xl p-4 sm:p-6 lg:p-8 mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center">
               <span className="bg-indigo-100 p-2 rounded-xl mr-3">
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -255,7 +298,7 @@ const ManagementFinance = () => {
               </span>
               Monthly Fee Collection Trend
             </h2>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" stroke="#888" />
@@ -276,7 +319,7 @@ const ManagementFinance = () => {
           </div>
 
           {/* Controls */}
-          <div className="bg-white rounded-3xl shadow-xl p-6 mb-8">
+          <div className="bg-white rounded-3xl shadow-xl p-4 sm:p-6 mb-6 sm:mb-8">
             <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
               {/* Tabs */}
               <div className="flex bg-gray-100 rounded-2xl p-1">
@@ -289,16 +332,6 @@ const ManagementFinance = () => {
                   }`}
                 >
                   ✅ Paid Fees ({paidFees.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("pending")}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                    activeTab === "pending"
-                      ? "bg-white text-red-600 shadow-md"
-                      : "text-gray-600 hover:text-gray-800"
-                  }`}
-                >
-                  ⏳ Pending Fees ({pendingFees.length})
                 </button>
               </div>
 
@@ -322,7 +355,7 @@ const ManagementFinance = () => {
           </div>
 
           {/* Student Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {getFilteredFees().map((student) => (
               <div
                 key={student.id}
@@ -367,7 +400,9 @@ const ManagementFinance = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Amount</span>
                       <span className={`text-sm font-bold ${activeTab === "paid" ? "text-green-600" : "text-red-600"}`}>
-                        ₹{parseFloat(student.amount_paid).toLocaleString()}
+                        {activeTab === "paid"
+                          ? `₹${parseFloat(student.amount_paid).toLocaleString()}`
+                          : `₹${(student.remaining_amount ?? 0).toLocaleString()}`}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -407,13 +442,13 @@ const ManagementFinance = () => {
 
         {/* Student Details Modal */}
         {showModal && selectedStudent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transform scale-100 transition-all">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 sm:p-6 z-50 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl max-w-lg sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transform scale-100 transition-all">
               <div className={`h-3 ${activeTab === "paid" ? "bg-gradient-to-r from-green-400 to-green-600" : "bg-gradient-to-r from-red-400 to-red-600"}`}></div>
               
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">Student Fee Details</h2>
+              <div className="p-5 sm:p-8">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Student Fee Details</h2>
                   <button
                     onClick={closeModal}
                     className="p-2 hover:bg-gray-100 rounded-xl transition-colors"

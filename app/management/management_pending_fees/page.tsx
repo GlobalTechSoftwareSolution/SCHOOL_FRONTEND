@@ -29,30 +29,62 @@ const ManagementPendingFees = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFee, setSelectedFee] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [classFilter, setClassFilter] = useState<string>("all");
+  const [sectionFilter, setSectionFilter] = useState<string>("all");
 
   const fetchPendingFees = async () => {
     try {
       setLoading(true);
-      const [paymentsRes, structuresRes] = await Promise.all([
+      const [paymentsRes, structuresRes, studentsRes, classesRes] = await Promise.all([
         axios.get(`${API_BASE}/fee_payments/`),
         axios.get(`${API_BASE}/fee_structures/`),
+        axios.get(`${API_BASE}/students/`),
+        axios.get(`${API_BASE}/classes/`),
       ]);
 
       const payments: FeePayment[] = paymentsRes.data;
       const structures: FeeStructure[] = structuresRes.data;
+      const studentsData = studentsRes.data || [];
+      const classesData = classesRes.data || [];
+
+      setStudents(studentsData);
+      setClasses(classesData);
 
       const pending = payments
         .map((pay) => {
           const structure = structures.find((s) => s.id === pay.fee_structure);
-          const total = structure ? parseFloat(structure.amount) : 0;
-          const paid = parseFloat(pay.amount_paid);
-          const remaining = total - paid;
+
+          // Find matching student by email or name
+          const student = studentsData.find((s: any) =>
+            s.email === (pay as any).student ||
+            s.fullname === pay.student_name
+          );
+
+          // Resolve class info via class_id
+          const classInfo = student?.class_id
+            ? classesData.find((c: any) => c.id === student.class_id)
+            : null;
+
+          // Total from fee structure (treat missing/invalid as 0)
+          const totalRaw = structure?.amount ?? "0";
+          const total = Number(totalRaw) || 0;
+
+          // Amount paid from payment record (treat missing/invalid as 0)
+          const paidRaw = pay.amount_paid ?? "0";
+          const paid = Number(paidRaw) || 0;
+
+          // Pending = total - paid, never negative
+          const remaining = Math.max(total - paid, 0);
 
           return {
             ...pay,
             fee_type: structure ? structure.fee_type : "Unknown",
             total_amount: total,
             remaining_amount: remaining,
+            class_name: classInfo?.class_name || "Unknown",
+            section: classInfo?.sec || "Unknown",
           };
         })
         .filter((p) => p.remaining_amount > 0);
@@ -69,10 +101,36 @@ const ManagementPendingFees = () => {
     fetchPendingFees();
   }, []);
 
-  const filteredFees = pendingFees.filter(fee =>
-    fee.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    fee.fee_type.toLowerCase().includes(searchTerm.toLowerCase())
+  // Derived filter options from classes
+  const uniqueClasses = Array.from(
+    new Set(classes.map((cls: any) => cls.class_name).filter(Boolean))
   );
+
+  const sectionsForSelectedClass = classFilter === "all"
+    ? []
+    : Array.from(
+        new Set(
+          classes
+            .filter((cls: any) => cls.class_name === classFilter)
+            .map((cls: any) => cls.sec)
+            .filter(Boolean)
+        )
+      );
+
+  // Apply search + class/section filters
+  const filteredFees = pendingFees.filter((fee) => {
+    const matchesSearch =
+      fee.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      fee.fee_type.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesClass =
+      classFilter === "all" || fee.class_name === classFilter;
+
+    const matchesSection =
+      sectionFilter === "all" || sectionFilter === "" || fee.section === sectionFilter;
+
+    return matchesSearch && matchesClass && matchesSection;
+  });
 
   const totalPendingAmount = filteredFees.reduce(
     (sum, fee) => sum + fee.remaining_amount,
@@ -156,7 +214,7 @@ const ManagementPendingFees = () => {
 
           {/* Search and Controls */}
           <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-200">
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
               <div className="flex-1 w-full">
                 <div className="relative">
                   <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,15 +229,55 @@ const ManagementPendingFees = () => {
                   />
                 </div>
               </div>
-              <button
-                onClick={fetchPendingFees}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors duration-200 font-medium"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                {/* Class filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                  <select
+                    value={classFilter}
+                    onChange={(e) => {
+                      setClassFilter(e.target.value);
+                      setSectionFilter("all");
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-xl bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Classes</option>
+                    {uniqueClasses.map((cls) => (
+                      <option key={cls as string} value={cls as string}>
+                        {cls as string}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Section filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                  <select
+                    value={sectionFilter}
+                    onChange={(e) => setSectionFilter(e.target.value)}
+                    disabled={classFilter === "all"}
+                    className="px-4 py-2 border border-gray-300 rounded-xl bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="all">All Sections</option>
+                    {sectionsForSelectedClass.map((sec) => (
+                      <option key={sec as string} value={sec as string}>
+                        {sec as string}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={fetchPendingFees}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors duration-200 font-medium"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
             </div>
           </div>
 
@@ -231,7 +329,10 @@ const ManagementPendingFees = () => {
                             <h3 className="font-semibold text-gray-900">
                               {fee.student_name}
                             </h3>
-                            <p className="text-sm text-gray-500">ID: {fee.id}</p>
+                            <p className="text-xs text-gray-500">ID: {fee.id}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {fee.class_name || "Class ?"} {fee.section ? `• Sec ${fee.section}` : ""}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -287,11 +388,11 @@ const ManagementPendingFees = () => {
 
       {/* Modal for Full Details */}
       {showModal && selectedFee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Fee Payment Details</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-4 py-4 sm:px-6 sm:py-5 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Fee Payment Details</h2>
                 <button
                   onClick={closeModal}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -303,66 +404,66 @@ const ManagementPendingFees = () => {
               </div>
             </div>
             
-            <div className="p-6">
-              <div className="flex items-center mb-6">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center mb-4 sm:mb-6">
                 <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
                   <span className="text-blue-600 font-bold text-xl">
                     {selectedFee.student_name.charAt(0)}
                   </span>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-xl font-semibold text-gray-900">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
                     {selectedFee.student_name}
                   </h3>
-                  <p className="text-gray-500">Payment ID: {selectedFee.id}</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Payment ID: {selectedFee.id}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-600 mb-1">Fees Type</h4>
-                    <p className="text-lg font-semibold text-gray-900">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Fees Type</h4>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-purple-100 text-purple-800">
                         {selectedFee.fee_type}
                       </span>
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-600 mb-1">Total Amount</h4>
-                    <p className="text-lg font-semibold text-gray-900">
+                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Total Amount</h4>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900">
                       ₹{selectedFee.total_amount?.toLocaleString()}
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-600 mb-1">Amount Paid</h4>
-                    <p className="text-lg font-semibold text-green-600">
+                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Amount Paid</h4>
+                    <p className="text-base sm:text-lg font-semibold text-green-600">
                       ₹{parseFloat(selectedFee.amount_paid).toLocaleString()}
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="bg-red-50 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-red-600 mb-1">Remaining Amount</h4>
-                    <p className="text-2xl font-bold text-red-600">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="bg-red-50 rounded-lg p-3 sm:p-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-red-600 mb-1">Remaining Amount</h4>
+                    <p className="text-xl sm:text-2xl font-bold text-red-600">
                       ₹{selectedFee.remaining_amount?.toLocaleString()}
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-600 mb-1">Payment Date</h4>
-                    <p className="text-lg font-semibold text-gray-900">
+                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Payment Date</h4>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900">
                       {new Date(selectedFee.payment_date).toLocaleDateString()}
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-600 mb-1">Status</h4>
-                    <p className="text-lg font-semibold">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                  <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Status</h4>
+                    <p className="text-base sm:text-lg font-semibold">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-yellow-100 text-yellow-800">
                         Pending
                       </span>
                     </p>
@@ -370,21 +471,21 @@ const ManagementPendingFees = () => {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <h4 className="text-sm font-medium text-blue-600 mb-2">Payment Progress</h4>
-                <div className="w-full bg-blue-200 rounded-full h-4">
+              <div className="mt-5 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
+                <h4 className="text-xs sm:text-sm font-medium text-blue-600 mb-2">Payment Progress</h4>
+                <div className="w-full bg-blue-200 rounded-full h-3 sm:h-4">
                   <div 
-                    className="bg-blue-600 h-4 rounded-full transition-all duration-300"
+                    className="bg-blue-600 h-3 sm:h-4 rounded-full transition-all duration-300"
                     style={{ 
                       width: `${((parseFloat(selectedFee.amount_paid) / selectedFee.total_amount) * 100).toFixed(1)}%` 
                     }}
                   ></div>
                 </div>
                 <div className="flex justify-between mt-2">
-                  <span className="text-sm text-gray-600">
+                  <span className="text-xs sm:text-sm text-gray-600">
                     {((parseFloat(selectedFee.amount_paid) / selectedFee.total_amount) * 100).toFixed(1)}% Paid
                   </span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-xs sm:text-sm font-semibold text-gray-900">
                     {selectedFee.remaining_amount > 0 ? 'Pending' : 'Completed'}
                   </span>
                 </div>

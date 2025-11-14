@@ -78,6 +78,10 @@ const [principalExtra, setPrincipalExtra] = useState<{
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
 
+  // Class / Section filters for students view
+  const [studentClassFilter, setStudentClassFilter] = useState<string>("all");
+  const [studentSectionFilter, setStudentSectionFilter] = useState<string>("all");
+
 // ✅ Updated handleSubjectClick with debugging
 const handleSubjectClick = (subject: any) => {
   setSelectedSubject(subject);
@@ -223,8 +227,13 @@ const showAllTimetableData = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/students/`);
-      setStudents(res.data);
+      const [studentsRes, classesRes] = await Promise.all([
+        axios.get(`${API_BASE}/students/`),
+        axios.get(`${API_BASE}/classes/`),
+      ]);
+
+      setStudents(studentsRes.data || []);
+      setAllClasses(classesRes.data || []);
     } catch (err) {
       console.error("Error fetching students:", err);
     } finally {
@@ -603,6 +612,46 @@ const fetchClasses = async (subjectId: number) => {
     console.error('Error fetching classes:', err);
   }
 };
+
+  // Helper: resolve class info for a student using class_id and allClasses
+  const getClassInfoForStudent = (student: any) => {
+    if (!student?.class_id) return null;
+    return allClasses.find((cls: any) => cls.id === student.class_id) || null;
+  };
+
+  // Derived lists for student filters
+  const studentUniqueClasses = Array.from(
+    new Set(
+      allClasses
+        .map((cls: any) => cls.class_name)
+        .filter((name: any) => Boolean(name))
+    )
+  );
+
+  const studentUniqueSectionsForClass = studentClassFilter === "all"
+    ? []
+    : Array.from(
+        new Set(
+          allClasses
+            .filter((cls: any) => cls.class_name === studentClassFilter)
+            .map((cls: any) => cls.sec)
+            .filter((sec: any) => Boolean(sec))
+        )
+      );
+
+  // Students filtered by class/section
+  const filteredStudentsByClass = students.filter((student: any) => {
+    const classInfo = getClassInfoForStudent(student);
+    const className = classInfo?.class_name;
+    const section = classInfo?.sec;
+
+    const matchesClass =
+      studentClassFilter === "all" || className === studentClassFilter;
+    const matchesSection =
+      studentSectionFilter === "all" || studentSectionFilter === "" || section === studentSectionFilter;
+
+    return matchesClass && matchesSection;
+  });
 
 
   // Fetch student details
@@ -1458,29 +1507,91 @@ const fetchClasses = async (subjectId: number) => {
           )}
           
 
-          {/* Students Grid */}
+          {/* Students Filters + Grid */}
           {view === "students" && !selectedStudent && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {students.map((student, index) => (
-                <div
-                  key={student.id || index}
-                  className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
-                  onClick={() => fetchStudentDetails(student)}
-                >
-                  <div className="p-6 text-center">
-                    <img
-                      src={student.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={student.fullname}
-                      className="w-20 h-20 rounded-full border-4 border-green-100 shadow-md mx-auto"
-                    />
-                    <h3 className="mt-4 text-lg font-bold text-gray-800">{student.fullname}</h3>
-                    <p className="text-sm text-green-600 font-medium">
-                      {student.class_name} - {student.section}
-                    </p>
+            <>
+              {/* Filters */}
+              <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                <div className="flex flex-wrap gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                    <select
+                      value={studentClassFilter}
+                      onChange={(e) => {
+                        setStudentClassFilter(e.target.value);
+                        setStudentSectionFilter("all");
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                    >
+                      <option value="all">All Classes</option>
+                      {studentUniqueClasses.map((clsName) => (
+                        <option key={clsName as string} value={clsName as string}>
+                          {clsName as string}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                    <select
+                      value={studentSectionFilter}
+                      onChange={(e) => setStudentSectionFilter(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                      disabled={studentClassFilter === "all"}
+                    >
+                      <option value="all">All Sections</option>
+                      {studentUniqueSectionsForClass.map((sec) => (
+                        <option key={sec as string} value={sec as string}>
+                          {sec as string}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                <div className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{filteredStudentsByClass.length}</span> students
+                </div>
+              </div>
+
+              {/* Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredStudentsByClass.map((student, index) => (
+                (() => {
+                  const classInfo = getClassInfoForStudent(student);
+                  const className = classInfo?.class_name;
+                  const section = classInfo?.sec;
+
+                  return (
+                    <div
+                      key={student.id || index}
+                      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
+                      onClick={() => fetchStudentDetails(student)}
+                    >
+                      <div className="p-6 text-center">
+                        <img
+                          src={student.profile_picture || "https://i.pravatar.cc/150"}
+                          alt={student.fullname}
+                          className="w-20 h-20 rounded-full border-4 border-green-100 shadow-md mx-auto"
+                        />
+                        <h3 className="mt-4 text-lg font-bold text-gray-800">{student.fullname}</h3>
+                        <p className="text-sm text-green-600 font-semibold mt-1">
+                          {className || "Class ?"} {section ? `• Sec ${section}` : ""}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          ID: {student.student_id || "N/A"}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          {student.email}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()
+                ))}
+              </div>
+            </>
           )}
 
           {/* Principals Grid */}
@@ -1499,8 +1610,11 @@ const fetchClasses = async (subjectId: number) => {
                       className="w-20 h-20 rounded-full border-4 border-purple-100 shadow-md mx-auto"
                     />
                     <h3 className="mt-4 text-lg font-bold text-gray-800">{principal.fullname}</h3>
-                    <p className="text-sm text-purple-600 font-medium">Principal</p>
-                    <p className="text-xs text-gray-500 mt-1">{principal.school_name}</p>
+                    <p className="text-sm text-purple-600 font-semibold">Principal</p>
+                    <p className="text-xs text-gray-500 mt-1 truncate">{principal.email}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {principal.school_name}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -1537,14 +1651,22 @@ const fetchClasses = async (subjectId: number) => {
                     />
                     <div>
                       <h2 className="text-3xl font-bold mb-2">{selectedStudent.fullname}</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                        <div><b>Student ID:</b> {selectedStudent.student_id}</div>
-                        <div><b>Class:</b> {selectedStudent.class_name}</div>
-                        <div><b>Section:</b> {selectedStudent.section}</div>
-                        <div><b>Roll No:</b> {selectedStudent.roll_number}</div>
-                        <div><b>Gender:</b> {selectedStudent.gender}</div>
-                        <div><b>DOB:</b> {selectedStudent.date_of_birth}</div>
-                      </div>
+                      {(() => {
+                        const classInfo = getClassInfoForStudent(selectedStudent);
+                        const className = classInfo?.class_name;
+                        const section = classInfo?.sec;
+
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                            <div><b>Student ID:</b> {selectedStudent.student_id}</div>
+                            <div><b>Class:</b> {className || "Class ?"}</div>
+                            <div><b>Section:</b> {section || "-"}</div>
+                            <div><b>Roll No:</b> {selectedStudent.student_id}</div>
+                            <div><b>Gender:</b> {selectedStudent.gender}</div>
+                            <div><b>DOB:</b> {selectedStudent.date_of_birth}</div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

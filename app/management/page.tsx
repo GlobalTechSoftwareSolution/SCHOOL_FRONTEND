@@ -1,13 +1,9 @@
 import React from 'react'
-import DashboardLayout from '../components/DashboardLayout'
+import ManagementFinance from '@/app/management/management_finance/page'
 
 const page = () => {
   return (
-    <DashboardLayout role='management'>
-      <div>
-      this is management page
-    </div>
-    </DashboardLayout>
+    <ManagementFinance />
   )
 }
 

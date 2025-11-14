@@ -25,6 +25,7 @@ const PrincipalProfilePage = () => {
   const [previewImage, setPreviewImage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // ✅ Get principal email from localStorage safely
   const getPrincipalEmail = (): string => {
@@ -143,6 +144,8 @@ const PrincipalProfilePage = () => {
       setIsEditing(false);
       setSelectedImage(null);
       setError("");
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
       
     } catch (error) {
       console.error("❌ Error updating profile:", error);
@@ -199,6 +202,29 @@ const PrincipalProfilePage = () => {
   return (
     <DashboardLayout role="principal">
       <div className="p-6">
+        {/* Success Popup */}
+        {showSuccess && (
+          <div className="fixed top-4 right-4 z-50">
+            <div className="bg-green-50 border border-green-200 rounded-xl shadow-lg px-4 py-3 flex items-start gap-3 max-w-sm">
+              <div className="mt-0.5">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-green-800">Profile Updated</p>
+                <p className="text-xs text-green-700 mt-0.5">Principal profile has been saved successfully.</p>
+              </div>
+              <button
+                onClick={() => setShowSuccess(false)}
+                className="text-green-500 hover:text-green-700 text-xs font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         <h1 className="text-2xl font-semibold mb-6">Principal Profile</h1>
 
         {/* Error Message */}

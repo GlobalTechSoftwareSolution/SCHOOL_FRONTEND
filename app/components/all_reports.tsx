@@ -29,16 +29,32 @@ const All_reports = () => {
     title: "",
     description: "",
     report_type: "",
-    student: "",
-    teacher: "",
-    created_by: "principal@school.com",
+    student_email: "",
+    teacher_email: "",
+    created_by_email: "",
   });
+
+  // Get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem("authToken") || localStorage.getItem("token") || "";
+  };
+
+  // Get axios config with auth
+  const getAxiosConfig = () => {
+    const token = getAuthToken();
+    return {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    };
+  };
 
   // Fetch all reports
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(API_URL);
+      const response = await axios.get(API_URL, getAxiosConfig());
       setReports(response.data);
     } catch (error) {
       console.error("Error fetching reports:", error);
@@ -55,19 +71,67 @@ const All_reports = () => {
   const handleAddReport = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(API_URL, newReport);
+      const userData = localStorage.getItem("userData");
+      const email = userData ? JSON.parse(userData).email : "";
+      
+      const reportData = {
+        title: newReport.title,
+        description: newReport.description,
+        report_type: newReport.report_type,
+        student: newReport.student_email || null,
+        teacher: newReport.teacher_email || null,
+        created_by: email || null,
+      };
+      
+      console.log("📤 Sending report data:", reportData);
+      
+      const response = await axios.post(API_URL, reportData, getAxiosConfig());
+      console.log("✅ Report created successfully:", response.data);
+      
       setShowAddForm(false);
       setNewReport({
         title: "",
         description: "",
         report_type: "",
-        student: "",
-        teacher: "",
-        created_by: "principal@school.com",
+        student_email: "",
+        teacher_email: "",
+        created_by_email: "",
       });
       fetchReports();
-    } catch (error) {
-      console.error("Error adding report:", error);
+      alert("Report created successfully!");
+    } catch (error: any) {
+      console.error("❌ Error adding report:", error);
+      console.error("Full response data:", error.response?.data);
+      console.error("Response status:", error.response?.status);
+      
+      // Extract detailed error messages
+      let errorMessage = "Error creating report.";
+      const data = error.response?.data;
+      
+      if (data) {
+        if (data.report_type && Array.isArray(data.report_type)) {
+          errorMessage = `Invalid report type: ${data.report_type.join(", ")}`;
+        } else if (data.detail) {
+          errorMessage = data.detail;
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else {
+          // Try to extract any error messages from the response
+          const errors = Object.entries(data)
+            .map(([key, value]: [string, any]) => {
+              if (Array.isArray(value)) {
+                return `${key}: ${value.join(", ")}`;
+              }
+              return `${key}: ${value}`;
+            })
+            .join("; ");
+          if (errors) {
+            errorMessage = errors;
+          }
+        }
+      }
+      
+      alert(`Error: ${errorMessage}`);
     }
   };
 
@@ -76,10 +140,10 @@ const All_reports = () => {
     const matchesType =
       filterType === "all" || report.report_type === filterType;
     const matchesSearch =
-      report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.student.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.teacher.toLowerCase().includes(searchTerm.toLowerCase());
+      (report.title?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (report.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (report.student_email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (report.teacher_email?.toLowerCase() || "").includes(searchTerm.toLowerCase());
     return matchesType && matchesSearch;
   });
 
@@ -88,8 +152,9 @@ const All_reports = () => {
     const colors: any = {
       Academic: "bg-blue-100 text-blue-800 border-blue-200",
       Behavior: "bg-orange-100 text-orange-800 border-orange-200",
-      Attendance: "bg-green-100 text-green-800 border-green-200",
+      Finance: "bg-green-100 text-green-800 border-green-200",
       General: "bg-purple-100 text-purple-800 border-purple-200",
+      Other: "bg-gray-100 text-gray-800 border-gray-200",
     };
     return colors[type] || "bg-gray-100 text-gray-800 border-gray-200";
   };
@@ -108,11 +173,11 @@ const All_reports = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+            <h1 className="text-4xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
               Reports Dashboard
             </h1>
             <p className="text-gray-600 text-lg">
@@ -142,9 +207,9 @@ const All_reports = () => {
             </div>
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {reports.filter((r) => r.report_type === "Attendance").length}
+                {reports.filter((r) => r.report_type === "Finance").length}
               </div>
-              <div className="text-sm text-gray-600">Attendance</div>
+              <div className="text-sm text-gray-600">Finance</div>
             </div>
           </div>
 
@@ -173,17 +238,18 @@ const All_reports = () => {
                   className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="all">All Report Types</option>
+                  <option value="General">General</option>
                   <option value="Academic">Academic</option>
                   <option value="Behavior">Behavior</option>
-                  <option value="Attendance">Attendance</option>
-                  <option value="General">General</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
 
               {/* Add Report */}
               <button
                 onClick={() => setShowAddForm(true)}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 whitespace-nowrap"
+                className="bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2 whitespace-nowrap"
               >
                 <FiPlus className="w-5 h-5" />
                 Create New Report
@@ -232,18 +298,30 @@ const All_reports = () => {
 
                     {/* Details */}
                     <div className="space-y-3 text-sm text-gray-600 border-t border-gray-100 pt-4">
-                      <div className="flex items-center gap-2">
-                        <FiUser className="w-4 h-4 text-blue-500" />
-                        <span>
-                          <strong>Student:</strong> {report.student}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <FiUser className="w-4 h-4 text-green-500" />
-                        <span>
-                          <strong>Teacher:</strong> {report.teacher}
-                        </span>
-                      </div>
+                      {report.student_email && (
+                        <div className="flex items-center gap-2">
+                          <FiMail className="w-4 h-4 text-blue-500" />
+                          <span>
+                            <strong>Student:</strong> {report.student_email}
+                          </span>
+                        </div>
+                      )}
+                      {report.teacher_email && (
+                        <div className="flex items-center gap-2">
+                          <FiMail className="w-4 h-4 text-green-500" />
+                          <span>
+                            <strong>Teacher:</strong> {report.teacher_email}
+                          </span>
+                        </div>
+                      )}
+                      {report.created_by_email && (
+                        <div className="flex items-center gap-2">
+                          <FiUser className="w-4 h-4 text-purple-500" />
+                          <span>
+                            <strong>Created by:</strong> {report.created_by_email}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <FiCalendar className="w-4 h-4 text-purple-500" />
                         <span>
@@ -291,10 +369,136 @@ const All_reports = () => {
                 </p>
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-xl transition-all duration-200"
+                  className="bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-xl transition-all duration-200"
                 >
                   Create Report
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Add Report Modal */}
+          {showAddForm && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-8 w-full max-w-2xl shadow-2xl relative border border-gray-200">
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                >
+                  <FiX className="w-6 h-6" />
+                </button>
+
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <FiPlus className="w-6 h-6" />
+                  Create New Report
+                </h2>
+
+                <form onSubmit={handleAddReport} className="space-y-4">
+                  {/* Title */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Report Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newReport.title}
+                      onChange={(e) =>
+                        setNewReport({ ...newReport, title: e.target.value })
+                      }
+                      placeholder="Enter report title"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Report Type */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Report Type *
+                    </label>
+                    <select
+                      required
+                      value={newReport.report_type}
+                      onChange={(e) =>
+                        setNewReport({ ...newReport, report_type: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Report Type</option>
+                      <option value="General">General</option>
+                      <option value="Academic">Academic</option>
+                      <option value="Behavior">Behavior</option>
+                      <option value="Finance">Finance</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  {/* Student Email */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Student Email
+                    </label>
+                    <input
+                      type="email"
+                      value={newReport.student_email}
+                      onChange={(e) =>
+                        setNewReport({ ...newReport, student_email: e.target.value })
+                      }
+                      placeholder="Enter student email (optional)"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Teacher Email */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Teacher Email
+                    </label>
+                    <input
+                      type="email"
+                      value={newReport.teacher_email}
+                      onChange={(e) =>
+                        setNewReport({ ...newReport, teacher_email: e.target.value })
+                      }
+                      placeholder="Enter teacher email (optional)"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Description *
+                    </label>
+                    <textarea
+                      required
+                      value={newReport.description}
+                      onChange={(e) =>
+                        setNewReport({ ...newReport, description: e.target.value })
+                      }
+                      placeholder="Enter report description"
+                      rows={5}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddForm(false)}
+                      className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-200"
+                    >
+                      Create Report
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
@@ -319,12 +523,21 @@ const All_reports = () => {
                   <p>
                     <strong>Type:</strong> {selectedReport.report_type}
                   </p>
-                  <p>
-                    <strong>Student:</strong> {selectedReport.student}
-                  </p>
-                  <p>
-                    <strong>Teacher:</strong> {selectedReport.teacher}
-                  </p>
+                  {selectedReport.student_email && (
+                    <p>
+                      <strong>Student Email:</strong> {selectedReport.student_email}
+                    </p>
+                  )}
+                  {selectedReport.teacher_email && (
+                    <p>
+                      <strong>Teacher Email:</strong> {selectedReport.teacher_email}
+                    </p>
+                  )}
+                  {selectedReport.created_by_email && (
+                    <p>
+                      <strong>Created by Email:</strong> {selectedReport.created_by_email}
+                    </p>
+                  )}
                   <p>
                     <strong>Date:</strong>{" "}
                     {new Date(selectedReport.created_at).toLocaleDateString()}

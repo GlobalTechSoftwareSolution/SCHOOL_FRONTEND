@@ -116,11 +116,14 @@ const TeachersPage = () => {
       const allAttendance = attendanceRes.data || [];
       const allLeaves = leavesRes.data || [];
 
-      const teacherAttendance = allAttendance.filter(
-        (a: any) =>
-          a.student_email &&
-          a.student_email.toLowerCase().includes(teacher.email.toLowerCase())
-      );
+      // Match attendance records by user_email or user_id (DB may expose either)
+      const teacherAttendance = allAttendance.filter((a: any) => {
+        const email = teacher.email?.toLowerCase();
+        if (!email) return false;
+
+        const userEmail = a.user_email ?? a.user_id;
+        return userEmail?.toLowerCase() === email;
+      });
 
       const teacherLeaves = allLeaves.filter(
         (l: any) => l.applicant_email === teacher.email
@@ -148,7 +151,14 @@ const TeachersPage = () => {
 
   // Calculate statistics
   const calculateStats = () => {
-    const teacherAttendance = attendance.filter((a: any) => a.email === selectedTeacher?.email);
+    const teacherAttendance = attendance.filter((a: any) => {
+      const email = selectedTeacher?.email?.toLowerCase();
+      if (!email) return false;
+
+      const userEmail = a.user_email ?? a.user_id;
+      return userEmail?.toLowerCase() === email;
+    });
+
     const totalDays = teacherAttendance.length;
     const presentDays = teacherAttendance.filter((a: any) => a.status === "Present").length;
     const absentDays = teacherAttendance.filter((a: any) => a.status === "Absent").length;
@@ -157,12 +167,29 @@ const TeachersPage = () => {
 
     const subjectList = selectedTeacher?.subject_list || [];
     const totalSubjects = subjectList.length;
-    
+
+    // Classes should be counted only where this teacher actually teaches
     const teacherSubjectIds = subjectList.map((subject: any) => subject.id);
-    const teacherClasses = timetable.filter((item: any) => 
-      teacherSubjectIds.includes(item.subject_id)
-    );
-    const uniqueClasses = [...new Set(teacherClasses.map((item: any) => item.class_name))];
+    const teacherName = selectedTeacher?.fullname?.toLowerCase();
+
+    const teacherClasses = timetable.filter((item: any) => {
+      const matchesSubject = teacherSubjectIds.includes(item.subject_id);
+      const matchesTeacher = item.teacher_name
+        ? item.teacher_name.toLowerCase() === teacherName
+        : true;
+      return matchesSubject && matchesTeacher;
+    });
+
+    // Treat each class+section pair as a distinct class
+    const uniqueClasses = [
+      ...new Set(
+        teacherClasses.map((item: any) => {
+          const name = item.class_name || "";
+          const section = (item.section || item.sec || "").toString();
+          return `${name}__${section}`;
+        })
+      ),
+    ];
 
     return {
       totalDays,
@@ -702,7 +729,12 @@ const TeachersPage = () => {
                             <p className="text-gray-500">Loading attendance records...</p>
                           </div>
                         </div>
-                      ) : attendance.filter((a: any) => a.email === selectedTeacher.email).length > 0 ? (
+                      ) : attendance.filter((a: any) => {
+                          const email = selectedTeacher.email?.toLowerCase();
+                          if (!email) return false;
+
+                          return a.user_email?.toLowerCase() === email;
+                        }).length > 0 ? (
                         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                           <div className="overflow-x-auto">
                             <table className="min-w-full">
@@ -720,7 +752,12 @@ const TeachersPage = () => {
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
                                 {attendance
-                                  .filter((record: any) => record.email === selectedTeacher.email)
+                                  .filter((record: any) => {
+                                    const email = selectedTeacher.email?.toLowerCase();
+                                    if (!email) return false;
+
+                                    return record.user_email?.toLowerCase() === email;
+                                  })
                                   .map((record: any, index: number) => (
                                     <tr key={index} className="hover:bg-gray-50 transition-colors">
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -744,7 +781,7 @@ const TeachersPage = () => {
                                         </span>
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {record.check_in_time || (
+                                        {record.check_in_time || record.check_in || (
                                           <span className="text-gray-400">Not recorded</span>
                                         )}
                                       </td>

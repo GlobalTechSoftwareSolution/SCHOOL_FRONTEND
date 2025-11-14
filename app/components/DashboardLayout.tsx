@@ -70,7 +70,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Program", path: "/teachers/teachers_programs" },
     { name: "Raise Issues", path: "/teachers/teachers_issues" },
     { name: "Projects", path: "/teachers/teachers_projects" },
-    { name: "Issue Documents", path: "/teachers/teachers_documents" },
+    { name: "Documents", path: "/teachers/teachers_documents" },
     { name: "Profile", path: "/teachers/teachers_profile" },
   ],
   students: [
@@ -84,19 +84,22 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Calender", path: "/students/students_calender" },
     { name: "Notice", path: "/students/students_notice" },
     { name: "Reports", path: "/students/students_reports" },
-    { name: "Raise Issues", path: "/students/students_issues" },
+    { name: "Issues", path: "/students/students_issues" },
     { name: "Programs", path: "/students/students_programs" },
-    { name: "Docs", path: "/students/students_docs" },
+    { name: "Documents", path: "/students/students_docs" },
     { name: "Fees", path: "/students/students_fees" },
     { name: "Profile", path: "/students/students_profile" },
   ],
   admin: [
+    { name: "Dashboard", path: "/admin/admin_dashboard" },
     { name: "Attendence", path: "/admin/admin_attendence" },
     { name: "Students", path: "/admin/admin_students" },
     { name: "Teachers", path: "/admin/admin_teachers" },
     { name: "Approvals", path: "/admin/admin_approval" },
     { name: "Calender", path: "/admin/admin_calender" },
     { name: "Notice", path: "/admin/admin_notice" },
+    { name: "Programs", path: "/admin/admin_programs" },
+    { name: "Reports", path: "/admin/admin_reports" },
     { name: "Raise Issues", path: "/admin/admin_issues" },
     { name: "Profile", path: "/admin/admin_profile" },
   ],
@@ -173,22 +176,30 @@ export default function DashboardLayout({ children, role }: Props) {
                 // For admin, use singular endpoint; for others, use singular (no plural 's')
                 const endpoint = `https://globaltechsoftwaresolutions.cloud/school-api/api/${roleForApi}/${email}/`
                 console.log("Fetching user from:", endpoint);
-                const response = await fetch(endpoint);
-                if (response.ok) {
-                  const data = await response.json();
-                  const userDetails = data.user_details || {};
-                  const fullname = data.fullname || userDetails.fullname || null;
-                  const roleFromApi = userDetails.role || null;
-                  const profilePic = data.profile_picture || userDetails.profile_picture || null;
+                try {
+                  const response = await fetch(endpoint);
+                  if (response.ok) {
+                    const data = await response.json();
+                    const userDetails = data.user_details || {};
+                    const fullname = data.fullname || userDetails.fullname || null;
+                    const roleFromApi = userDetails.role || null;
+                    const profilePic = data.profile_picture || userDetails.profile_picture || null;
 
-                  // Use role from API if valid, else fallback to tokenRole or prop role
-                  let finalRole = roleFromApi ? roleFromApi.toLowerCase() : (tokenRole || role.toLowerCase());
+                    // Use role from API if valid, else fallback to tokenRole or prop role
+                    let finalRole = roleFromApi ? roleFromApi.toLowerCase() : (tokenRole || role.toLowerCase());
 
-                  setUserName(fullname || (email.split("@")[0] || "User"));
-                  setUserRole(finalRole.toUpperCase());
-                  setProfilePicture(profilePic || null);
-                } else {
-                  // fallback if fetch fails
+                    setUserName(fullname || (email.split("@")[0] || "User"));
+                    setUserRole(finalRole.toUpperCase());
+                    setProfilePicture(profilePic || null);
+                  } else {
+                    // fallback if fetch fails (404, 500, etc.)
+                    console.log("ℹ️ User details endpoint not available (" + response.status + "), using defaults");
+                    setUserName(email.split("@")[0] || "User");
+                    setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
+                    setProfilePicture(null);
+                  }
+                } catch (fetchErr) {
+                  console.log("ℹ️ Could not fetch user details:", fetchErr);
                   setUserName(email.split("@")[0] || "User");
                   setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
                   setProfilePicture(null);

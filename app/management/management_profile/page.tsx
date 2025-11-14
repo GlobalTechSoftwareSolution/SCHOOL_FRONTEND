@@ -66,8 +66,8 @@ const ManagementProfilePage = () => {
       if (profile) {
         setManagement(profile);
         // Set profile photo if available
-        if (profile.profile_photo) {
-          setProfilePhoto(profile.profile_photo);
+        if (profile.profile_picture) {
+          setProfilePhoto(profile.profile_picture);
         }
         setFormData({
           fullname: profile.fullname || "",
@@ -130,21 +130,29 @@ const ManagementProfilePage = () => {
 
       // Upload to server
       const formData = new FormData();
-      formData.append('profile_photo', file);
-      formData.append('email', management?.email || management?.user_details?.email);
+      // Backend uses `profile_picture` like other roles
+      formData.append('profile_picture', file);
+      const email = management?.email || management?.user_details?.email;
+      if (!email) {
+        showError('No valid email found for this management user');
+        return;
+      }
+      formData.append('email', email);
 
-      const response = await axios.post(`${API_BASE}/management/upload-photo/`, formData, {
+      // Use the same detail endpoint as other profile updates: /management/{email}/
+      const response = await axios.patch(`${API_BASE}/management/${encodeURIComponent(email)}/`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
       // Update management data with new photo URL
-      if (response.data?.profile_photo) {
+      if (response.data?.profile_picture) {
         setManagement((prev: any) => ({
           ...prev,
-          profile_photo: response.data.profile_photo
+          profile_picture: response.data.profile_picture
         }));
+        setProfilePhoto(response.data.profile_picture);
         showSuccess();
       }
     } catch (error: any) {
@@ -326,9 +334,9 @@ const ManagementProfilePage = () => {
                   <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6">
                     <div className="relative">
                       <div className="w-24 h-24 bg-white/20 rounded-2xl border-4 border-white/30 shadow-lg flex items-center justify-center relative overflow-hidden">
-                        {profilePhoto || management?.profile_photo ? (
+                        {profilePhoto || management?.profile_picture ? (
                           <img 
-                            src={profilePhoto || management?.profile_photo} 
+                            src={profilePhoto || management?.profile_picture} 
                             alt="Profile" 
                             className="w-full h-full object-cover rounded-2xl"
                           />

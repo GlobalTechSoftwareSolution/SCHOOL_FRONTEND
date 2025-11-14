@@ -58,11 +58,30 @@ export default function Student_Profile() {
           return;
         }
 
-        const response = await fetch(`${API_URL}${email}/`);
-        if (!response.ok) throw new Error("Failed to fetch student");
+        // Fetch student and classes data in parallel
+        const [studentRes, classesRes] = await Promise.all([
+          fetch(`${API_URL}${email}/`),
+          fetch("https://globaltechsoftwaresolutions.cloud/school-api/api/classes/")
+        ]);
 
-        const data = await response.json();
-        setStudent(data);
+        if (!studentRes.ok) throw new Error("Failed to fetch student");
+
+        const data = await studentRes.json();
+        const classesData = await classesRes.json();
+
+        // Find class details for this student
+        const classDetail = classesData.find(
+          (c: any) => c.id === data.class_id
+        );
+
+        // Enrich student with class information
+        const enrichedStudent = {
+          ...data,
+          section: classDetail?.sec ,
+          class_name: classDetail?.class_name,
+        };
+
+        setStudent(enrichedStudent);
       } catch (err) {
         console.error("Fetch error:", err);
       } finally {
@@ -96,12 +115,22 @@ export default function Student_Profile() {
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Image upload failed");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Image upload failed");
+      }
 
       const updated = await res.json();
       setStudent((prev) => (prev ? { ...prev, profile_picture: updated.profile_picture } : null));
+      
+      // Show success popup
+      setShowSuccessPopup(true);
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+      }, 3000);
     } catch (err) {
-      console.error(err);
+      console.error("Profile picture upload error:", err);
+      alert("Failed to upload profile picture. Please try again.");
     } finally {
       setUploadingImage(false);
     }
@@ -233,9 +262,9 @@ export default function Student_Profile() {
                 <p className="text-gray-500 text-sm mb-4">ID: {student.student_id}</p>
                 
                 {/* Academic Badge */}
-                <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl p-3 mb-4">
-                  <div className="text-sm font-medium">{student.class_name}</div>
-                  <div className="text-xs opacity-90">Section {student.section}</div>
+                <div className=" text-black rounded-xl p-3 mb-4">
+                  <div className="text-sm font-medium">Class Name:{student.class_name}</div>
+                  <div className="text-xs opacity-90">Section: {student.section}</div>
                 </div>
 
                 {/* Edit Toggle Button */}

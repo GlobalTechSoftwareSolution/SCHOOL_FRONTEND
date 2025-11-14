@@ -26,6 +26,7 @@ const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
 const StudentsPage = () => {
   const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
@@ -34,22 +35,28 @@ const StudentsPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [classFilter, setClassFilter] = useState("all");
+  const [sectionFilter, setSectionFilter] = useState("all");
   const [attendanceFilter, setAttendanceFilter] = useState("all");
 
-  // ✅ Fetch all students initially
+  // Fetch students and classes initially
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${API_BASE}/students/`);
-        setStudents(response.data);
+        const [studentsRes, classesRes] = await Promise.all([
+          axios.get(`${API_BASE}/students/`),
+          axios.get(`${API_BASE}/classes/`)
+        ]);
+
+        setStudents(studentsRes.data || []);
+        setClasses(classesRes.data || []);
       } catch (error) {
-        console.error("Error fetching students:", error);
+        console.error("Error fetching students/classes:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchStudents();
+    fetchData();
   }, []);
 
   // Fetch student details dynamically
@@ -58,10 +65,11 @@ const StudentsPage = () => {
     setLoading(true);
     try {
       const [attendanceRes, leavesRes, gradesRes] = await Promise.all([
-        axios.get(`${API_BASE}/attendance/?student_email=${student.email}`).catch(err => { 
+        axios.get(`${API_BASE}/attendance/`).catch(err => { 
           console.log('Attendance API failed:', err.message); 
           return { data: [] }; 
         }),
+
         axios.get(`${API_BASE}/leaves/`).catch(err => { 
           console.log('Leaves API failed:', err.message); 
           return { data: [] }; 
@@ -72,9 +80,14 @@ const StudentsPage = () => {
         }),
       ]);
 
-      const studentAttendance = (attendanceRes.data || []).filter(
-        (a: any) => a.student_email?.toLowerCase().includes(student.email.toLowerCase())
-      );
+      const studentAttendance = (attendanceRes.data || []).filter((a: any) => {
+        const email = student.email?.toLowerCase();
+        if (!email) return false;
+
+        const recordEmail = (a.user_email ?? a.student_email)?.toLowerCase();
+        const role = a.role?.toLowerCase();
+        return recordEmail === email && role === "student";
+      });
 
       const studentLeaves = (leavesRes.data || []).filter(
         (l: any) => l.applicant_email === student.email
@@ -154,19 +167,41 @@ const StudentsPage = () => {
     poorGrades: 0
   };
 
-  // Filter students based on search and filters
+  // Helper: resolve class info from classes list using class_id
+  const getClassInfoForStudent = (student: any) => {
+    if (!student?.class_id) return null;
+    return classes.find((cls: any) => cls.id === student.class_id) || null;
+  };
+
+  // Get unique classes for filter from classes API
+  const uniqueClasses = [...new Set(classes.map((cls: any) => cls.class_name).filter(Boolean))];
+
+  // Get sections for the selected class
+  const uniqueSectionsForSelectedClass = classFilter === "all"
+    ? []
+    : [...new Set(
+        classes
+          .filter((cls: any) => cls.class_name === classFilter)
+          .map((cls: any) => cls.sec)
+          .filter(Boolean)
+      )];
+
+  // Filter students based on search, class and section (via class_id -> classes)
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.student_id?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesClass = classFilter === "all" || student.class_name === classFilter;
-    
-    return matchesSearch && matchesClass;
-  });
 
-  // Get unique classes for filter
-  const uniqueClasses = [...new Set(students.map(student => student.class_name))];
+    const classInfo = getClassInfoForStudent(student);
+    const className = classInfo?.class_name;
+    const section = classInfo?.sec;
+
+    const matchesClass = classFilter === "all" || className === classFilter;
+    const matchesSection =
+      sectionFilter === "all" || sectionFilter === "" || section === sectionFilter;
+
+    return matchesSearch && matchesClass && matchesSection;
+  });
 
   // Export student data
   const exportStudentData = () => {
@@ -189,7 +224,7 @@ const StudentsPage = () => {
   return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
         <div className="max-w-7xl mx-auto">
-          {/* ✅ Students Grid View */}
+          {/* Students Grid View */}
           {!selectedStudent ? (
             <>
               {/* Header Section */}
@@ -224,16 +259,34 @@ const StudentsPage = () => {
                   </div>
                   
                   <div className="flex flex-wrap gap-3">
-                    <select
-                      value={classFilter}
-                      onChange={(e) => setClassFilter(e.target.value)}
-                      className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
-                    >
-                      <option value="all">All Classes</option>
-                      {uniqueClasses.map(cls => (
-                        <option key={cls} value={cls}>{cls}</option>
-                      ))}
-                    </select>
+                    <div className="flex flex-wrap gap-3">
+                      <select
+                        value={classFilter}
+                        onChange={(e) => {
+                          setClassFilter(e.target.value);
+                          setSectionFilter("all");
+                        }}
+                        className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                      >
+                        <option value="all">Select Class</option>
+                        {uniqueClasses.map(cls => (
+                          <option key={cls} value={cls}>{cls}</option>
+                        ))}
+                      </select>
+
+                      {classFilter !== "all" && (
+                        <select
+                          value={sectionFilter}
+                          onChange={(e) => setSectionFilter(e.target.value)}
+                          className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                        >
+                          <option value="all">All Sections</option>
+                          {uniqueSectionsForSelectedClass.map(sec => (
+                            <option key={sec} value={sec}>{sec}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                     
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Filter className="w-4 h-4" />
@@ -276,15 +329,18 @@ const StudentsPage = () => {
                           </h3>
                           
                           <p className="text-sm text-emerald-600 font-semibold mt-1">
-                            {student.class_name || student.section ? (
-                              <>
-                                {student.class_name && <>Class {student.class_name}</>}
-                                {student.class_name && student.section && " • "}
-                                {student.section && <>Sec {student.section}</>}
-                              </>
-                            ) : (
-                              "Class info unavailable"
-                            )}
+                            {(() => {
+                              const classInfo = getClassInfoForStudent(student);
+                              if (!classInfo) return "Class info unavailable";
+
+                              return (
+                                <>
+                                  {classInfo.class_name && <>Class {classInfo.class_name}</>}
+                                  {classInfo.class_name && classInfo.sec && " • "}
+                                  {classInfo.sec && <>Sec {classInfo.sec}</>}
+                                </>
+                              );
+                            })()}
                           </p>
                           
                           <p className="text-xs text-gray-500 mt-2 line-clamp-1">{student.email}</p>

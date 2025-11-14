@@ -59,11 +59,12 @@ const ParentDashboard = () => {
       try {
         setLoading(true);
         
-        const [studentsRes, attendanceRes, gradesRes, leavesRes] = await Promise.all([
+        const [studentsRes, attendanceRes, gradesRes, leavesRes, classesRes] = await Promise.all([
           axios.get(`${API_BASE}/students/`),
           axios.get(`${API_BASE}/attendance/`),
           axios.get(`${API_BASE}/grades/`),
-          axios.get(`${API_BASE}/leaves/`)
+          axios.get(`${API_BASE}/leaves/`),
+          axios.get(`${API_BASE}/classes/`)
         ]);
 
         // Filter students by parent email
@@ -71,29 +72,44 @@ const ParentDashboard = () => {
           (student: any) => student.parent === parentEmail
         );
 
-        setStudents(parentStudents);
+        // Enrich students with class information
+        const enrichedStudents = parentStudents.map((student: any) => {
+          const classDetail = classesRes.data.find(
+            (c: any) => c.id === student.class_id
+          );
+          
+          return {
+            ...student,
+            class_name: classDetail?.class_name ,
+            section: classDetail?.sec,
+            class_teacher: classDetail?.class_teacher_name ,
+            teacher_email: classDetail?.teacher_email 
+          };
+        });
+
+        setStudents(enrichedStudents);
 
         // Filter attendance for parent's students
         const filteredAttendance = attendanceRes.data.filter((record: any) =>
-          parentStudents.some(
+          enrichedStudents.some(
             (stu: any) =>
-              stu.email === record.student || stu.student_id === record.student
+              stu.email === record.user_email || stu.student_id === record.user_email
           )
         );
 
         // Merge student info with attendance
         const mergedAttendance = filteredAttendance.map((att: any) => {
-          const stu = parentStudents.find(
+          const stu = enrichedStudents.find(
             (s: any) =>
-              s.email === att.student || s.student_id === att.student
+              s.email === att.user_email || s.student_id === att.user_email
           );
           return {
             ...att,
-            fullname: stu?.fullname || "Unknown Student",
-            email: stu?.email || "N/A",
-            class_name: stu?.class_name || "N/A",
-            section: stu?.section || "N/A",
-            profile_picture: stu?.profile_picture || "",
+            fullname: stu?.fullname ,
+            email: stu?.email,
+            class_name: stu?.class_name ,
+            section: stu?.sec ,
+            profile_picture: stu?.profile_picture,
             student_data: stu
           };
         });
@@ -102,15 +118,41 @@ const ParentDashboard = () => {
 
         // Filter grades for parent's students
         const studentGrades = gradesRes.data.filter((grade: any) =>
-          parentStudents.some((student: any) => student.email === grade.student)
+          enrichedStudents.some((student: any) => student.email === grade.student)
         );
-        setGrades(studentGrades);
+
+        // Enrich grades with student information
+        const enrichedGrades = studentGrades.map((grade: any) => {
+          const student = enrichedStudents.find((s: any) => s.email === grade.student);
+          return {
+            ...grade,
+            fullname: student?.fullname ,
+            email: student?.email ,
+            section: student?.sec ,
+            class_name: student?.class_name 
+          };
+        });
+
+        setGrades(enrichedGrades);
 
         // Filter leaves for parent's students
         const studentLeaves = leavesRes.data.filter((leave: any) =>
-          parentStudents.some((student: any) => student.email === leave.applicant_email)
+          enrichedStudents.some((student: any) => student.email === leave.applicant_email)
         );
-        setLeaves(studentLeaves);
+
+        // Enrich leaves with student information
+        const enrichedLeaves = studentLeaves.map((leave: any) => {
+          const student = enrichedStudents.find((s: any) => s.email === leave.applicant_email);
+          return {
+            ...leave,
+            fullname: student?.fullname ,
+            email: student?.email ,
+            section: student?.sec ,
+            class_name: student?.class_name 
+          };
+        });
+
+        setLeaves(enrichedLeaves);
 
         setLoading(false);
       } catch (error) {
@@ -374,17 +416,38 @@ const ParentDashboard = () => {
           <div className="space-y-8">
             {/* Children Overview */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                <Users className="h-6 w-6 text-blue-600" />
-                Your Children
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                  <Users className="h-6 w-6 text-blue-600" />
+                  Your Children
+                </h2>
+                {selectedStudent !== "all" && (
+                  <button
+                    onClick={() => setSelectedStudent("all")}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {students.map((student, index) => {
                   const studentStat = getStudentStats(student.email);
+                  const isSelected = selectedStudent === student.email;
                   return (
-                    <div key={index} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                    <div 
+                      key={index} 
+                      onClick={() => setSelectedStudent(student.email)}
+                      className={`border rounded-xl p-6 transition-all cursor-pointer ${
+                        isSelected
+                          ? "border-blue-500 bg-blue-50 shadow-md"
+                          : "border-gray-200 hover:shadow-md"
+                      }`}
+                    >
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                          isSelected ? "bg-blue-200" : "bg-blue-100"
+                        }`}>
                           {student.profile_picture ? (
                             <img
                               src={student.profile_picture}
@@ -397,8 +460,9 @@ const ParentDashboard = () => {
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-gray-900 text-lg">{student.fullname}</h3>
-                          <p className="text-sm text-gray-600">{student.class_name} - {student.section}</p>
-                          <p className="text-xs text-gray-500 mt-1">Roll No: {student.roll_number || "N/A"}</p>
+                          <p className="text-sm text-gray-600">{student.class_name}</p>
+                          <p className="text-sm text-gray-600">{student.section}</p>
+                          <p className="text-xs text-gray-500 mt-1">Roll No: {student.student_id}</p>
                         </div>
                       </div>
                       
@@ -625,9 +689,13 @@ const ParentDashboard = () => {
                           <BookOpen className="h-6 w-6 text-purple-600" />
                         </div>
                         <div className="flex-1">
+                          {/* Student Name and Subject Row */}
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-gray-900 text-lg">{grade.subject_name}</h3>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-900 text-lg">{grade.subject_name}</h3>
+                              <p className="text-sm text-gray-600">{grade.fullname}</p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium border whitespace-nowrap ${
                               grade.percentage >= 80 ? "bg-green-50 text-green-700 border-green-200" :
                               grade.percentage >= 60 ? "bg-blue-50 text-blue-700 border-blue-200" :
                               "bg-red-50 text-red-700 border-red-200"
@@ -636,7 +704,16 @@ const ParentDashboard = () => {
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                          {/* Email and Class/Section Row */}
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-2">
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-4 w-4" />
+                              <span className="truncate" title={grade.email}>{grade.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <BookOpen className="h-4 w-4" />
+                              <span>{grade.class_name} - {grade.section}</span>
+                            </div>
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4" />
                               <span>{grade.exam_type}</span>
@@ -645,9 +722,11 @@ const ParentDashboard = () => {
                               <Calendar className="h-4 w-4" />
                               <span>{new Date(grade.exam_date).toLocaleDateString()}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span>Marks: {grade.marks_obtained}/{grade.total_marks}</span>
-                            </div>
+                          </div>
+
+                          {/* Marks Row */}
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium text-gray-900">Marks:</span> {grade.marks_obtained}/{grade.total_marks}
                           </div>
                         </div>
                       </div>
@@ -678,11 +757,12 @@ const ParentDashboard = () => {
             ) : (
               <div className="divide-y divide-gray-100">
                 {filteredLeaves.map((leave, index) => (
-                  <div key={index} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
+                  <div key={index} className="p-6 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setExpandedRecord(expandedRecord === index ? null : index)}>
+                    <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-gray-900 text-lg">{leave.leave_type} Leave</h3>
+                        {/* Header with Student Name and Status */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="font-semibold text-gray-900 text-lg">{leave.fullname}</h3>
                           <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
                             leave.status === "Approved" ? "bg-green-50 text-green-700 border-green-200" :
                             leave.status === "Pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
@@ -692,21 +772,146 @@ const ParentDashboard = () => {
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        {/* Main Info Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600 mb-2">
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4" />
+                            <span><span className="font-medium text-gray-900">{leave.class_name}</span> - {leave.section}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            <span className="truncate" title={leave.email}>{leave.email}</span>
+                          </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
                             <span>{leave.start_date} to {leave.end_date}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4" />
-                            <span>{leave.reason}</span>
+                            <span>{leave.leave_type} Leave</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span>Applied: {new Date(leave.created_at).toLocaleDateString()}</span>
+                        </div>
+
+                        {/* Reason */}
+                        <div className="text-sm grid grid-cols-2">
+                          <span className="text-gray-600 font-medium">Reason:   {leave.reason}</span>
+                          {/* <p className="text-gray-700 mr-5"></p> */}
+                        </div>
+                      </div>
+
+                      {/* Expand Button */}
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedRecord(expandedRecord === index ? null : index);
+                          }}
+                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                          {expandedRecord === index ? 
+                            <ChevronUp className="h-4 w-4 text-gray-600" /> : 
+                            <ChevronDown className="h-4 w-4 text-gray-600" />
+                          }
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded Details */}
+                    {expandedRecord === index && (
+                      <div className="mt-6 border-t pt-6">
+                        <div className="grid md:grid-cols-4 gap-6">
+                          {/* Student Information Section */}
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Student Information</h4>
+                            <div className="space-y-3 text-sm">
+                              <div>
+                                <span className="text-gray-600 font-medium block">Name</span>
+                                <span className="text-gray-900">{leave.fullname}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 font-medium block">Email</span>
+                                <span className="text-gray-900 break-all">{leave.email}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 font-medium block">Class</span>
+                                <span className="text-gray-900">{leave.class_name}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 font-medium block">Section</span>
+                                <span className="text-gray-900">{leave.section}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Leave Details Section */}
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Leave Details</h4>
+                            <div className="space-y-3 text-sm">
+                              <div>
+                                <span className="text-gray-600 font-medium block">Leave Type</span>
+                                <span className="text-gray-900">{leave.leave_type}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 font-medium block">Start Date</span>
+                                <span className="text-gray-900">{leave.start_date}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 font-medium block">End Date</span>
+                                <span className="text-gray-900">{leave.end_date}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Approval Details Section */}
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Approval Details</h4>
+                            <div className="space-y-3 text-sm">
+                              <div>
+                                <span className="text-gray-600 font-medium block">Status</span>
+                                <span className={`font-semibold inline-block px-2 py-1 rounded ${
+                                  leave.status === "Approved" ? "text-green-600 bg-green-50" :
+                                  leave.status === "Pending" ? "text-yellow-600 bg-yellow-50" :
+                                  "text-red-600 bg-red-50"
+                                }`}>
+                                  {leave.status}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 font-medium block">Approved By</span>
+                                <span className="text-gray-900">{leave.approved_by || "Pending Approval"}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 font-medium block">Applied On</span>
+                                <span className="text-gray-900">{new Date(leave.created_at).toLocaleDateString()}</span>
+                              </div>
+                              {leave.approved_at && (
+                                <div>
+                                  <span className="text-gray-600 font-medium block">Approved On</span>
+                                  <span className="text-gray-900">{new Date(leave.approved_at).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Reason Section */}
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Additional Information</h4>
+                            <div className="space-y-3 text-sm">
+                              <div>
+                                <span className="text-gray-600 font-medium block">Reason</span>
+                                <p className="text-gray-700 bg-gray-50 p-2 rounded mt-1">{leave.reason}</p>
+                              </div>
+                              {leave.remarks && (
+                                <div>
+                                  <span className="text-gray-600 font-medium block">Remarks</span>
+                                  <p className="text-gray-700 bg-gray-50 p-2 rounded mt-1">{leave.remarks}</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -1,197 +1,229 @@
 "use client";
-import DashboardLayout from '@/app/components/DashboardLayout';
-import { useState, useEffect } from 'react'
 
-type Attendance = {
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import DashboardLayout from "@/app/components/DashboardLayout";
+
+const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+
+interface Student {
   id: number;
-  student_name: string;
+  email: string;
+  fullname: string;
+  student_id: string;
+  class_id: number;
+  profile_picture?: string | null;
+  [key: string]: any;
+}
+
+interface Teacher {
+  id: number;
+  email: string;
+  fullname: string;
+  profile_picture?: string | null;
+  [key: string]: any;
+}
+
+interface Principal {
+  id: number;
+  email: string;
+  fullname: string;
+  profile_picture?: string | null;
+  [key: string]: any;
+}
+
+interface Admin {
+  id: number;
+  email: string;
+  fullname: string;
+  profile_picture?: string | null;
+  [key: string]: any;
+}
+
+interface ClassData {
+  id: number;
   class_name: string;
+  sec?: string;
+  class_id?: number;
+  class_teacher_name?: string;
+  [key: string]: any;
+}
+
+interface AttendanceRecord {
+  id: number;
+  user_email: string;
+  user_name?: string;
   date: string;
-  status: "Present" | "Absent" | "Late" | "Half Day";
-  remarks: string;
-  created_at: string;
-  student: string;
-  class_enrolled: number;
-};
+  status: string;
+  check_in?: string;
+  check_out?: string;
+  role?: string;
+  profile_picture?: string | null;
+  [key: string]: any;
+}
 
-const Attendence_Page = () => {
-  const [attendance, setAttendance] = useState<Attendance[]>([]);
+export default function ClassWiseAttendance() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [principal, setPrincipal] = useState<Principal | null>(null);
+  const [admin, setAdmin] = useState<Admin | null>(null);
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterClass, setFilterClass] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterDate, setFilterDate] = useState("");
+  const [mode, setMode] = useState("students");
+  const [adminEmail, setAdminEmail] = useState("");
 
-  const fetchAttendance = async () => {
-    try {
-      setLoading(true);
-
-      // ✅ Always prefer authToken, then token, then cookie values
-      const token =
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("token") ||
-        document.cookie.split("; ").find(row => row.trim().startsWith("authToken="))?.split("=")[1] ||
-        document.cookie.split("; ").find(row => row.trim().startsWith("token="))?.split("=")[1];
-
-      console.log("🎯 Final token used:", token);
-
-      if (!token) {
-        console.warn("⚠️ No token found in storage or cookies!");
-        setError("No authentication token found. Please log in again.");
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 1500);
-        return;
-      }
-
-      let response;
-      try {
-        response = await fetch(
-          "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      } catch (fetchError) {
-        console.error(" Network Error:", fetchError);
-        setError("Network error. Please check your connection and try again.");
-        return;
-      }
-
-      if (!response.ok) {
-        const errText = await response.text();
-        
-        // Handle specific database schema error silently
-        if (response.status === 500 && errText.includes("column school_attendance.sec does not exist")) {
-          console.warn(" Database schema issue detected - attendance feature temporarily unavailable");
-          setAttendance([]);
-          setError("Attendance system is temporarily unavailable due to database maintenance. The backend team has been notified to fix the table structure.");
-          return;
-        }
-        
-        // Handle other errors
-        console.error(" API Fetch Error:", response.status, errText);
-        throw new Error(`Failed to fetch attendance: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(" Attendance fetched successfully:", data.length, "records");
-      setAttendance(data);
-      setError("");
-    } catch (err) {
-      console.error(" Attendance Fetch Error:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch attendance records");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // READ ADMIN EMAIL FROM LOCALSTORAGE
   useEffect(() => {
-    fetchAttendance();
+    try {
+      const userData = localStorage.getItem("userData");
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        setAdminEmail(parsed.email);
+        console.log("👨‍💼 Admin Logged In:", parsed.email);
+      }
+    } catch (err) {
+      console.error("❌ Error reading localStorage userData:", err);
+    }
   }, []);
 
-  // Filter attendance based on search and filters
-  const filteredAttendance = attendance.filter(record => {
-    const matchesSearch = 
-      record.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.class_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.student.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesClass = filterClass === "all" || record.class_name === filterClass;
-    const matchesStatus = filterStatus === "all" || record.status === filterStatus;
-    const matchesDate = !filterDate || record.date === filterDate;
+  // FETCH ALL APIs
+  useEffect(() => {
+    console.log("🔄 Starting API Fetch...");
 
-    return matchesSearch && matchesClass && matchesStatus && matchesDate;
-  });
+    const loadData = async () => {
+      try {
+        console.log("📡 Fetching Students API...");
+        const s = await axios.get(`${API}/students/`);
+        console.log("✅ Students Fetched:", s.data);
+        setStudents(s.data);
 
-  // Get unique classes and dates for filters
-  const uniqueClasses = [...new Set(attendance.map(record => record.class_name))];
-  const uniqueDates = [...new Set(attendance.map(record => record.date))].sort().reverse();
+        console.log("📡 Fetching Teachers API...");
+        const t = await axios.get(`${API}/teachers/`);
+        console.log("✅ Teachers Fetched:", t.data);
+        setTeachers(t.data);
 
-  const getStatusBadge = (status: string) => {
-    const statusColors = {
-      Present: "bg-green-100 text-green-800 border-green-200",
-      Absent: "bg-red-100 text-red-800 border-red-200",
-      Late: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      "Half Day": "bg-blue-100 text-blue-800 border-blue-200"
+        console.log("📡 Fetching Principal API...");
+        try {
+          const p = await axios.get(`${API}/principal/`);
+          console.log("✅ Principal Fetched:", p.data);
+          setPrincipal(Array.isArray(p.data) ? p.data[0] : p.data);
+        } catch (err) {
+          console.warn("⚠️ Principal API failed:", err);
+        }
+
+        console.log("📡 Fetching Admin API...");
+        try {
+          const ad = await axios.get(`${API}/admin/`);
+          console.log("✅ Admin Fetched:", ad.data);
+          setAdmin(Array.isArray(ad.data) ? ad.data[0] : ad.data);
+        } catch (err) {
+          console.warn("⚠️ Admin API failed:", err);
+        }
+
+        console.log("📡 Fetching Classes API...");
+        const c = await axios.get(`${API}/classes/`);
+        console.log("✅ Classes Fetched:", c.data);
+        setClasses(c.data);
+
+        console.log("📡 Fetching Attendance API...");
+        const a = await axios.get(`${API}/attendance/`);
+        console.log("✅ Attendance Fetched:", a.data);
+        setAttendance(a.data);
+
+        console.log("🎉 All API Data Loaded");
+        setLoading(false);
+      } catch (err) {
+        console.error("❌ API Fetch Error:", err);
+        setLoading(false);
+      }
     };
-    
-    const color = statusColors[status as keyof typeof statusColors] || "bg-gray-100 text-gray-800 border-gray-200";
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${color}`}>
-        {status}
-      </span>
-    );
+
+    loadData();
+  }, []);
+
+  // MERGE STUDENTS + CLASS + ATTENDANCE WITH PROFILE PICTURES
+  const getMergedAttendance = () => {
+    console.log("🔄 Merging Students + Classes + Attendance...");
+
+    const merged = attendance
+      .map((att) => {
+        const student = students.find((s) => s.email === att.user_email);
+        if (!student) {
+          return null;
+        }
+
+        const cls = classes.find((c) => c.id === student.class_id);
+
+        return {
+          id: att.id,
+          fullname: student.fullname,
+          email: student.email,
+          student_id: student.student_id,
+          class_id: student.class_id,
+          class_name: cls?.class_name,
+          section: cls?.sec,
+          class_teacher: cls?.class_teacher_name || "Not Assigned",
+          date: att.date,
+          check_in: att.check_in,
+          check_out: att.check_out,
+          status: att.status,
+          profile_picture: student.profile_picture || null,
+        };
+      })
+      .filter((item): item is Exclude<typeof item, null> => item !== null);
+
+    console.log("✅ Merged Attendance:", merged);
+    return merged;
   };
 
-  const getStatusStats = () => {
-    const total = filteredAttendance.length;
-    const present = filteredAttendance.filter(a => a.status === "Present").length;
-    const absent = filteredAttendance.filter(a => a.status === "Absent").length;
-    const late = filteredAttendance.filter(a => a.status === "Late").length;
-    const halfDay = filteredAttendance.filter(a => a.status === "Half Day").length;
-    
-    return { total, present, absent, late, halfDay };
-  };
+  // STUDENT FILTER
+  const filteredStudentAttendance = selectedClassId
+    ? getMergedAttendance().filter((i) => i.class_id === parseInt(selectedClassId as string))
+    : [];
 
-  const stats = getStatusStats();
+  // TEACHER FILTER WITH PROFILE PICTURE
+  const teacherAttendance = attendance
+    .map((a) => {
+      const teacher = teachers.find((t) => t.email === a.user_email);
+      return {
+        ...a,
+        user_name: teacher?.fullname || a.user_name,
+        profile_picture: teacher?.profile_picture || null,
+      };
+    })
+    .filter((a) => a.role?.toLowerCase() === "teacher");
+
+  // PRINCIPAL FILTER WITH PROFILE PICTURE
+  const principalAttendance = attendance
+    .map((a) => {
+      return {
+        ...a,
+        user_name: principal?.fullname || a.user_name,
+        profile_picture: principal?.profile_picture || null,
+      };
+    })
+    .filter((a) => a.role?.toLowerCase() === "principal");
+
+  // ADMIN ATTENDANCE FILTER WITH PROFILE PICTURE
+  const adminAttendance = attendance
+    .map((a) => {
+      return {
+        ...a,
+        user_name: admin?.fullname || a.user_name,
+        profile_picture: admin?.profile_picture || null,
+      };
+    })
+    .filter((a) => a.user_email === adminEmail);
+
+  console.log("👨‍💼 Admin Attendance Records:", adminAttendance);
 
   if (loading) {
     return (
       <DashboardLayout role="admin">
-        <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (error) {
-    const isDatabaseError = error.includes("Database schema issue");
-    return (
-      <DashboardLayout role="admin">
-        <div className={`${isDatabaseError ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'} border rounded-lg p-6`}>
-          <div className={`flex items-center gap-3 ${isDatabaseError ? 'text-yellow-800' : 'text-red-800'}`}>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isDatabaseError ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              )}
-            </svg>
-            <div className="flex-1">
-              <h3 className="font-semibold">
-                {isDatabaseError ? "Attendance System Maintenance" : "Error Loading Attendance"}
-              </h3>
-              <p className="text-sm mt-1">{error}</p>
-              {isDatabaseError && (
-                <p className="text-xs mt-2 text-yellow-600">
-                  This is a backend database issue. The system administrator needs to fix the attendance table structure.
-                </p>
-              )}
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={fetchAttendance}
-                  className={`px-4 py-2 ${isDatabaseError ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-red-600 hover:bg-red-700'} text-white rounded-lg transition`}
-                >
-                  Retry
-                </button>
-                {isDatabaseError && (
-                  <button
-                    onClick={() => setError("")}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
-                  >
-                    Dismiss
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       </DashboardLayout>
     );
@@ -199,272 +231,275 @@ const Attendence_Page = () => {
 
   return (
     <DashboardLayout role="admin">
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Attendance Management</h1>
-          <p className="text-gray-600 mt-1">Track and manage student attendance records</p>
-        </div>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center gap-2 font-medium">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add Record
-          </button>
-          <button
-            onClick={fetchAttendance}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 font-medium"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Records</p>
-              <p className="text-xl font-bold text-gray-900 mt-1">{stats.total}</p>
-            </div>
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Attendance Management</h1>
+            <p className="text-gray-600">View and manage attendance records for all users</p>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-green-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Present</p>
-              <p className="text-xl font-bold text-green-600 mt-1">{stats.present}</p>
-            </div>
-            <div className="p-2 bg-green-100 rounded-lg">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-red-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Absent</p>
-              <p className="text-xl font-bold text-red-600 mt-1">{stats.absent}</p>
-            </div>
-            <div className="p-2 bg-red-100 rounded-lg">
-              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-yellow-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Late</p>
-              <p className="text-xl font-bold text-yellow-600 mt-1">{stats.late}</p>
-            </div>
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Half Day</p>
-              <p className="text-xl font-bold text-blue-600 mt-1">{stats.halfDay}</p>
-            </div>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-1">
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search student, class, email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-          
-          <select
-            value={filterClass}
-            onChange={(e) => setFilterClass(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">All Classes</option>
-            {uniqueClasses.map(className => (
-              <option key={className} value={className}>{className}</option>
-            ))}
-          </select>
-
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">All Status</option>
-            <option value="Present">Present</option>
-            <option value="Absent">Absent</option>
-            <option value="Late">Late</option>
-            <option value="Half Day">Half Day</option>
-          </select>
-
-          <select
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">All Dates</option>
-            {uniqueDates.map(date => (
-              <option key={date} value={date}>
-                {new Date(date).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'short', 
-                  day: 'numeric' 
-                })}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Attendance Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Student Information
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Class & Date
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Remarks
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Recorded
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAttendance.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                          {record.student_name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-gray-900">{record.student_name}</div>
-                        <div className="text-sm text-gray-500">{record.student}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{record.class_name}</div>
+          {/* Mode Selection Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {[
+              { key: "students", label: "Students", icon: "👨‍🎓", color: "blue" },
+              { key: "teachers", label: "Teachers", icon: "👨‍🏫", color: "green" },
+              { key: "principal", label: "Principal", icon: "👨‍💼", color: "purple" },
+              { key: "admin", label: "Admin", icon: "🛠️", color: "orange" },
+            ].map(({ key, label, icon, color }) => (
+              <button
+                key={key}
+                onClick={() => setMode(key)}
+                className={`p-4 rounded-xl shadow-sm border-2 transition-all duration-200 ${
+                  mode === key
+                    ? `bg-${color}-50 border-${color}-500 text-${color}-700 shadow-md`
+                    : "bg-white border-gray-200 text-gray-700 hover:shadow-md hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{icon}</span>
+                  <div className="text-left">
+                    <div className="font-semibold">{label}</div>
                     <div className="text-sm text-gray-500">
-                      {new Date(record.date).toLocaleDateString('en-US', { 
-                        weekday: 'short',
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
+                      {key === "students" && filteredStudentAttendance.length}
+                      {key === "teachers" && teacherAttendance.length}
+                      {key === "principal" && principalAttendance.length}
+                      {key === "admin" && adminAttendance.length} records
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(record.status)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-600 max-w-xs truncate" title={record.remarks}>
-                      {record.remarks || "No remarks"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(record.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <button className="text-blue-600 hover:text-blue-900 transition" title="Edit">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button className="text-green-600 hover:text-green-900 transition" title="View Details">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                      <button className="text-red-600 hover:text-red-900 transition" title="Delete">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredAttendance.length === 0 && (
-          <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No attendance records found</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || filterClass !== "all" || filterStatus !== "all" || filterDate
-                ? "Try adjusting your search or filters" 
-                : "No attendance records are currently available."}
-            </p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
-        )}
+
+          {/* Content Area */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* Students Section */}
+            {mode === "students" && (
+              <div className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Student Attendance</h2>
+                    <p className="text-gray-600">Select a class to view student attendance records</p>
+                  </div>
+                  <select
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white min-w-[200px]"
+                    value={selectedClassId}
+                    onChange={(e) => setSelectedClassId(e.target.value)}
+                  >
+                    <option value="">Select Class</option>
+                    {classes.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.class_name} - {cls.sec || "N/A"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedClassId ? (
+                  filteredStudentAttendance.length > 0 ? (
+                    <AttendanceTable data={filteredStudentAttendance} includeClass={true} />
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-gray-400 text-6xl mb-4">📊</div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Attendance Records</h3>
+                      <p className="text-gray-500">No attendance records found for the selected class.</p>
+                    </div>
+                  )
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-6xl mb-4">🏫</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Class</h3>
+                    <p className="text-gray-500">Please select a class to view attendance records.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Teachers Section */}
+            {mode === "teachers" && (
+              <div className="p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Teacher Attendance</h2>
+                  <p className="text-gray-600">Attendance records for teaching staff</p>
+                </div>
+                {teacherAttendance.length > 0 ? (
+                  <AttendanceTable data={teacherAttendance} includeClass={false} />
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-6xl mb-4">👨‍🏫</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Teacher Records</h3>
+                    <p className="text-gray-500">No attendance records found for teachers.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Principal Section */}
+            {mode === "principal" && (
+              <div className="p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Principal Attendance</h2>
+                  <p className="text-gray-600">Attendance records for principal</p>
+                </div>
+                {principalAttendance.length > 0 ? (
+                  <AttendanceTable data={principalAttendance} includeClass={false} />
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-6xl mb-4">👨‍💼</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Principal Records</h3>
+                    <p className="text-gray-500">No attendance records found for principal.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Admin Section */}
+            {mode === "admin" && (
+              <div className="p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Admin Attendance</h2>
+                  <p className="text-gray-600">
+                    Your attendance records ({adminEmail || "Not logged in"})
+                  </p>
+                </div>
+                {adminAttendance.length > 0 ? (
+                  <AttendanceTable data={adminAttendance} includeClass={false} />
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-6xl mb-4">🛠️</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Admin Records</h3>
+                    <p className="text-gray-500">No attendance records found for admin account.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
     </DashboardLayout>
   );
 }
 
-export default Attendence_Page;
+/* TABLE COMPONENT */
+interface AttendanceTableProps {
+  data: any[];
+  includeClass: boolean;
+}
+
+function AttendanceTable({ data, includeClass }: AttendanceTableProps) {
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { color: string; icon: string }> = {
+      Present: { color: "bg-green-100 text-green-800", icon: "✅" },
+      Absent: { color: "bg-red-100 text-red-800", icon: "❌" },
+      Late: { color: "bg-yellow-100 text-yellow-800", icon: "⏰" },
+      Halfday: { color: "bg-orange-100 text-orange-800", icon: "🕑" },
+    };
+
+    const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", icon: "❓" };
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
+        <span>{config.icon}</span>
+        {status}
+      </span>
+    );
+  };
+
+  const getInitials = (name: string) => {
+    return (name || "?")
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="w-full">
+        <thead className="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              Photo
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              Name
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              Email
+            </th>
+            {includeClass && (
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Class
+              </th>
+            )}
+            {includeClass && (
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Section
+              </th>
+            )}
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              Status
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              Check In
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              Check Out
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {data.map((item) => (
+            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 whitespace-nowrap">
+                {item.profile_picture ? (
+                  <img
+                    src={item.profile_picture}
+                    alt={item.user_name || item.fullname}
+                    className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                    onError={(e) => {
+                      (e.currentTarget).style.display = "none";
+                    }}
+                  />
+                ) : null}
+                {!item.profile_picture && (
+                  <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                    {getInitials(item.user_name || item.fullname || "?")}
+                  </div>
+                )}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="font-medium text-gray-900">{item.user_name || item.fullname}</div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                {item.user_email || item.email}
+              </td>
+              {includeClass && (
+                <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                  {item.class_name}
+                </td>
+              )}
+              {includeClass && (
+                <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                  {item.section}
+                </td>
+              )}
+              <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(item.status)}</td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`font-medium ${item.check_in ? "text-green-600" : "text-gray-400"}`}>
+                  {item.check_in || "Not checked in"}
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`font-medium ${item.check_out ? "text-blue-600" : "text-gray-400"}`}>
+                  {item.check_out || "Not checked out"}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

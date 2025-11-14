@@ -42,9 +42,10 @@ const PrincipalDashboard = () => {
         setLoading(true);
 
         // Fetch all required data
-        const [teachersRes, studentsRes, activitiesRes, attendanceRes] = await Promise.all([
+        const [teachersRes, studentsRes, classesRes, activitiesRes, attendanceRes] = await Promise.all([
           axios.get(`${API_BASE}/teachers/`),
           axios.get(`${API_BASE}/students/`),
+          axios.get(`${API_BASE}/classes/`),
           axios.get(`${API_BASE}/activities/`),
           axios.get(`${API_BASE}/attendance/`),
         ]);
@@ -52,16 +53,19 @@ const PrincipalDashboard = () => {
         // Calculate statistics
         const teachers = teachersRes.data || [];
         const students = studentsRes.data || [];
+        const classes = classesRes.data || [];
         const activities = activitiesRes.data || [];
         const attendance = attendanceRes.data || [];
+
 
         // Calculate attendance rate
         const presentCount = attendance.filter((a: any) => a.status === "Present").length;
         const totalCount = attendance.length;
         const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
-        // Get unique classes
-        const uniqueClasses = [...new Set(students.map((s: any) => s.class_name))].filter(Boolean);
+        // Get unique classes from classes API
+        const uniqueClasses = [...new Set(classes.map((c: any) => c.class_name))].filter(Boolean);
+
 
         // Get upcoming events (next 7 days)
         const today = new Date();
@@ -77,19 +81,59 @@ const PrincipalDashboard = () => {
         // Get recent activities (last 5)
         const recent = activities.slice(0, 5);
 
-        // const today = new Date();
+        // Enrich attendance with display name, role, class & section (for students) or department (for teachers)
+        const enrichedAttendance = attendance.map((record: any) => {
 
-        const todaysAttendance = attendanceData.filter((record) => {
-          const recordDate = new Date(record.date);
-          return (
-            recordDate.getFullYear() === today.getFullYear() &&
-            recordDate.getMonth() === today.getMonth() &&
-            recordDate.getDate() === today.getDate()
-          );
+          const email = String(record.user_email || record.student_email || "").toLowerCase();
+          const roleRaw = record.role || "";
+          const role = String(roleRaw).toLowerCase();
+
+          let displayName = record.student_name || record.user_name || record.user_email;
+          let className = record.class_name || "";
+          let section = record.sec || record.section || "";
+          let department = record.department || "";
+
+          if (role === "student") {
+            const student = students.find(
+              (s: any) => String(s.email || "").toLowerCase() === email
+            );
+            if (student) {
+              displayName = student.fullname || displayName;
+
+              // Prefer explicit student class/section if present
+              className = student.class_name || className;
+              section = student.section || section;
+
+              // If class info still missing, resolve via classes API using class_id
+              if (!className || !section) {
+                const cls = classes.find((c: any) => c.id === student.class_id);
+                if (cls) {
+                  className = cls.class_name || className;
+                  section = cls.sec || section;
+                }
+              }
+            }
+          }
+
+          if (role === "teacher") {
+            const teacher = teachers.find(
+              (t: any) => String(t.email || "").toLowerCase() === email
+            );
+            if (teacher) {
+              displayName = teacher.fullname || displayName;
+              department = teacher.department_name || department;
+            }
+          }
+
+          return {
+            ...record,
+            role,
+            display_name: displayName,
+            class_name: className,
+            section,
+            department,
+          };
         });
-
-        const presentList = todaysAttendance.filter(r => r.status === "Present");
-        const absentList = todaysAttendance.filter(r => r.status === "Absent");
 
 
         setStats({
@@ -103,7 +147,9 @@ const PrincipalDashboard = () => {
 
         setRecentActivities(recent);
         setUpcomingEvents(upcoming);
-        setAttendanceData(attendance.slice(0, 10));
+        // Store enriched attendance; Present/Absent tables will filter for today
+        setAttendanceData(enrichedAttendance);
+
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -420,7 +466,7 @@ const PrincipalDashboard = () => {
                 {/* Filter today */}
                 {(() => {
                   const today = new Date();
-                  return attendanceData.filter((record) => {
+                  const todayRecords = attendanceData.filter((record) => {
                     const recordDate = new Date(record.date);
                     return (
                       recordDate.getFullYear() === today.getFullYear() &&
@@ -428,104 +474,133 @@ const PrincipalDashboard = () => {
                       recordDate.getDate() === today.getDate()
                     );
                   });
-                })().length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Present */} <div className="bg-green-50 rounded-lg p-4"> <div className="flex justify-between items-center mb-2">
-                     <h3 className="font-semibold text-green-800">Present</h3>
-                    <button
-                      onClick={() => setShowPresent(!showPresent)}
-                      className="px-2 py-1 bg-green-500 text-white rounded-lg text-sm"
-                    >
-                      {showPresent ? "Hide" : "View"} </button> </div>
-                    {showPresent && (<div className="overflow-x-auto"> <table className="min-w-full"> 
-                      <thead>
-                         <tr className="border-b border-gray-200"> 
-                          <th className="text-left py-2 text-sm text-gray-500">Name</th> 
-                          <th className="text-left py-2 text-sm text-gray-500">Check-in Time</th>
-                          <th className="text-left py-2 text-sm text-gray-500">Class</th>
-                          <th className="text-left py-2 text-sm text-gray-500">Section</th>
-                           </tr>
-                            </thead> 
-                            <tbody>
-                      {attendanceData
-                        .filter((r) => {
-                          const d = new Date(r.date);
-                          const t = new Date();
-                          return (
-                            r.status === "Present" &&
-                            d.getFullYear() === t.getFullYear() &&
-                            d.getMonth() === t.getMonth() &&
-                            d.getDate() === t.getDate()
-                          );
-                        })
-                        .map((record, idx) => (<tr key={idx} className="border-b border-gray-100 hover:bg-gray-50"> 
-                        <td className="py-2 text-sm text-gray-700">{record.student_name }</td>
-                         <td className="py-2 text-sm text-gray-600">{record.check_in}</td>
-                         <td className="py-2 text-sm text-gray-600">{record.class_name}</td>
-                         <td className="py-2 text-sm text-gray-600">{record.sec}</td>
-                           </tr>
-                        ))} </tbody> 
-                        </table>
-                         </div>
-                    )} </div>
-
-
-                  {/* Absent */}
-                  <div className="bg-red-50 rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold text-red-800">Absent</h3>
-                      <button
-                        onClick={() => setShowAbsent(!showAbsent)}
-                        className="px-2 py-1 bg-red-500 text-white rounded-lg text-sm"
-                      >
-                        {showAbsent ? "Hide" : "View"}
-                      </button>
-                    </div>
-                    {showAbsent && (
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                          <thead>
-                            <tr className="border-b border-gray-200">
-                              <th className="text-left py-2 text-sm text-gray-500">Name</th>
-                              <th className="text-left py-2 text-sm text-gray-500">Date</th>
-                              <th className="text-left py-2 text-sm text-gray-500">Class</th>
-                              <th className="text-left py-2 text-sm text-gray-500">Section</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {attendanceData
-                              .filter((r) => {
-                                const d = new Date(r.date);
-                                const t = new Date();
-                                return (
-                                  r.status === "Absent" &&
-                                  d.getFullYear() === t.getFullYear() &&
-                                  d.getMonth() === t.getMonth() &&
-                                  d.getDate() === t.getDate()
-                                );
-                              })
-                              .map((record, idx) => (
-                                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                                  <td className="py-2 text-sm text-gray-700">{record.student_name}</td>
-                                  <td className="py-2 text-sm text-gray-600">{record.date}</td>
-                                  <td className="py-2 text-sm text-gray-600">{record.class_name}</td>
-                                  <td className="py-2 text-sm text-gray-600">{record.sec}</td>
+                  return todayRecords.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Present */}
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="font-semibold text-green-800">Present</h3>
+                          <button
+                            onClick={() => setShowPresent(!showPresent)}
+                            className="px-2 py-1 bg-green-500 text-white rounded-lg text-sm"
+                          >
+                            {showPresent ? "Hide" : "View"}
+                          </button>
+                        </div>
+                        {showPresent && (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                              <thead>
+                                <tr className="border-b border-gray-200">
+                                  <th className="text-left py-2 text-sm text-gray-500">Name</th>
+                                  <th className="text-left py-2 text-sm text-gray-500">Role</th>
+                                  <th className="text-left py-2 text-sm text-gray-500">Check-in Time</th>
+                                  <th className="text-left py-2 text-sm text-gray-500">Class</th>
+                                  <th className="text-left py-2 text-sm text-gray-500">Section</th>
                                 </tr>
-                              ))}
-                          </tbody>
-                        </table>
+                              </thead>
+                              <tbody>
+                                {todayRecords
+                                  .filter((r) => r.status === "Present")
+                                  .map((record, idx) => (
+                                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                      <td className="py-2 text-sm text-gray-700">
+                                        <div className="flex flex-col">
+                                          <span className="font-medium text-gray-800 max-w-[180px] truncate">
+                                            {record.display_name || record.student_name || record.user_name}
+                                          </span>
+                                          {record.user_email && (
+                                            <span
+                                              className="text-xs text-gray-500 max-w-[180px] truncate"
+                                              title={record.user_email}
+                                            >
+                                              {record.user_email}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="py-2 text-sm text-gray-600 capitalize font-bold">
+                                        {record.role || "-"}
+                                      </td>
+                                      <td className="py-2 text-sm text-gray-600">{record.check_in || "-"}</td>
+                                      <td className="py-2 text-sm text-gray-600">{record.class_name || "-"}</td>
+                                      <td className="py-2 text-sm text-gray-600">{record.sec || record.sec || "-"}</td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-4">No attendance records for today.</p>
-                )}
+
+                      {/* Absent */}
+                      <div className="bg-red-50 rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="font-semibold text-red-800">Absent</h3>
+                          <button
+                            onClick={() => setShowAbsent(!showAbsent)}
+                            className="px-2 py-1 bg-red-500 text-white rounded-lg text-sm"
+                          >
+                            {showAbsent ? "Hide" : "View"}
+                          </button>
+                        </div>
+                        {showAbsent && (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                              <thead>
+                                <tr className="border-b border-gray-200">
+                                  <th className="text-left py-2 text-sm text-gray-500">Name</th>
+                                  <th className="text-left py-2 text-sm text-gray-500">Role</th>
+                                  <th className="text-left py-2 text-sm text-gray-500">Date</th>
+                                  <th className="text-left py-2 text-sm text-gray-500">Class</th>
+                                  <th className="text-left py-2 text-sm text-gray-500">Section</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {todayRecords
+                                  .filter((r) => r.status === "Absent")
+                                  .map((record, idx) => (
+                                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                      <td className="py-2 text-sm text-gray-700">
+                                        <div className="flex flex-col">
+                                          <span className="font-medium text-gray-800 max-w-[100px] truncate">
+                                            {record.display_name || record.student_name || record.user_name}
+                                          </span>
+                                          {record.user_email && (
+                                            <span
+                                              className="text-xs text-gray-500 max-w-[100px] truncate"
+                                              title={record.user_email}
+                                            >
+                                              {record.user_email}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="py-2 text-sm text-gray-600 capitalize font-bold">
+                                        {record.role || "-"}
+                                      </td>
+                                      <td className="py-2 text-sm text-gray-600">{record.date}</td>
+                                      <td className="py-2 text-sm text-gray-600">{record.class_name || "-"}</td>
+                                      <td className="py-2 text-sm text-gray-600">{record.section || record.sec || "-"}</td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No attendance records for today.</p>
+                  );
+                })()}
               </>
-
-
-            ) : (<div className="text-center py-8"> <div className="text-4xl mb-2">📊</div> <p className="text-gray-500">No attendance records available.</p> </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-2">📊</div>
+                <p className="text-gray-500">No attendance records available.</p>
+              </div>
             )}
-
           </div>
 
         </div>

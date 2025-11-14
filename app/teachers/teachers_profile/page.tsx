@@ -101,14 +101,33 @@ const TeacherProfilePage = () => {
     try {
       const email = formData.email;
 
-      // If profile picture changed, prepare FormData for upload
-      let updatedData: any = formData;
       if (profileFile) {
+        // If profile picture changed, prepare FormData for upload
         const uploadData = new FormData();
         uploadData.append("profile_picture", profileFile);
-        Object.keys(formData).forEach((key) => {
-          if (formData[key as keyof Teacher] !== undefined) {
-            uploadData.append(key, String(formData[key as keyof Teacher]));
+        
+        // Add only changed fields, skip undefined values
+        const fieldsToUpdate: (keyof Teacher)[] = [
+          "fullname",
+          "department_name",
+          "qualification",
+          "experience_years",
+          "phone",
+          "date_of_birth",
+          "gender",
+          "nationality",
+          "blood_group",
+          "date_joined",
+          "residential_address",
+          "emergency_contact_name",
+          "emergency_contact_relationship",
+          "emergency_contact_no"
+        ];
+
+        fieldsToUpdate.forEach((key) => {
+          const value = formData[key];
+          if (value !== undefined && value !== null && value !== "") {
+            uploadData.append(key, String(value));
           }
         });
 
@@ -118,6 +137,7 @@ const TeacherProfilePage = () => {
         setTeacher(res.data);
         setFormData(res.data);
       } else {
+        // Just text updates, no file upload
         const res = await axios.patch(`${API_BASE_URL}${email}/`, formData);
         setTeacher(res.data);
         setFormData(res.data);
@@ -126,9 +146,10 @@ const TeacherProfilePage = () => {
       setIsEditing(false);
       setProfileFile(null);
       showPopup('success', "Profile updated successfully!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
-      showPopup('error', "Failed to update profile");
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to update profile";
+      showPopup('error', errorMessage);
     }
   };
 

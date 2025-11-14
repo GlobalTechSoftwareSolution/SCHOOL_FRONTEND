@@ -8,11 +8,7 @@ import {
   UserCheck, 
   Clock, 
   Calendar,
-  Activity,
-  BarChart3,
-  Settings,
-  Database,
-  AlertCircle
+  BarChart3
 } from "lucide-react";
 
 const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
@@ -182,13 +178,38 @@ const ManagementDashboard = () => {
           departmentFees[dept].averageFee = departmentFees[dept].totalFees / departmentFees[dept].feeCount;
         });
         
-        // Calculate revenue from fee payments
-        const paidPayments = feePayments.filter((payment: any) => payment.status === "Paid" || payment.payment_status === "Completed");
-        const totalRevenue = paidPayments.reduce((sum: number, payment: any) => sum + (parseFloat(payment.amount_paid) || parseFloat(payment.amount) || parseFloat(payment.total_amount) || 0), 0);
-        
-        // Calculate pending fees from fee payments
-        const pendingPayments = feePayments.filter((payment: any) => payment.status === "Pending" || payment.payment_status === "Pending" || payment.remaining_amount > 0);
-        const pendingFees = pendingPayments.reduce((sum: number, payment: any) => sum + (parseFloat(payment.remaining_amount) || parseFloat(payment.amount) || parseFloat(payment.total_amount) || 0), 0);
+        // Merge fee structures into payments to compute accurate totals and pending amounts
+        const mergedPayments = feePayments.map((pay: any) => {
+          const structure = feeStructures.find((s: any) => s.id === pay.fee_structure);
+
+          const totalRaw = structure?.amount ?? "0";
+          const total = Number(totalRaw) || 0;
+
+          const paidRaw = pay.amount_paid ?? pay.amount ?? "0";
+          const paid = Number(paidRaw) || 0;
+
+          const remaining = Math.max(total - paid, 0);
+
+          return {
+            ...pay,
+            total_amount: total,
+            remaining_amount: remaining,
+          };
+        });
+
+        // Calculate revenue from merged payments (only Paid / Completed)
+        const paidPayments = mergedPayments.filter((payment: any) => payment.status === "Paid" || payment.payment_status === "Completed");
+        const totalRevenue = paidPayments.reduce(
+          (sum: number, payment: any) => sum + (Number(payment.amount_paid ?? payment.amount ?? 0) || 0),
+          0
+        );
+
+        // Calculate pending fees from merged payments (remaining > 0)
+        const pendingPayments = mergedPayments.filter((payment: any) => payment.remaining_amount > 0);
+        const pendingFees = pendingPayments.reduce(
+          (sum: number, payment: any) => sum + (Number(payment.remaining_amount) || 0),
+          0
+        );
         
         // Calculate attendance rate
         const presentAttendance = attendance.filter((record: any) => record.status === "Present").length;
@@ -336,12 +357,17 @@ const ManagementDashboard = () => {
         // Generate chart data based on real trends
         const chartData = {
           revenue: Array.from({length: 12}, (_, i) => {
-            const monthPayments = feePayments.filter((payment: any) => {
+            const monthPayments = mergedPayments.filter((payment: any) => {
               const paymentDate = new Date(payment.payment_date || payment.paid_at || payment.created_at);
               const paymentMonth = paymentDate.getMonth();
               return paymentMonth === i && (payment.status === "Paid" || payment.payment_status === "Completed");
             });
-            return monthPayments.reduce((sum: number, payment: any) => sum + (parseFloat(payment.amount_paid) || parseFloat(payment.amount) || parseFloat(payment.total_amount) || 0), 0) / 1000; // Convert to thousands
+            return (
+              monthPayments.reduce(
+                (sum: number, payment: any) => sum + (Number(payment.amount_paid ?? payment.amount ?? 0) || 0),
+                0
+              ) / 1000
+            ); // Convert to thousands
           }),
           students: Array.from({length: 12}, (_, i) => {
             // Simulate student growth over months based on current data
@@ -455,9 +481,6 @@ const ManagementDashboard = () => {
                     day: 'numeric' 
                   })}
                 </span>
-                <button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all">
-                  Generate Report
-                </button>
               </div>
             </div>
           </div>
@@ -699,37 +722,6 @@ const ManagementDashboard = () => {
                     <p className="text-gray-500 text-sm">No notices available at the moment</p>
                   </div>
                 )}
-              </div>
-
-              {/* Quick Actions */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Quick Actions</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <button className="p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:border-blue-300 border-2 border-dashed border-gray-300 transition-all group">
-                    <DollarSign className="w-6 h-6 text-gray-600 group-hover:text-blue-600 mx-auto mb-2" />
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Fee Collection</span>
-                  </button>
-                  <button className="p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:border-blue-300 border-2 border-dashed border-gray-300 transition-all group">
-                    <Users className="w-6 h-6 text-gray-600 group-hover:text-blue-600 mx-auto mb-2" />
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">New Admission</span>
-                  </button>
-                  <button className="p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:border-blue-300 border-2 border-dashed border-gray-300 transition-all group">
-                    <BarChart3 className="w-6 h-6 text-gray-600 group-hover:text-blue-600 mx-auto mb-2" />
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">View Reports</span>
-                  </button>
-                  <button className="p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:border-blue-300 border-2 border-dashed border-gray-300 transition-all group">
-                    <UserCheck className="w-6 h-6 text-gray-600 group-hover:text-blue-600 mx-auto mb-2" />
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Staff Management</span>
-                  </button>
-                  <button className="p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:border-blue-300 border-2 border-dashed border-gray-300 transition-all group">
-                    <Activity className="w-6 h-6 text-gray-600 group-hover:text-blue-600 mx-auto mb-2" />
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Course Management</span>
-                  </button>
-                  <button className="p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:border-blue-300 border-2 border-dashed border-gray-300 transition-all group">
-                    <Settings className="w-6 h-6 text-gray-600 group-hover:text-blue-600 mx-auto mb-2" />
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">Settings</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>

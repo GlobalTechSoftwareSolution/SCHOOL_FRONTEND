@@ -37,7 +37,9 @@ const ParentAttendance = () => {
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
       const parsedData = JSON.parse(storedUserData);
-      setParentEmail(parsedData.email);
+      const email = parsedData.email;
+      setParentEmail(email);
+      console.log("📧 Parent email from localStorage:", email);
     }
   }, []);
 
@@ -47,17 +49,42 @@ const ParentAttendance = () => {
 
     const fetchParentStudents = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/students/`);
-        const allStudents = res.data;
+        const [studentRes, classesRes] = await Promise.all([
+          axios.get(`${API_BASE}/students/`),
+          axios.get(`${API_BASE}/classes/`)
+        ]);
+        
+        const allStudents = studentRes.data;
+        const allClasses = classesRes.data;
+        console.log("👥 Total students from API:", allStudents.length);
+        console.log("🏫 Total classes from API:", allClasses.length);
 
         // ✅ Filter students by parent email
         const parentStudents = allStudents.filter(
           (student: any) => student.parent === parentEmail
         );
+        console.log("🎓 Students matched to parent email (", parentEmail, "):", parentStudents.length);
+        console.log("📋 Filtered students emails:", parentStudents.map((s: any) => s.email));
 
-        setStudents(parentStudents);
+        // ✅ Enrich students with class information
+        const enrichedStudents = parentStudents.map((student: any) => {
+          const classDetail = allClasses.find(
+            (c: any) => c.id === student.class_id
+          );
+          console.log(`📚 Class details for student ${student.fullname}:`, classDetail);
+          
+          return {
+            ...student,
+            class_name: classDetail?.class_name ,
+            section: classDetail?.sec,
+            class_teacher: classDetail?.class_teacher_name ,
+            teacher_email: classDetail?.teacher_email 
+          };
+        });
+
+        setStudents(enrichedStudents);
       } catch (error) {
-        console.error("Error fetching students:", error);
+        console.error("❌ Error fetching students:", error);
       }
     };
 
@@ -70,38 +97,66 @@ const ParentAttendance = () => {
 
     const fetchAttendance = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/attendance/`);
-        const allAttendance = res.data;
+        // Fetch attendance and classes data in parallel
+        const [attendanceRes, classesRes] = await Promise.all([
+          axios.get(`${API_BASE}/attendance/`),
+          axios.get(`${API_BASE}/classes/`)
+        ]);
+
+        const allAttendance = attendanceRes.data;
+        const allClasses = classesRes.data;
+        console.log("📋 Total attendance records from API:", allAttendance.length);
+        console.log("🏫 Total classes from API:", allClasses.length);
+        console.log("📝 Student emails we're looking for:", students.map((s: any) => s.email));
 
         // ✅ Keep only attendance matching these students
-        const filteredAttendance = allAttendance.filter((record: any) =>
-          students.some(
+        const filteredAttendance = allAttendance.filter((record: any) => {
+          const isMatch = students.some(
             (stu: any) =>
-              stu.email === record.student || stu.student_id === record.student
-          )
-        );
+              stu.email === record.user_email
+          );
+          return isMatch;
+        });
+        console.log("✅ Attendance records matched to students:", filteredAttendance.length);
+        if (filteredAttendance.length > 0) {
+          console.log("📌 Matched attendance records:", filteredAttendance);
+        }
 
-        // ✅ Merge student info for easier display
+        // ✅ Merge student info and class details for display
         const merged = filteredAttendance.map((att: any) => {
           const stu = students.find(
-            (s: any) =>
-              s.email === att.student || s.student_id === att.student
+            (s: any) => s.email === att.user_email
           );
+          
+          // Find class details using student's class_id
+          const classDetail = allClasses.find(
+            (c: any) => c.id === stu?.class_id
+          );
+
+          const profilePic = stu?.profile_picture || "";
+          console.log(`📚 Class details for student ${stu?.fullname}:`, classDetail);
+
           return {
             ...att,
-            fullname: stu?.fullname || "Unknown Student",
-            email: stu?.email || "N/A",
-            class_name: stu?.class_name || "N/A",
-            section: stu?.section || "N/A",
-            profile_picture: stu?.profile_picture || "",
-            student_data: stu
+            student: att.user_email,
+            status: att.check_out ? "Present" : "Absent",
+            fullname: att.user_name || stu?.fullname || "Unknown Student",
+            email: att.user_email || "N/A",
+            class_name: classDetail?.name || stu?.class_name || "N/A",
+            section: classDetail?.section || stu?.section || "N/A",
+            class_teacher: classDetail?.teacher_name || classDetail?.class_teacher || "N/A",
+            teacher_email: classDetail?.teacher_email || "N/A",
+            profile_picture: profilePic,
+            student_data: stu,
+            class_data: classDetail
           };
         });
 
+        console.log("👨‍👩‍👧 Final merged attendance data:", merged.length, "records ready for display");
         setAttendanceData(merged);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching attendance:", error);
+        console.error("❌ Error fetching attendance:", error);
         setLoading(false);
       }
     };
@@ -228,17 +283,38 @@ const ParentAttendance = () => {
         {/* Children Overview */}
         {students.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-              <Users className="h-6 w-6 text-blue-600" />
-              Your Children
-            </h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                <Users className="h-6 w-6 text-blue-600" />
+                Your Children
+              </h2>
+              {selectedStudent !== "all" && (
+                <button
+                  onClick={() => setSelectedStudent("all")}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium rounded-lg transition-colors"
+                >
+                  Clear Selection
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {students.map((student, index) => {
                 const studentStat = getStudentStats(student.email);
+                const isSelected = selectedStudent === student.email;
                 return (
-                  <div key={index} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                  <div 
+                    key={index} 
+                    onClick={() => setSelectedStudent(student.email)}
+                    className={`border rounded-xl p-6 transition-all cursor-pointer ${
+                      isSelected
+                        ? "border-blue-500 bg-blue-50 shadow-md"
+                        : "border-gray-200 hover:shadow-md"
+                    }`}
+                  >
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                        isSelected ? "bg-blue-200" : "bg-blue-100"
+                      }`}>
                         {student.profile_picture ? (
                           <img
                             src={student.profile_picture}
@@ -252,7 +328,7 @@ const ParentAttendance = () => {
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900 text-lg">{student.fullname}</h3>
                         <p className="text-sm text-gray-600">{student.class_name} - {student.section}</p>
-                        <p className="text-xs text-gray-500 mt-1">Roll No: {student.roll_number || "N/A"}</p>
+                        <p className="text-xs text-gray-500 mt-1">Roll No: {student.student_id || "N/A"}</p>
                       </div>
                     </div>
                     
@@ -394,12 +470,10 @@ const ParentAttendance = () => {
                               day: 'numeric' 
                             })}</span>
                           </div>
-                          {record.remarks && (
-                            <div className="flex items-center gap-2">
-                              <Eye className="h-4 w-4" />
-                              <span className="truncate">{record.remarks}</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span title={record.teacher_email}>Class Teacher: {record.class_teacher}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -423,7 +497,23 @@ const ParentAttendance = () => {
                   {/* Expanded Details */}
                   {expandedRecord === index && (
                     <div className="mt-4 pl-16 border-t pt-4">
-                      <div className="grid md:grid-cols-2 gap-6">
+                      <div className="grid md:grid-cols-3 gap-6">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-3">Student Profile</h4>
+                          <div className="flex flex-col items-center">
+                            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-3 overflow-hidden">
+                              {record.profile_picture ? (
+                                <img
+                                  src={record.profile_picture}
+                                  alt={record.fullname}
+                                  className="w-24 h-24 object-cover"
+                                />
+                              ) : (
+                                <User className="h-12 w-12 text-blue-600" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
                         <div>
                           <h4 className="font-medium text-gray-900 mb-3">Record Details</h4>
                           <div className="space-y-2 text-sm">

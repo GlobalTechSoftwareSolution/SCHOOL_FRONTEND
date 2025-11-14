@@ -1,257 +1,233 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import DashboardLayout from "@/app/components/DashboardLayout";
+
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import DashboardLayout from "@/app/components/DashboardLayout";
 import { 
-  Calendar,
-  Users,
-  UserCheck,
-  UserX,
-  Clock,
-  Search,
+  Calendar, 
+  Users, 
+  UserCheck, 
+  UserX, 
+  Clock, 
+  ChevronLeft, 
+  ChevronRight,
+  TrendingUp,
+  BarChart3,
   Filter,
   Download,
-  BarChart3,
-  PieChart,
-  TrendingUp,
-  Eye,
+  Search,
+  GraduationCap,
+  BookOpen,
+  Crown,
+  Shield,
+  Settings,
   CheckCircle,
   XCircle,
-  Clock4,
-  RefreshCw,
-  AlertCircle
+  MoreVertical,
+  Eye,
+  FileText
 } from "lucide-react";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
-// TypeScript interfaces for type safety
-interface AttendanceRecord {
-  id: number;
-  date: string;
-  student_name: string;
-  student_email: string;
-  class_name: string;
-  section: string;
-  status: "Present" | "Absent" | "Late" | string;
-  check_in_time: string | null;
-  check_out_time: string | null;
-  teacher_name: string;
-  marked_by_email?: string;
-  marked_by_role?: string;
-  remarks?: string;
-}
+export default function AttendanceByRole() {
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
 
-interface Student {
-  id: number;
-  fullname: string;
-  email: string;
-  class_name: string;
-  section: string;
-}
-
-interface Teacher {
-  id: number;
-  fullname: string;
-  email: string;
-  department_name: string;
-}
-
-const ManagementAttendancePage = () => {
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
+  const [error, setError] = useState(null);
+
+  // ui
+  const [mode, setMode] = useState<
+    "students" | "teachers" | "principal" | "management" | "admin"
+  >("students");
+  const [dateStr, setDateStr] = useState(() => {
+    const t = new Date();
+    return t.toISOString().slice(0, 10);
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [classFilter, setClassFilter] = useState("all");
-  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
-    fetchAttendanceData();
-  }, [selectedDate]);
+    console.log("🔄 AttendanceByRole: starting fetch for attendance, students, classes");
+    const load = async () => {
+      try {
+        const [attRes, stuRes, teaRes, clsRes] = await Promise.all([
+          axios.get(`${API}/attendance/`),
+          axios.get(`${API}/students/`),
+          axios.get(`${API}/teachers/`),
+          axios.get(`${API}/classes/`),
+        ]);
 
-  const fetchAttendanceData = async () => {
-    setLoading(true);
-    try {
-      console.log("Fetching attendance data for date:", selectedDate);
-      
-      // Fetch attendance data with date parameter
-      const attendanceRes = await axios.get(`${API_BASE}/attendance/`, {
-        params: {
-          date: selectedDate
-        }
-      });
+        console.log("📅 attendance count:", attRes.data.length);
+        console.log("🎓 students count:", stuRes.data.length);
+        console.log("👩‍🏫 teachers count:", teaRes.data.length);
+        console.log("🏫 classes count:", clsRes.data.length);
 
-      // Fetch students and teachers data
-      const [studentsRes, teachersRes] = await Promise.all([
-        axios.get(`${API_BASE}/students/`),
-        axios.get(`${API_BASE}/teachers/`)
-      ]);
-
-      const attendanceData = attendanceRes.data || [];
-      const studentsData = studentsRes.data || [];
-      const teachersData = teachersRes.data || [];
-
-      console.log("API Response - Attendance:", attendanceData.length, "records");
-      console.log("API Response - Students:", studentsData.length, "records");
-      console.log("API Response - Teachers:", teachersData.length, "records");
-
-      // Set the data directly from API
-      setAttendance(attendanceData);
-      setStudents(studentsData);
-      setTeachers(teachersData);
-    } catch (error: any) {
-      console.error("Error fetching attendance data:", error);
-      console.error("Error details:", error.response?.data || error.message);
-      
-      // Set empty arrays when API fails
-      setAttendance([]);
-      setStudents([]);
-      setTeachers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Additional function to fetch attendance for date range
-  const fetchAttendanceByDateRange = async (startDate: string, endDate: string) => {
-    try {
-      const response = await axios.get(`${API_BASE}/attendance/`, {
-        params: {
-          start_date: startDate,
-          end_date: endDate
-        }
-      });
-      return response.data || [];
-    } catch (error) {
-      console.error("Error fetching attendance by date range:", error);
-      return [];
-    }
-  };
-
-  
-  // Calculate attendance statistics
-  const calculateStats = () => {
-    const todayAttendance = attendance.filter(a => a.date === selectedDate);
-    const totalStudents = students.length;
-    const present = todayAttendance.filter(a => a.status === "Present").length;
-    const absent = todayAttendance.filter(a => a.status === "Absent").length;
-    const late = todayAttendance.filter(a => a.status === "Late").length;
-    const attendanceRate = totalStudents > 0 ? (present / totalStudents) * 100 : 0;
-
-    // Monthly stats (sample)
-    const monthlyPresent = Math.floor(totalStudents * 0.85);
-    const monthlyAbsent = Math.floor(totalStudents * 0.10);
-    const monthlyLate = Math.floor(totalStudents * 0.05);
-
-    return {
-      totalStudents,
-      present,
-      absent,
-      late,
-      attendanceRate: attendanceRate.toFixed(1),
-      monthlyPresent,
-      monthlyAbsent,
-      monthlyLate,
-      monthlyRate: "94.2"
+        setAttendance(attRes.data || []);
+        setStudents(stuRes.data || []);
+        setTeachers(teaRes.data || []);
+        setClasses(clsRes.data || []);
+        setLoading(false);
+      } catch (e) {
+        console.error("❌ fetch error:", e);
+        setError(e);
+        setLoading(false);
+      }
     };
+
+    load();
+  }, []);
+
+  // helper: normalize role
+  const normalizeRole = (r: unknown) => (r ? String(r).toLowerCase() : "");
+
+  // compute filtered attendance by selected date
+  const attendanceForDate = useMemo(() => {
+    console.log("📆 Filtering attendance for date:", dateStr);
+    return attendance.filter((a) => {
+      return String(a.date || "").startsWith(dateStr);
+    });
+  }, [attendance, dateStr]);
+
+  // compute rows based on mode
+  const filteredByMode = useMemo(() => {
+    const rows = attendanceForDate.filter((a) => {
+      const role = normalizeRole(a.role);
+
+      if (mode === "students") {
+        return role === "student";
+      }
+
+      if (mode === "teachers") {
+        return role === "teacher";
+      }
+
+      if (mode === "principal") {
+        return role === "principal";
+      }
+
+      if (mode === "management") {
+        return role === "management";
+      }
+
+      if (mode === "admin") {
+        return role === "admin";
+      }
+
+      return false;
+    });
+
+    console.log(`🔎 Rows for mode=${mode}:`, rows.length);
+    return rows;
+  }, [attendanceForDate, mode]);
+
+  // Apply search filter
+  const filteredBySearch = useMemo(() => {
+    if (!searchTerm.trim()) return filteredByMode;
+    
+    const query = searchTerm.toLowerCase();
+    return filteredByMode.filter((row) => {
+      const displayName = getDisplayName(row);
+      return (
+        displayName.toLowerCase().includes(query) ||
+        (row.user_email || "").toLowerCase().includes(query) ||
+        (row.role || "").toLowerCase().includes(query)
+      );
+    });
+  }, [filteredByMode, searchTerm]);
+
+  // helper to resolve student->class
+  const resolveClassForEmail = (email: string | undefined | null) => {
+    const student = students.find((s) => s.email === email);
+    if (!student) return null;
+    const cls = classes.find((c) => c.id === student.class_id);
+    return { student, classObj: cls || null };
   };
 
-  const stats = calculateStats();
-
-  // Filter attendance based on search and filters
-  const filteredAttendance = attendance.filter((record: AttendanceRecord) =>
-    (record.student_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     record.student_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     record.class_name?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (statusFilter === "all" || record.status === statusFilter) &&
-    (classFilter === "all" || record.class_name === classFilter) &&
-    record.date === selectedDate
-  );
-
-  const handleViewDetails = (record: AttendanceRecord) => {
-    setSelectedRecord(record);
-    setShowDetailsModal(true);
+  // helper to resolve teacher department by email
+  const resolveTeacherDeptForEmail = (email: string | undefined | null) => {
+    if (!email) return null;
+    const lower = String(email).toLowerCase();
+    const teacher = teachers.find((t) => String(t.email || "").toLowerCase() === lower);
+    if (!teacher) return null;
+    return teacher.department_name || null;
   };
 
-  const handleUpdateStatus = async (recordId: number, newStatus: string) => {
-    try {
-      // Make API call to update attendance status
-      await axios.put(`${API_BASE}/attendance/${recordId}/`, {
-        status: newStatus
-      });
-      
-      // Update local state
-      setAttendance(attendance.map((record: AttendanceRecord) =>
-        record.id === recordId ? { ...record, status: newStatus } : record
-      ));
-    } catch (error) {
-      console.error("Error updating attendance:", error);
-      // Still update local state even if API fails for demo purposes
-      setAttendance(attendance.map((record: AttendanceRecord) =>
-        record.id === recordId ? { ...record, status: newStatus } : record
-      ));
+  // Get display name for row
+  const getDisplayName = (row: any) => {
+    const role = normalizeRole(row.role);
+    const isStudent = role === "student";
+    
+    if (isStudent) {
+      const resolved = resolveClassForEmail(row.user_email);
+      if (resolved && resolved.student) {
+        return resolved.student.fullname || row.user_name || row.user_email;
+      }
     }
+    return row.user_name || row.user_email;
   };
 
-  const exportToCSV = () => {
-    const headers = ["Date", "Student Name", "Class", "Section", "Status", "Check-in", "Check-out", "Teacher"];
-    const csvData = [
-      headers.join(","),
-      ...filteredAttendance.map((record: AttendanceRecord) => 
-        [
-          record.date,
-          record.student_name,
-          record.class_name,
-          record.section,
-          record.status,
-          record.check_in_time || "N/A",
-          record.check_out_time || "N/A",
-          record.teacher_name
-        ].join(",")
-      )
-    ].join("\n");
-
-    const blob = new Blob([csvData], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `attendance-${selectedDate}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+  // prev / next date handlers
+  const addDays = (dStr: string, delta: number) => {
+    const d = new Date(dStr + "T00:00:00");
+    d.setDate(d.getDate() + delta);
+    return d.toISOString().slice(0, 10);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Present": return "text-green-600 bg-green-100";
-      case "Absent": return "text-red-600 bg-red-100";
-      case "Late": return "text-yellow-600 bg-yellow-100";
-      default: return "text-gray-600 bg-gray-100";
-    }
-  };
+  const gotoPrev = () => setDateStr((cur) => addDays(cur, -1));
+  const gotoNext = () => setDateStr((cur) => addDays(cur, 1));
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Present": return <CheckCircle className="w-4 h-4" />;
-      case "Absent": return <XCircle className="w-4 h-4" />;
-      case "Late": return <Clock4 className="w-4 h-4" />;
-      default: return <Clock className="w-4 h-4" />;
-    }
+  // Statistics
+  const stats = useMemo(() => {
+    const total = filteredByMode.length;
+    const present = filteredByMode.filter(a => a.status === "Present").length;
+    const absent = filteredByMode.filter(a => a.status === "Absent").length;
+    const presentPercentage = total > 0 ? Math.round((present / total) * 100) : 0;
+    
+    return { total, present, absent, presentPercentage };
+  }, [filteredByMode]);
+
+  // Mode configuration
+  const modeConfig = {
+    students: { label: "Students", icon: GraduationCap, color: "blue" },
+    teachers: { label: "Teachers", icon: Users, color: "green" },
+    principal: { label: "Principal", icon: Crown, color: "purple" },
+    management: { label: "Management", icon: Shield, color: "orange" },
+    admin: { label: "Admin", color: "red" }
   };
 
   if (loading) {
     return (
       <DashboardLayout role="management">
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50/30 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading attendance data...</p>
+            <div className="text-lg font-medium text-gray-700">Loading Attendance Data...</div>
+            <div className="text-sm text-gray-500 mt-2">Please wait while we fetch all records</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="management">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50/30 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
+            <p className="text-gray-600">Please check your connection and try again.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </DashboardLayout>
@@ -260,534 +236,393 @@ const ManagementAttendancePage = () => {
 
   return (
     <DashboardLayout role="management">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50/30 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/10 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header Section */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-                <Calendar className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Attendance Management
-              </h1>
-            </div>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Monitor and manage student and teacher attendance across the school
-            </p>
-          </div>
-
-          {/* API Warning Banner */}
-          {attendance.length === 0 && !loading && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          {/* Header */}
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-lg">
+                  <BarChart3 className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+                </div>
                 <div>
-                  <p className="text-red-800 font-medium">No Data Available</p>
-                  <p className="text-red-600 text-sm">
-                    Unable to fetch attendance data from the server. Please check your connection or try again later.
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
+                    Attendance Dashboard
+                  </h1>
+                  <p className="text-gray-600 text-sm sm:text-base mt-1 sm:mt-2">
+                    Comprehensive attendance tracking and analytics
                   </p>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 text-center group hover:shadow-xl transition-all">
-              <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                <UserCheck className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="text-2xl font-bold text-green-600">{stats.present}</div>
-              <div className="text-sm text-gray-600 font-medium">Present Today</div>
-            </div>
-            
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 text-center group hover:shadow-xl transition-all">
-              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                <UserX className="w-6 h-6 text-red-600" />
-              </div>
-              <div className="text-2xl font-bold text-red-600">{stats.absent}</div>
-              <div className="text-sm text-gray-600 font-medium">Absent Today</div>
-            </div>
-            
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 text-center group hover:shadow-xl transition-all">
-              <div className="w-12 h-12 bg-yellow-50 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                <Clock4 className="w-6 h-6 text-yellow-600" />
-              </div>
-              <div className="text-2xl font-bold text-yellow-600">{stats.late}</div>
-              <div className="text-sm text-gray-600 font-medium">Late Today</div>
-            </div>
-            
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 text-center group hover:shadow-xl transition-all">
-              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="text-2xl font-bold text-blue-600">{stats.attendanceRate}%</div>
-              <div className="text-sm text-gray-600 font-medium">Attendance Rate</div>
-            </div>
-          </div>
-
-          {/* Controls Bar */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-              <div className="flex flex-wrap gap-4 items-center">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="Present">Present</option>
-                    <option value="Absent">Absent</option>
-                    <option value="Late">Late</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Class</label>
-                  <select
-                    value={classFilter}
-                    onChange={(e) => setClassFilter(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  >
-                    <option value="all">All Classes</option>
-                    {[...new Set(students.map(s => s.class_name))].map(cls => (
-                      <option key={cls} value={cls}>{cls}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
+              
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Filter className="w-4 h-4" />
-                  <span>{filteredAttendance.length} records</span>
-                </div>
-
-                <button
-                  onClick={fetchAttendanceData}
-                  className="flex items-center gap-2 px-4 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors shadow-sm"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Refresh
-                </button>
-
-                <button
-                  onClick={exportToCSV}
-                  className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors shadow-sm"
-                >
-                  <Download className="w-4 h-4" />
+                <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 shadow-sm">
+                  <Download className="h-4 w-4" />
                   Export
                 </button>
-              </div>
-            </div>
-
-            {/* Search Bar */}
-            <div className="mt-4">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search students by name, email, or class..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
+                <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 shadow-sm">
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filters</span>
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Tabs Navigation */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-6">
-            <div className="border-b border-gray-200">
-              <nav className="flex overflow-x-auto">
-                {["overview", "students", "teachers", "analytics"].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex items-center gap-2 px-8 py-4 font-medium text-sm transition-all whitespace-nowrap border-b-2 ${
-                      activeTab === tab
-                        ? "text-blue-600 border-blue-600 bg-blue-50/50"
-                        : "text-gray-500 hover:text-gray-700 border-transparent hover:bg-gray-50"
-                    }`}
-                  >
-                    {tab === "overview" && <Calendar className="w-4 h-4" />}
-                    {tab === "students" && <Users className="w-4 h-4" />}
-                    {tab === "teachers" && <UserCheck className="w-4 h-4" />}
-                    {tab === "analytics" && <BarChart3 className="w-4 h-4" />}
-                    {tab === "overview" && "Daily Overview"}
-                    {tab === "students" && "Student Attendance"}
-                    {tab === "teachers" && "Teacher Attendance"}
-                    {tab === "analytics" && "Analytics"}
-                  </button>
-                ))}
-              </nav>
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Total {modeConfig[mode].label}</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+                  <div className="flex items-center gap-1 mt-3">
+                    <Users className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm text-blue-600 font-medium">On {dateStr}</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
             </div>
 
-            <div className="p-6">
-              {/* Overview Tab */}
-              {activeTab === "overview" && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Attendance Summary */}
-                  <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                      <PieChart className="w-5 h-5 text-blue-600" />
-                      Today's Attendance Summary
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                          <span className="font-medium">Present</span>
-                        </div>
-                        <div className="text-lg font-bold text-green-600">{stats.present}</div>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                          <span className="font-medium">Absent</span>
-                        </div>
-                        <div className="text-lg font-bold text-red-600">{stats.absent}</div>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                          <span className="font-medium">Late</span>
-                        </div>
-                        <div className="text-lg font-bold text-yellow-600">{stats.late}</div>
-                      </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Total Students</span>
-                        <span className="text-lg font-bold text-blue-600">{stats.totalStudents}</span>
-                      </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="font-semibold">Attendance Rate</span>
-                        <span className="text-lg font-bold text-green-600">{stats.attendanceRate}%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recent Activity */}
-                  <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                      <Clock className="w-5 h-5 text-purple-600" />
-                      Recent Attendance Activity
-                    </h3>
-                    <div className="space-y-3">
-                      {filteredAttendance.slice(0, 5).map((record) => (
-                        <div key={record.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-all cursor-pointer"
-                             onClick={() => handleViewDetails(record)}>
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getStatusColor(record.status)}`}>
-                              {getStatusIcon(record.status)}
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-800">{record.student_name}</div>
-                              <div className="text-sm text-gray-500">{record.class_name} - {record.section}</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium text-gray-800">{record.status}</div>
-                            {record.check_in_time && (
-                              <div className="text-xs text-gray-500">{record.check_in_time}</div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Class-wise Attendance */}
-                  <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm lg:col-span-2">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                      <Users className="w-5 h-5 text-green-600" />
-                      Class-wise Attendance
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {["10A", "9B", "8C", "7D"].map((className) => (
-                        <div key={className} className="bg-white p-4 rounded-lg border border-gray-200 text-center">
-                          <div className="text-lg font-bold text-gray-800 mb-2">{className}</div>
-                          <div className="text-2xl font-bold text-green-600">92%</div>
-                          <div className="text-sm text-gray-600">Attendance</div>
-                        </div>
-                      ))}
-                    </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Present</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.present}</p>
+                  <div className="flex items-center gap-1 mt-3">
+                    <UserCheck className="h-4 w-4 text-emerald-500" />
+                    <span className="text-sm text-emerald-600 font-medium">{stats.presentPercentage}% attendance</span>
                   </div>
                 </div>
-              )}
+                <div className="p-3 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-xl">
+                  <UserCheck className="h-6 w-6 text-emerald-600" />
+                </div>
+              </div>
+            </div>
 
-              {/* Student Attendance Tab */}
-              {activeTab === "students" && (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          {["Student", "Class", "Section", "Status", "Check-in", "Check-out", "Teacher", "Actions"].map((header) => (
-                            <th
-                              key={header}
-                              className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
-                            >
-                              {header}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredAttendance.map((record) => (
-                          <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="font-medium text-gray-900">{record.student_name}</div>
-                                <div className="text-sm text-gray-500">{record.student_email}</div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {record.class_name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {record.section}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(record.status)}`}>
-                                {getStatusIcon(record.status)}
-                                {record.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {record.check_in_time || (
-                                <span className="text-gray-400">Not recorded</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {record.check_out_time || (
-                                <span className="text-gray-400">Not recorded</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {record.teacher_name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                              <div className="flex gap-2">
-                                <button 
-                                  onClick={() => handleViewDetails(record)}
-                                  className="text-blue-600 hover:text-blue-800"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                                <select
-                                  value={record.status}
-                                  onChange={(e) => handleUpdateStatus(record.id, e.target.value)}
-                                  className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500"
-                                >
-                                  <option value="Present">Present</option>
-                                  <option value="Absent">Absent</option>
-                                  <option value="Late">Late</option>
-                                </select>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Absent</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.absent}</p>
+                  <div className="flex items-center gap-1 mt-3">
+                    <UserX className="h-4 w-4 text-red-500" />
+                    <span className="text-sm text-red-600 font-medium">{stats.total > 0 ? Math.round((stats.absent / stats.total) * 100) : 0}% absent</span>
                   </div>
                 </div>
-              )}
+                <div className="p-3 bg-gradient-to-br from-red-100 to-red-200 rounded-xl">
+                  <UserX className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+            </div>
 
-              {/* Teacher Attendance Tab */}
-              {activeTab === "teachers" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {teachers.map((teacher) => (
-                    <div
-                      key={teacher.id}
-                      className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all"
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Date</p>
+                  <p className="text-lg font-bold text-gray-900">{new Date(dateStr).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}</p>
+                  <div className="flex items-center gap-1 mt-3">
+                    <Calendar className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm text-purple-600 font-medium">Selected date</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl">
+                  <Calendar className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Controls Section */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-4 sm:p-6 mb-6 sm:mb-8">
+            <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+              {/* Role Selection */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-3">View Attendance For</label>
+                <div className="flex flex-wrap gap-3">
+                  {Object.entries(modeConfig).map(([key, config]) => (
+                    <button
+                      key={key}
+                      onClick={() => setMode(key as any)}
+                      className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                        mode === key 
+                          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25" 
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
                     >
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <UserCheck className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-gray-800">{teacher.fullname}</h3>
-                          <p className="text-sm text-gray-600">{teacher.department_name}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 text-sm text-gray-600 mb-4">
-                        <div className="flex justify-between">
-                          <span>Today's Status:</span>
-                          <span className="font-semibold text-green-600">Present</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Check-in:</span>
-                          <span className="font-semibold">08:30 AM</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Classes Taken:</span>
-                          <span className="font-semibold">4/5</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-gray-200">
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>Monthly Attendance</span>
-                          <span className="font-semibold text-green-600">98%</span>
-                        </div>
-                      </div>
-                    </div>
+                      {config.icon && <config.icon className="h-4 w-4" />}
+                      {config.label}
+                    </button>
                   ))}
                 </div>
-              )}
+              </div>
 
-              {/* Analytics Tab */}
-              {activeTab === "analytics" && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">Monthly Attendance Trend</h3>
-                    <div className="h-64 flex items-center justify-center bg-gray-100 rounded-xl">
-                      <div className="text-center">
-                        <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-500">Attendance trend chart would be here</p>
-                      </div>
-                    </div>
+              {/* Date Navigation */}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full sm:w-auto">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={gotoPrev}
+                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-gray-600" />
+                  </button>
+                  
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={dateStr}
+                      onChange={(e) => setDateStr(e.target.value)}
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all duration-200"
+                    />
                   </div>
+                  
+                  <button 
+                    onClick={gotoNext}
+                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors duration-200"
+                  >
+                    <ChevronRight className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
 
-                  <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">Attendance Distribution</h3>
-                    <div className="h-64 flex items-center justify-center bg-gray-100 rounded-xl">
-                      <div className="text-center">
-                        <PieChart className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-500">Attendance distribution chart would be here</p>
-                      </div>
-                    </div>
+                {/* Search */}
+                <div className="relative w-full sm:w-auto">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all duration-200 w-full sm:w-64"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Section */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
+            {/* Table Header */}
+            <div className="p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg">
+                    <FileText className="h-5 w-5 text-blue-600" />
                   </div>
-
-                  <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm lg:col-span-2">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">Top Performing Classes</h3>
-                    <div className="space-y-3">
-                      {[
-                        { class: "10A", rate: "98.5%", students: 35 },
-                        { class: "9B", rate: "97.2%", students: 32 },
-                        { class: "8C", rate: "96.8%", students: 30 },
-                        { class: "7D", rate: "95.4%", students: 28 }
-                      ].map((item, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                              <span className="text-green-600 font-bold">{index + 1}</span>
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-800">Class {item.class}</div>
-                              <div className="text-sm text-gray-500">{item.students} students</div>
-                            </div>
-                          </div>
-                          <div className="text-lg font-bold text-green-600">{item.rate}</div>
-                        </div>
-                      ))}
-                    </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-lg">Attendance Records</h3>
+                    <p className="text-sm text-gray-600">
+                      {filteredBySearch.length} records found for {modeConfig[mode].label.toLowerCase()} on {dateStr}
+                    </p>
                   </div>
                 </div>
-              )}
+                
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span>{stats.presentPercentage}% Overall Attendance</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 sm:px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Person
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                      Contact
+                    </th>
+                    <th className="px-4 sm:px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Role
+                    </th>
+                    {mode === "students" && (
+                      <>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                          Class
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                          Section
+                        </th>
+                      </>
+                    )}
+                    {mode === "teachers" && (
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                        Department
+                      </th>
+                    )}
+                    <th className="px-4 sm:px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                      Check In
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                      Check Out
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                      Remarks
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-200">
+                  {filteredBySearch.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <UserX className="w-16 h-16 text-gray-300 mb-4" />
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Records Found</h3>
+                          <p className="text-gray-600 max-w-md">
+                            {searchTerm 
+                              ? `No ${modeConfig[mode].label.toLowerCase()} found matching "${searchTerm}" for ${dateStr}`
+                              : `No attendance records found for ${modeConfig[mode].label.toLowerCase()} on ${dateStr}`
+                            }
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredBySearch.map((row) => {
+                      const role = normalizeRole(row.role);
+                      const isStudent = role === "student";
+                      const isTeacher = role === "teacher";
+                      
+                      let displayName = getDisplayName(row);
+                      let className = "-";
+                      let section = "-";
+                      let department = "-";
+
+                      if (isStudent) {
+                        const resolved = resolveClassForEmail(row.user_email);
+                        if (resolved && resolved.classObj) {
+                          className = resolved.classObj.class_name || "-";
+                          section = resolved.classObj.sec || "-";
+                        }
+                      } else if (isTeacher) {
+                        const dept = resolveTeacherDeptForEmail(row.user_email);
+                        if (dept) department = dept;
+                      }
+
+                      return (
+                        <tr key={row.id} className="hover:bg-gray-50 transition-colors duration-150">
+                          <td className="px-4 sm:px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
+                                {displayName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{displayName}</div>
+                                <div className="text-sm text-gray-500">{row.user_email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 hidden md:table-cell">
+                            <div className="text-sm text-gray-900">{row.user_email}</div>
+                          </td>
+                          <td className="px-4 sm:px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                              {row.role}
+                            </span>
+                          </td>
+                          
+                          {mode === "students" && (
+                            <>
+                              <td className="px-6 py-4 hidden md:table-cell">
+                                <div className="text-sm text-gray-900">{className}</div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  {section}
+                                </span>
+                              </td>
+                            </>
+                          )}
+                          
+                          {mode === "teachers" && (
+                            <td className="px-6 py-4 hidden md:table-cell">
+                              <div className="text-sm text-gray-900">{department}</div>
+                            </td>
+                          )}
+                          
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                              row.status === "Present" 
+                                ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
+                                : "bg-red-100 text-red-700 border border-red-200"
+                            }`}>
+                              {row.status === "Present" ? (
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                              ) : (
+                                <XCircle className="h-4 w-4 mr-1" />
+                              )}
+                              {row.status}
+                            </span>
+                          </td>
+                          
+                          <td className="px-6 py-4 hidden md:table-cell">
+                            <div className="flex items-center gap-2 text-sm text-gray-900">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              {row.check_in || "-"}
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4 hidden md:table-cell">
+                            <div className="flex items-center gap-2 text-sm text-gray-900">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              {row.check_out || "-"}
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4 hidden lg:table-cell">
+                            <div className="text-sm text-gray-600 max-w-xs truncate">
+                              {row.remarks || "-"}
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4 hidden lg:table-cell">
+                            <button className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                              <Eye className="h-4 w-4" />
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table Footer */}
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-gray-600">
+                <div>
+                  Showing <span className="font-semibold">{filteredBySearch.length}</span> of{" "}
+                  <span className="font-semibold">{filteredByMode.length}</span> records
+                </div>
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <span>Present: <span className="font-semibold text-emerald-600">{stats.present}</span></span>
+                  <span>Absent: <span className="font-semibold text-red-600">{stats.absent}</span></span>
+                  <span>Rate: <span className="font-semibold text-blue-600">{stats.presentPercentage}%</span></span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Attendance Details Modal */}
-      {showDetailsModal && selectedRecord && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <Eye className="w-5 h-5" />
-                Attendance Details
-              </h3>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <XCircle className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">Student Name:</span>
-                <span className="font-semibold">{selectedRecord.student_name}</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">Class & Section:</span>
-                <span className="font-semibold">{selectedRecord.class_name} - {selectedRecord.section}</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">Date:</span>
-                <span className="font-semibold">{selectedRecord.date}</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">Status:</span>
-                <span className={`font-semibold ${getStatusColor(selectedRecord.status)} px-2 py-1 rounded`}>
-                  {selectedRecord.status}
-                </span>
-              </div>
-
-              {selectedRecord.check_in_time && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium">Check-in Time:</span>
-                  <span className="font-semibold">{selectedRecord.check_in_time}</span>
-                </div>
-              )}
-
-              {selectedRecord.check_out_time && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium">Check-out Time:</span>
-                  <span className="font-semibold">{selectedRecord.check_out_time}</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">Teacher:</span>
-                <span className="font-semibold">{selectedRecord.teacher_name}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  // Handle edit action
-                  setShowDetailsModal(false);
-                }}
-                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
-              >
-                Edit Record
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
-};
-
-export default ManagementAttendancePage;
+}

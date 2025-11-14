@@ -10,7 +10,9 @@ import {
   Edit, 
   Calendar,
   MapPin,
-  BookOpen
+  BookOpen,
+  CheckCircle,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import DashboardLayout from "@/app/components/DashboardLayout";
@@ -31,6 +33,7 @@ export default function Admin_ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab ] = useState("profile");
   const [isLoading, setIsLoading] = useState(true);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   // ✅ Load admin data from live API when page opens
   useEffect(() => {
@@ -145,8 +148,9 @@ export default function Admin_ProfilePage() {
       formDataToSend.append("fullname", formData.name);
       formDataToSend.append("phone", formData.phone);
       formDataToSend.append("office_address", formData.address);
+      formDataToSend.append("department", formData.department);
+
       // Only append profile_picture if it's a file (not just a URL string)
-      // For this, we check if the input element has a file (find it in the DOM)
       const fileInput = document.querySelector('input[type="file"][accept^="image"]') as HTMLInputElement | null;
       if (fileInput && fileInput.files && fileInput.files.length > 0) {
         formDataToSend.append("profile_picture", fileInput.files[0]);
@@ -163,20 +167,17 @@ export default function Admin_ProfilePage() {
         name: updatedData.fullname || prev.name,
         phone: updatedData.phone || prev.phone,
         address: updatedData.office_address || prev.address,
+        department: updatedData.department || prev.department,
         profile_picture: updatedData.profile_picture || prev.profile_picture
       }));
       setIsEditing(false);
-
-      // Show success notification
-      const event = new CustomEvent('notification', {
-        detail: {
-          type: 'success',
-          message: 'Profile updated successfully!'
-        }
-      });
-      window.dispatchEvent(event);
+      setShowSuccessPopup(true);
+      
+      // Auto-close popup after 3 seconds
+      setTimeout(() => setShowSuccessPopup(false), 3000);
     } catch (error) {
       console.error("Error saving profile:", error);
+      alert("Failed to update profile. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -196,14 +197,10 @@ export default function Admin_ProfilePage() {
     return (
       <DashboardLayout role="admin">
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center"
-          >
+          <div className="text-center">
             <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600">Loading your profile...</p>
-          </motion.div>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -211,31 +208,47 @@ export default function Admin_ProfilePage() {
 
   return (
     <DashboardLayout role="admin">
+      {/* Success Popup */}
+      <AnimatePresence>
+        {showSuccessPopup && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="fixed top-6 right-6 z-50"
+          >
+            <div className="bg-white rounded-lg shadow-lg border-l-4 border-green-500 p-4 w-96 flex items-start space-x-3">
+              <CheckCircle className="w-6 h-6 text-green-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">Profile Updated!</h3>
+                <p className="text-sm text-gray-600 mt-1">Your profile has been successfully updated.</p>
+              </div>
+              <button
+                onClick={() => setShowSuccessPopup(false)}
+                className="text-gray-400 hover:text-gray-600 shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
+          <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
             <p className="text-gray-600 mt-2">Manage your account information and preferences</p>
-          </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
             {/* Main Content */}
             <div className="lg:col-span-3">
-              <AnimatePresence mode="wait">
-                {activeTab === "profile" && (
-                  <motion.div
-                    key="profile"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="space-y-6"
-                  >
+              {activeTab === "profile" && (
+                <div className="space-y-6">
                     {/* Profile Card */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                       <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
@@ -392,11 +405,7 @@ export default function Admin_ProfilePage() {
 
                         {/* Save Button */}
                         {isEditing && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="flex justify-end space-x-3 pt-4 border-t border-gray-200"
-                          >
+                          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 transition-all duration-200">
                             <button
                               onClick={handleCancel}
                               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -410,13 +419,12 @@ export default function Admin_ProfilePage() {
                               <Save className="w-4 h-4" />
                               <span>Save Changes</span>
                             </button>
-                          </motion.div>
+                          </div>
                         )}
                       </div>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                </div>
+              )}
             </div>
           </div>
         </div>
