@@ -39,6 +39,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Transport", path: "/management/management_transport" },
     { name: "Calender", path: "/management/management_calender" },
     { name: "Raise Issues", path: "/management/management_issue" },
+    { name: "ID card", path: "/management/management_id_card" },
     { name: "Profile", path: "/management/management_profile" },
   ],
   principal: [
@@ -50,15 +51,18 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Attendence", path: "/principal/principal_attendance" },
     { name: "Monthly Report", path: "/principal/principal_monthly_report" },
     { name: "Notice", path: "/principal/principal_notice" },
+    { name: "Create Timetable", path: "/principal/principal_timetablecreation" },
     { name: "Calender", path: "/principal/principal_calender" },
     { name: "Raise Issues", path: "/principal/principal_issues" },
     { name: "Projects", path: "/principal/principal_projects" },
     { name: "Programs", path: "/principal/principal_programs" },
     { name: "Absent Students", path: "/principal/principal_absent_students" },
+    { name: "ID card", path: "/principal/principal_id_card" },
     { name: "Profile", path: "/principal/principal_profile" },
   ],
   teachers: [
     { name: "Dashboard", path: "/teachers/teachers_dashboard" },
+    { name: "Time Table", path: "/teachers/teachers_timetable" },
     { name: "Leaves", path: "/teachers/teachers_leaves" },
     { name: "Student Leaves", path: "/teachers/teachers_student_leaves" },
     { name: "Attendance", path: "/teachers/teachers_attendance" },
@@ -71,6 +75,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Raise Issues", path: "/teachers/teachers_issues" },
     { name: "Projects", path: "/teachers/teachers_projects" },
     { name: "Documents", path: "/teachers/teachers_documents" },
+    { name: "ID card", path: "/teachers/teachers_id_card" },
     { name: "Profile", path: "/teachers/teachers_profile" },
   ],
   students: [
@@ -88,6 +93,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Programs", path: "/students/students_programs" },
     { name: "Documents", path: "/students/students_docs" },
     { name: "Fees", path: "/students/students_fees" },
+    { name: "ID card", path: "/students/students_id_card" },
     { name: "Profile", path: "/students/students_profile" },
   ],
   admin: [
@@ -101,6 +107,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Programs", path: "/admin/admin_programs" },
     { name: "Reports", path: "/admin/admin_reports" },
     { name: "Raise Issues", path: "/admin/admin_issues" },
+    { name: "ID card", path: "/admin/admin_id_card" },
     { name: "Profile", path: "/admin/admin_profile" },
   ],
 };

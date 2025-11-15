@@ -11,53 +11,53 @@ const PrincipalMonthlyReport = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-const [selectedSubject, setSelectedSubject] = useState<any>(null);
-const [filteredTimetable, setFilteredTimetable] = useState<any[]>([]);
-const [allClasses, setAllClasses] = useState<any[]>([]);
-const [attendanceMonth, setAttendanceMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-});
-const [leaveMonth, setLeaveMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-});
-const [studentExtra, setStudentExtra] = useState<{ 
-  leaves: any[]; 
-  grades: any[]; 
-  attendance: any[];
-  notices: any[];
-}>({
-  leaves: [],
-  grades: [],
-  attendance: [],
-  notices: [],
-});
-const [selectedLeave, setSelectedLeave] = useState<any>(null);
-const [showLeaveDetails, setShowLeaveDetails] = useState(false);
-const [selectedGrade, setSelectedGrade] = useState<any>(null);
-const [showGradeDetails, setShowGradeDetails] = useState(false);
-const [studentAttendanceMonth, setStudentAttendanceMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-});
-const [studentLeaveMonth, setStudentLeaveMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-});
-const [teacherExtra, setTeacherExtra] = useState<{
-  leaves: any[];
-  classes: any[];
-  reports: any[];
-  subjects: any[];
-  attendance: any[];
-}>({
-  leaves: [],
-  classes: [],
-  reports: [],
-  subjects: [],
-  attendance: [],
-});
+  const [filteredTimetable, setFilteredTimetable] = useState<any[]>([]);
+  const [allClasses, setAllClasses] = useState<any[]>([]);
+  const [attendanceMonth, setAttendanceMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [leaveMonth, setLeaveMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [studentExtra, setStudentExtra] = useState<{ 
+    leaves: any[]; 
+    grades: any[]; 
+    attendance: any[];
+    notices: any[];
+  }>({
+    leaves: [],
+    grades: [],
+    attendance: [],
+    notices: [],
+  });
+  const [selectedLeave, setSelectedLeave] = useState<any>(null);
+  const [showLeaveDetails, setShowLeaveDetails] = useState(false);
+  const [selectedGrade, setSelectedGrade] = useState<any>(null);
+  const [showGradeDetails, setShowGradeDetails] = useState(false);
+  const [studentAttendanceMonth, setStudentAttendanceMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [studentLeaveMonth, setStudentLeaveMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [teacherExtra, setTeacherExtra] = useState<{
+    leaves: any[];
+    classes: any[];
+    reports: any[];
+    subjects: any[];
+    attendance: any[];
+  }>({
+    leaves: [],
+    classes: [],
+    reports: [],
+    subjects: [],
+    attendance: [],
+  });
+  const [selectedSubject, setSelectedSubject] = useState<any | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -65,6 +65,10 @@ const [teacherExtra, setTeacherExtra] = useState<{
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
+
+  // Class / Section filters for students view
+  const [studentClassFilter, setStudentClassFilter] = useState<string>("all");
+  const [studentSectionFilter, setStudentSectionFilter] = useState<string>("all");
 
 // ✅ Updated handleSubjectClick with debugging
 const handleSubjectClick = (subject: any) => {
@@ -186,8 +190,13 @@ const showAllTimetableData = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/students/`);
-      setStudents(res.data);
+      const [studentsRes, classesRes] = await Promise.all([
+        axios.get(`${API_BASE}/students/`),
+        axios.get(`${API_BASE}/classes/`),
+      ]);
+
+      setStudents(studentsRes.data || []);
+      setAllClasses(classesRes.data || []);
     } catch (err) {
       console.error("Error fetching students:", err);
     } finally {
@@ -202,11 +211,11 @@ const fetchTeacherDetails = async (teacher: any) => {
   setLoading(true);
 
   try {
-    // Use teacher's subject list from the teacher object
-    const subjects = teacher.subject_list || [];
-    const teacherSubjectIds = subjects.map((subject: any) => subject.id);
+    // Use teacher's subject list from the teacher object if available
+    const subjectsFromTeacher = Array.isArray(teacher.subject_list) ? teacher.subject_list : [];
+    const teacherSubjectIds = subjectsFromTeacher.map((subject: any) => subject.id);
     
-    console.log("🔍 Teacher Subjects:", subjects);
+    console.log("🔍 Teacher Subjects (from teacher object):", subjectsFromTeacher);
     console.log("🎯 Teacher Subject IDs:", teacherSubjectIds);
 
     // Try multiple timetable endpoints with different parameters
@@ -261,28 +270,31 @@ const fetchTeacherDetails = async (teacher: any) => {
       }
     }
 
-    // Final filtering by subject IDs - check multiple possible field names
-    const classes = allTimetableEntries.filter((entry: any) => {
-      const possibleFields = [
-        entry.subject_id,
-        entry.subjectId, 
-        entry.subject,
-        entry.subject_name,
-        entry.subject_code,
-        entry.subject_name_id
-      ];
-      
-      const matches = possibleFields.some(field => 
-        teacherSubjectIds.includes(field)
-      );
-      
-      if (matches) {
-        console.log("✅ Matched entry:", entry);
-      }
-      return matches;
-    });
+    // If we don't have explicit subject IDs from the teacher, keep all timetable entries
+    let classes = allTimetableEntries;
 
-    console.log("🎯 Final filtered classes:", classes);
+    // If teacherSubjectIds is available, further filter classes by those subject IDs
+    if (teacherSubjectIds.length > 0) {
+      classes = allTimetableEntries.filter((entry: any) => {
+        const possibleFields = [
+          entry.subject_id,
+          entry.subjectId, 
+          entry.subject,
+          entry.subject_name_id
+        ];
+        
+        const matches = possibleFields.some(field => 
+          teacherSubjectIds.includes(field)
+        );
+        
+        if (matches) {
+          console.log("✅ Matched entry:", entry);
+        }
+        return matches;
+      });
+    }
+
+    console.log("🎯 Final classes used for timetable:", classes);
 
     // Fetch leaves and attendance for the specific teacher
     let leaves: any[] = [];
@@ -323,8 +335,21 @@ const fetchTeacherDetails = async (teacher: any) => {
           );
           
           if (hasTeacherData) {
-            attendance = data;
-            console.log("✅ Found teacher attendance data from:", endpoint);
+            // Further restrict to this teacher and teacher role when available
+            const filtered = data.filter((record: any) => {
+              const role = (record.role || record.user_type || record.user_role || '').toString().toLowerCase();
+              const isTeacherRole = !role || role.includes('teacher');
+              const recEmail =
+                record.teacher_email ||
+                record.email ||
+                record.user_email ||
+                record.staff_email;
+              const matchesEmail = recEmail === teacher.email;
+              return isTeacherRole && matchesEmail;
+            });
+
+            attendance = filtered.length > 0 ? filtered : data;
+            console.log("✅ Found teacher attendance data from:", endpoint, "Filtered count:", filtered.length);
             break;
           } else {
             console.log("⚠️ This endpoint returns student data, not teacher data");
@@ -338,9 +363,53 @@ const fetchTeacherDetails = async (teacher: any) => {
     console.log("📝 Final Teacher Leaves:", leaves);
     console.log("📊 Final Teacher Attendance:", attendance);
 
+    // Ensure we have full class info (class_name, sec) for timetable entries
+    let currentClasses = allClasses;
+    if (currentClasses.length === 0) {
+      try {
+        const classesRes = await axios.get(`${API_BASE}/classes/`);
+        currentClasses = classesRes.data || [];
+        setAllClasses(currentClasses);
+      } catch (err) {
+        console.log("❌ Failed to load classes for timetable view:", err);
+      }
+    }
+
+    // Derive teacher subjects from timetable entries + subjects API
+    let derivedSubjects: any[] = [];
+    try {
+      const subjectsRes = await axios.get(`${API_BASE}/subjects/`);
+      const allSubjects = Array.isArray(subjectsRes.data) ? subjectsRes.data : [];
+
+      const seen = new Set<number | string>();
+      classes.forEach((entry: any) => {
+        const subjectId = entry.subject_id ?? entry.subjectId ?? entry.subject ?? entry.subject_name_id;
+        if (!subjectId || seen.has(subjectId)) return;
+        seen.add(subjectId);
+
+        const subj = allSubjects.find((s: any) => s.id === subjectId || s.subject_id === subjectId);
+        if (subj) {
+          derivedSubjects.push(subj);
+        } else {
+          // Fallback subject object from timetable entry
+          derivedSubjects.push({
+            id: subjectId,
+            subject_name: entry.subject_name || String(subjectId),
+            subject_code: entry.subject_code || '',
+          });
+        }
+      });
+    } catch (err) {
+      console.log("❌ Failed to derive subjects from /subjects/ API:", err);
+      derivedSubjects = [];
+    }
+
+    // Prefer derived subjects; if empty, fall back to any subjects from teacher object
+    const finalSubjects = derivedSubjects.length > 0 ? derivedSubjects : subjectsFromTeacher;
+
     setTeacherExtra({
       leaves: leaves,
-      subjects: subjects,
+      subjects: finalSubjects,
       classes: classes,
       reports: [],
       attendance: attendance,
@@ -453,35 +522,39 @@ const refreshStudentAttendanceData = async () => {
   try {
     console.log("🔄 Refreshing student attendance data for:", studentAttendanceMonth);
     
-    // Try attendance endpoints with new month
-    try {
-      console.log("🔍 Trying primary attendance endpoint:", `${API_BASE}/attendance/?student_email=${selectedStudent.email}&year=${year}&month=${month}`);
-      const attendanceResponse = await axios.get(`${API_BASE}/attendance/?student_email=${selectedStudent.email}&year=${year}&month=${month}`);
-      const rawAttendance = attendanceResponse.data || [];
-      
-      // Filter client-side
-      attendance = rawAttendance.filter((record: any) => 
+    // Fetch all student_attendance records, then filter by email + month/year client-side
+    console.log("🔍 Fetching all student_attendance records for client-side filtering");
+    const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
+    let rawAttendance = attendanceResponse.data || [];
+
+    // Some backends may return an object instead of array
+    if (!Array.isArray(rawAttendance)) {
+      rawAttendance = Object.values(rawAttendance);
+    }
+
+    console.log("📊 Raw Student Attendance:", rawAttendance);
+    console.log("📊 Attendance data type:", typeof rawAttendance);
+    console.log("📊 Attendance length:", rawAttendance.length);
+
+    attendance = rawAttendance.filter((record: any) => {
+      const emailMatch =
+        record.student === selectedStudent.email ||
         record.student_email === selectedStudent.email ||
         record.email === selectedStudent.email ||
-        record.student_id === selectedStudent.email
-      );
-      
-      console.log("✅ Updated student attendance:", attendance);
-    } catch (err: any) {
-      console.log("❌ Primary attendance failed, trying alternatives");
-      try {
-        const attendanceResponse = await axios.get(`${API_BASE}/attendance/?student_email=${selectedStudent.email}`);
-        const rawAttendance = attendanceResponse.data || [];
-        
-        attendance = rawAttendance.filter((record: any) => 
-          record.student_email === selectedStudent.email ||
-          record.email === selectedStudent.email ||
-          record.student_id === selectedStudent.email
-        );
-      } catch (err2: any) {
-        console.log("❌ All attendance endpoints failed");
+        record.student_id === selectedStudent.email;
+
+      // Match by year-month using the date string (e.g. "2025-11-15")
+      const recordDate = record.date || record.attendance_date;
+      let monthMatch = true;
+      if (recordDate && typeof recordDate === 'string') {
+        const recMonth = recordDate.split('T')[0]?.slice(0, 7); // YYYY-MM
+        monthMatch = recMonth === studentAttendanceMonth;
       }
-    }
+
+      return emailMatch && monthMatch;
+    });
+
+    console.log("✅ Updated student attendance (filtered by email + month):", attendance);
 
     // Update state with new attendance data
     setStudentExtra(prev => ({
@@ -553,6 +626,46 @@ const fetchClasses = async (subjectId: number) => {
     console.error('Error fetching classes:', err);
   }
 };
+
+  // Helper: resolve class info for a student using class_id and allClasses
+  const getClassInfoForStudent = (student: any) => {
+    if (!student?.class_id) return null;
+    return allClasses.find((cls: any) => cls.id === student.class_id) || null;
+  };
+
+  // Derived lists for student filters
+  const studentUniqueClasses = Array.from(
+    new Set(
+      allClasses
+        .map((cls: any) => cls.class_name)
+        .filter((name: any) => Boolean(name))
+    )
+  );
+
+  const studentUniqueSectionsForClass = studentClassFilter === "all"
+    ? []
+    : Array.from(
+        new Set(
+          allClasses
+            .filter((cls: any) => cls.class_name === studentClassFilter)
+            .map((cls: any) => cls.sec)
+            .filter((sec: any) => Boolean(sec))
+        )
+      );
+
+  // Students filtered by class/section
+  const filteredStudentsByClass = students.filter((student: any) => {
+    const classInfo = getClassInfoForStudent(student);
+    const className = classInfo?.class_name;
+    const section = classInfo?.sec;
+
+    const matchesClass =
+      studentClassFilter === "all" || className === studentClassFilter;
+    const matchesSection =
+      studentSectionFilter === "all" || studentSectionFilter === "" || section === studentSectionFilter;
+
+    return matchesClass && matchesSection;
+  });
 
 
   // Fetch student details
@@ -923,6 +1036,7 @@ const fetchClasses = async (subjectId: number) => {
     }
   };
 
+
   return (
     <DashboardLayout role="principal">
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
@@ -988,10 +1102,10 @@ const fetchClasses = async (subjectId: number) => {
           {/* Teachers Grid */}
           {view === "teachers" && !selectedTeacher && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {teachers.map((teacher) => (
+              {teachers.map((teacher, index) => (
                // ✅ In your teachers grid - make sure onClick passes the full teacher object
 <div
-  key={teacher.teacher_id}
+  key={`teacher-${teacher.teacher_id ?? teacher.email ?? teacher.id ?? index}`}
   onClick={() => fetchTeacherDetails(teacher)} // Pass full teacher object
   className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
 >
@@ -1141,21 +1255,27 @@ const fetchClasses = async (subjectId: number) => {
     
     {filteredTimetable.length > 0 ? (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTimetable.map((entry: any, index: number) => (
-          <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
-            <h4 className="font-semibold text-gray-800 mb-2">{entry.class_name}</h4>
-            <div className="space-y-1 text-sm text-gray-600">
-              <div><strong>Section:</strong> {entry.section}</div>
-              <div><strong>Day:</strong> {entry.day_of_week}</div>
-              <div><strong>Time:</strong> {entry.start_time} - {entry.end_time}</div>
-              {entry.room_number && <div><strong>Room:</strong> {entry.room_number}</div>}
-              {/* Debug info */}
-              <div className="mt-2 text-xs text-gray-400">
-                Subject ID: {entry.subject_id} | Entry ID: {entry.id}
+        {filteredTimetable.map((entry: any, index: number) => {
+          const classInfo = allClasses.find((cls: any) => cls.id === entry.class_id);
+          const className = classInfo?.class_name || entry.class_name || "Unknown Class";
+          const section = classInfo?.sec || entry.sec || entry.section || "-";
+
+          return (
+            <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-800 mb-2">{className}</h4>
+              <div className="space-y-1 text-sm text-gray-600">
+                <div><strong>Section:</strong> {section}</div>
+                <div><strong>Day:</strong> {entry.day_of_week}</div>
+                <div><strong>Time:</strong> {entry.start_time} - {entry.end_time}</div>
+                {entry.room_number && <div><strong>Room:</strong> {entry.room_number}</div>}
+                {/* Debug info */}
+                <div className="mt-2 text-xs text-gray-400">
+                  Subject ID: {entry.subject_id || entry.subject} | Entry ID: {entry.id}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     ) : (
       <div className="text-center py-8">
@@ -1256,29 +1376,91 @@ const fetchClasses = async (subjectId: number) => {
           )}
           
 
-          {/* Students Grid */}
+          {/* Students Filters + Grid */}
           {view === "students" && !selectedStudent && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {students.map((student, index) => (
-                <div
-                  key={student.id || index}
-                  className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
-                  onClick={() => fetchStudentDetails(student)}
-                >
-                  <div className="p-6 text-center">
-                    <img
-                      src={student.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={student.fullname}
-                      className="w-20 h-20 rounded-full border-4 border-green-100 shadow-md mx-auto"
-                    />
-                    <h3 className="mt-4 text-lg font-bold text-gray-800">{student.fullname}</h3>
-                    <p className="text-sm text-green-600 font-medium">
-                      {student.class_name} - {student.section}
-                    </p>
+            <>
+              {/* Filters */}
+              <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                <div className="flex flex-wrap gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                    <select
+                      value={studentClassFilter}
+                      onChange={(e) => {
+                        setStudentClassFilter(e.target.value);
+                        setStudentSectionFilter("all");
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                    >
+                      <option value="all">All Classes</option>
+                      {studentUniqueClasses.map((clsName) => (
+                        <option key={clsName as string} value={clsName as string}>
+                          {clsName as string}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                    <select
+                      value={studentSectionFilter}
+                      onChange={(e) => setStudentSectionFilter(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                      disabled={studentClassFilter === "all"}
+                    >
+                      <option value="all">All Sections</option>
+                      {studentUniqueSectionsForClass.map((sec) => (
+                        <option key={sec as string} value={sec as string}>
+                          {sec as string}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                <div className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{filteredStudentsByClass.length}</span> students
+                </div>
+              </div>
+
+              {/* Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredStudentsByClass.map((student, index) => (
+                (() => {
+                  const classInfo = getClassInfoForStudent(student);
+                  const className = classInfo?.class_name;
+                  const section = classInfo?.sec;
+
+                  return (
+                    <div
+                      key={student.id || index}
+                      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
+                      onClick={() => fetchStudentDetails(student)}
+                    >
+                      <div className="p-6 text-center">
+                        <img
+                          src={student.profile_picture || "https://i.pravatar.cc/150"}
+                          alt={student.fullname}
+                          className="w-20 h-20 rounded-full border-4 border-green-100 shadow-md mx-auto"
+                        />
+                        <h3 className="mt-4 text-lg font-bold text-gray-800">{student.fullname}</h3>
+                        <p className="text-sm text-green-600 font-semibold mt-1">
+                          {className || "Class ?"} {section ? `• Sec ${section}` : ""}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          ID: {student.student_id || "N/A"}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          {student.email}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()
+                ))}
+              </div>
+            </>
           )}
 
           {/* Student Details */}
@@ -1311,14 +1493,22 @@ const fetchClasses = async (subjectId: number) => {
                     />
                     <div>
                       <h2 className="text-3xl font-bold mb-2">{selectedStudent.fullname}</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                        <div><b>Student ID:</b> {selectedStudent.student_id}</div>
-                        <div><b>Class:</b> {selectedStudent.class_name}</div>
-                        <div><b>Section:</b> {selectedStudent.section}</div>
-                        <div><b>Roll No:</b> {selectedStudent.roll_number}</div>
-                        <div><b>Gender:</b> {selectedStudent.gender}</div>
-                        <div><b>DOB:</b> {selectedStudent.date_of_birth}</div>
-                      </div>
+                      {(() => {
+                        const classInfo = getClassInfoForStudent(selectedStudent);
+                        const className = classInfo?.class_name;
+                        const section = classInfo?.sec;
+
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                            <div><b>Student ID:</b> {selectedStudent.student_id}</div>
+                            <div><b>Class:</b> {className || "Class ?"}</div>
+                            <div><b>Section:</b> {section || "-"}</div>
+                            <div><b>Roll No:</b> {selectedStudent.student_id}</div>
+                            <div><b>Gender:</b> {selectedStudent.gender}</div>
+                            <div><b>DOB:</b> {selectedStudent.date_of_birth}</div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

@@ -6,17 +6,18 @@ import DashboardLayout from "@/app/components/DashboardLayout";
 const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
 export default function ParentNoticesPage() {
-  const [loading, setLoading] = useState(false);
-  const [children, setChildren] = useState([]);
-  const [classInfo, setClassInfo] = useState(null);
-  const [notices, setNotices] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [filteredNotices, setFilteredNotices] = useState([]);
-  const [activeTab, setActiveTab] = useState("all");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [children, setChildren] = useState<any[]>([]);
+  const [classInfo, setClassInfo] = useState<any | null>(null);
+  const [notices, setNotices] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [studentBaseNotices, setStudentBaseNotices] = useState<any[]>([]);
+  const [filteredNotices, setFilteredNotices] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("all");
 
   let parentEmail = null;
 
-  // 🔐 Fetch parent email from localStorage
+  // Fetch parent email from localStorage
   if (typeof window !== "undefined") {
     try {
       const userData = JSON.parse(localStorage.getItem("userData"));
@@ -29,6 +30,16 @@ export default function ParentNoticesPage() {
 
   console.log("👨‍👩‍👧 Logged-in Parent Email:", parentEmail);
 
+  // Helper to normalize email strings (remove extra labels, spaces, etc.)
+  const normalizeEmail = (value: any) => {
+    if (!value) return "";
+    const str = String(value).trim();
+    // Remove anything after first space or "(" (e.g. "student@example.com (Student)")
+    const firstPart = str.split(" ")[0].split("(")[0];
+    // If there is a comma-separated list, take the first email
+    return firstPart.split(",")[0].trim().toLowerCase();
+  };
+
   // ======================================================
   // 1️⃣ Load Students → Filter children using s.parent
   // ======================================================
@@ -38,8 +49,8 @@ export default function ParentNoticesPage() {
       const stuRes = await axios.get(`${API}/students/`);
       console.log("👦 Students API:", stuRes.data);
 
-      const myKids = stuRes.data.filter(
-        (s) => String(s.parent).toLowerCase() === String(parentEmail).toLowerCase()
+      const myKids = stuRes.data.filter((s) =>
+        normalizeEmail(s.parent) === normalizeEmail(parentEmail)
       );
 
       console.log("🧒 Children of parent:", myKids);
@@ -51,7 +62,6 @@ export default function ParentNoticesPage() {
       }
 
       setChildren(myKids);
-      
       // Set first student as selected by default
       if (myKids.length > 0) {
         setSelectedStudent(myKids[0]);
@@ -76,23 +86,19 @@ export default function ParentNoticesPage() {
   };
 
   // ======================================================
-  // 2️⃣ Load Notices for CHILDREN ONLY
+  // 2️⃣ Load Notices (all) - we'll filter per student when selected
   // ======================================================
   const loadNotices = async (kids) => {
     try {
       const noticeRes = await axios.get(`${API}/notices/`);
       console.log("📜 Notices API:", noticeRes.data);
+      const allNotices = Array.isArray(noticeRes.data) ? noticeRes.data : [];
 
-      const kidEmails = kids.map((k) => k.email);
+      console.log("📩 Loaded Notices (unfiltered):", allNotices);
 
-      const filtered = noticeRes.data.filter((n) =>
-        kidEmails.includes(n.notice_to_email)
-      );
-
-      console.log("📩 Filtered Notices:", filtered);
-
-      setNotices(filtered);
-      setFilteredNotices(filtered);
+      // Keep all notices; per-student filtering happens in handleStudentSelect
+      setNotices(allNotices);
+      setFilteredNotices(allNotices);
 
     } catch (err) {
       console.log("❌ Notice load error:", err);
@@ -105,11 +111,20 @@ export default function ParentNoticesPage() {
   const handleStudentSelect = (student) => {
     setSelectedStudent(student);
     if (student) {
-      const studentNotices = notices.filter(
-        (n) => n.notice_to_email === student.email
-      );
-      setFilteredNotices(studentNotices);
+      const studentEmail = normalizeEmail(student.email);
+      // Backend stores the target student email in `email`
+      const base = (notices || []).filter((n) => {
+        const targetEmail = normalizeEmail(n.email);
+        return targetEmail && targetEmail === studentEmail;
+      });
+
+      console.log("📩 Base notices for selected student:", base);
+
+      setStudentBaseNotices(base);
+      setFilteredNotices(base);
+
     } else {
+      setStudentBaseNotices([]);
       setFilteredNotices(notices);
     }
     setActiveTab("all");
@@ -120,28 +135,26 @@ export default function ParentNoticesPage() {
   // ======================================================
   const filterNoticesByType = (type) => {
     setActiveTab(type);
-    
+    const base = selectedStudent ? studentBaseNotices : notices;
+
     if (type === "all") {
-      if (selectedStudent) {
-        setFilteredNotices(notices.filter(n => n.notice_to_email === selectedStudent.email));
-      } else {
-        setFilteredNotices(notices);
-      }
+      setFilteredNotices(base);
       return;
     }
 
     if (type === "important") {
-      const importantNotices = notices.filter(n => 
-        n.priority === "High" || 
+      const importantNotices = base.filter(n =>
+        n.important === true ||
         n.title?.toLowerCase().includes("important") ||
         n.title?.toLowerCase().includes("urgent")
       );
+
       setFilteredNotices(importantNotices);
       return;
     }
 
     if (type === "academic") {
-      const academicNotices = notices.filter(n => 
+      const academicNotices = base.filter(n =>
         n.category === "Academic" ||
         n.title?.toLowerCase().includes("exam") ||
         n.title?.toLowerCase().includes("result") ||
@@ -152,10 +165,11 @@ export default function ParentNoticesPage() {
     }
 
     if (type === "general") {
-      const generalNotices = notices.filter(n => 
+      const generalNotices = base.filter(n =>
         n.category === "General" ||
         (!n.category && n.priority !== "High")
       );
+
       setFilteredNotices(generalNotices);
     }
   };
@@ -239,30 +253,33 @@ export default function ParentNoticesPage() {
                 </div>
               )}
 
-              {/* CLASS INFO & STATS */}
-              {classInfo && selectedStudent && (
+              {/* CLASS INFO & NOTICES */}
+              {selectedStudent && (
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      🏫 Class Information
-                    </h3>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm text-gray-600">Class</p>
-                        <p className="font-semibold text-gray-900">{classInfo.class_name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Section</p>
-                        <p className="font-semibold text-gray-900">{classInfo.sec}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Class Teacher</p>
-                        <p className="font-semibold text-gray-900">{classInfo.class_teacher || "Not assigned"}</p>
+                  {classInfo && (
+                    <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6">
+                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        🏫 Class Information
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-gray-600">Class</p>
+                          <p className="font-semibold text-gray-900">{classInfo.class_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Section</p>
+                          <p className="font-semibold text-gray-900">{classInfo.sec}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Class Teacher</p>
+                          <p className="font-semibold text-gray-900">{classInfo.class_teacher || "Not assigned"}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6">
+
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
                       <div>
                         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">

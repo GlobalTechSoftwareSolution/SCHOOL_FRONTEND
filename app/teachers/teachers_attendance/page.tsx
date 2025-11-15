@@ -10,12 +10,13 @@ export default function Attendance() {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [attendance, setAttendance] = useState([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
   const [classesList, setClassesList] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [students, setStudents] = useState([]);
   const [classInfo, setClassInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [pendingAttendance, setPendingAttendance] = useState<{ [email: string]: string }>({});
 
   let userEmail = null;
 
@@ -24,6 +25,7 @@ export default function Attendance() {
       const userData = JSON.parse(localStorage.getItem("userData"));
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       userEmail = userData?.email || userInfo?.email || null;
+      console.log("👨‍🏫 Logged-in teacher email (attendance page):", userEmail);
     } catch {}
   }
 
@@ -93,12 +95,18 @@ export default function Attendance() {
   const loadStudentAttendance = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/attendance/`);
-      const filtered = res.data.filter(
-        (a) =>
-          a.date === selectedDate &&
-          students.some((stu) => stu.email === a.user_email)
-      );
+      // Use student_attendance for student records
+      const res = await axios.get(`${API}/student_attendance/`);
+      const filtered = res.data.filter((a) => {
+        if (a.date !== selectedDate) return false;
+
+        // Match by student email field from API
+        const recordEmail = (a.student || a.student_email || a.user_email)?.toLowerCase();
+        if (!recordEmail) return false;
+
+        return students.some((stu) => stu.email?.toLowerCase() === recordEmail);
+      });
+
       setAttendance(filtered);
     } catch (error) {
       console.error("Error loading student attendance:", error);
@@ -107,23 +115,50 @@ export default function Attendance() {
     }
   };
 
-  /* ============================ 5) Mark Attendance ============================ */
-  const markAttendance = async (email: string, status: string) => {
+  /* ============================ 5) Mark Attendance LOCALLY ============================ */
+  const markAttendance = (email: string, status: string) => {
+    console.log("📝 Locally marking attendance:", email, status, "date:", selectedDate);
+    setPendingAttendance((prev) => ({ ...prev, [email]: status }));
+  };
+
+  /* ============================ 6) Submit Attendance to API ============================ */
+  const submitAttendance = async () => {
     try {
       if (!userEmail) {
-        console.warn("No teacher email found in localStorage; cannot mark attendance");
+        console.warn("No teacher email found in localStorage; cannot submit attendance");
+        return;
+      }
+      if (!selectedClass) {
+        console.warn("No class selected; cannot submit attendance");
         return;
       }
 
-      await axios.post(`${API}/mark_students_attendance/`, {
-        marked_by_email: userEmail,
-        date: selectedDate,
-        updates: [{ user_email: email, status }],
-      });
+      const emails = Object.keys(pendingAttendance);
+      if (emails.length === 0) {
+        console.log("ℹ️ No pending attendance changes to submit");
+        return;
+      }
 
+      const payload = emails.map((email) => ({
+        student: email,
+        // Teacher email comes from localStorage (userEmail)
+        teacher: userEmail,
+        class_id: selectedClass,
+        date: selectedDate,
+        status: pendingAttendance[email],
+        // If backend requires subject, adjust this mapping accordingly
+        subject: 1,
+      }));
+
+      console.log("📨 Submitting bulk student_attendance payload:", payload);
+      const resp = await axios.post(`${API}/student_attendance/bulk_create/`, payload);
+      console.log("✅ student_attendance bulk_create response:", resp.status, resp.data);
+
+      setPendingAttendance({});
       await loadStudentAttendance();
+      console.log("🔄 Reloaded student_attendance after submit");
     } catch (err) {
-      console.log("❌ Error marking attendance:", err);
+      console.log("❌ Error submitting attendance:", err);
     }
   };
 
@@ -320,9 +355,17 @@ export default function Attendance() {
                   </h2>
                   <p className="text-gray-600">Manage student attendance for selected date</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">Total Students</div>
-                  <div className="text-2xl font-bold text-blue-600">{students.length}</div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500">Total Students</div>
+                    <div className="text-2xl font-bold text-blue-600">{students.length}</div>
+                  </div>
+                  <button
+                    onClick={submitAttendance}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    Submit Attendance
+                  </button>
                 </div>
               </div>
             </div>
@@ -340,7 +383,10 @@ export default function Attendance() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {students.map((stu) => {
-                      const att = attendance.find((a) => a.user_email === stu.email);
+                      const att = attendance.find((a) => {
+                        const recordEmail = (a.student || a.student_email || a.user_email)?.toLowerCase();
+                        return recordEmail === stu.email?.toLowerCase();
+                      });
                       const isPresent = att?.status === "Present";
                       const isAbsent = att?.status === "Absent";
 

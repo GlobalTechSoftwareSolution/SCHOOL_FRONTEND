@@ -61,7 +61,7 @@ const ParentDashboard = () => {
         
         const [studentsRes, attendanceRes, gradesRes, leavesRes, classesRes] = await Promise.all([
           axios.get(`${API_BASE}/students/`),
-          axios.get(`${API_BASE}/attendance/`),
+          axios.get(`${API_BASE}/student_attendance/`),
           axios.get(`${API_BASE}/grades/`),
           axios.get(`${API_BASE}/leaves/`),
           axios.get(`${API_BASE}/classes/`)
@@ -89,28 +89,31 @@ const ParentDashboard = () => {
 
         setStudents(enrichedStudents);
 
-        // Filter attendance for parent's students
-        const filteredAttendance = attendanceRes.data.filter((record: any) =>
-          enrichedStudents.some(
-            (stu: any) =>
-              stu.email === record.user_email || stu.student_id === record.user_email
-          )
+        // Filter attendance for parent's students using student_attendance (field `student`)
+        const allStudentAttendance = attendanceRes.data;
+        console.log("📋 Total student_attendance records (dashboard):", allStudentAttendance.length);
+        console.log("📝 Dashboard student emails we're looking for:", enrichedStudents.map((s: any) => s.email));
+
+        const filteredAttendance = allStudentAttendance.filter((record: any) =>
+          enrichedStudents.some((stu: any) => stu.email === record.student)
         );
 
         // Merge student info with attendance
         const mergedAttendance = filteredAttendance.map((att: any) => {
-          const stu = enrichedStudents.find(
-            (s: any) =>
-              s.email === att.user_email || s.student_id === att.user_email
-          );
+          const stu = enrichedStudents.find((s: any) => s.email === att.student);
           return {
             ...att,
-            fullname: stu?.fullname ,
-            email: stu?.email,
-            class_name: stu?.class_name ,
-            section: stu?.sec ,
+            student: att.student,
+            status: att.status || "Present",
+            fullname: att.student_name || stu?.fullname || "Unknown Student",
+            email: att.student || stu?.email,
+            class_name: att.class_name || stu?.class_name,
+            section: att.section || stu?.section,
             profile_picture: stu?.profile_picture,
-            student_data: stu
+            student_data: stu,
+            date: att.date,
+            remarks: att.remarks || "",
+            created_at: att.created_time,
           };
         });
 
@@ -575,9 +578,11 @@ const ParentDashboard = () => {
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="font-semibold text-gray-900 text-lg">{record.fullname}</h3>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                              record.status === "Present" 
-                                ? "bg-green-50 text-green-700 border-green-200" 
-                                : "bg-red-50 text-red-700 border-red-200"
+                              record.status === "Present"
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : record.status === "Absent"
+                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
                             }`}>
                               {record.status}
                             </span>

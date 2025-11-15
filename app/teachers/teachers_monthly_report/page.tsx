@@ -40,7 +40,7 @@ const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api/";
 interface ClassInfo {
   id: number;
   class_name: string;
-  section: string;
+  sec: string;
 }
 
 interface Student {
@@ -187,20 +187,28 @@ const TeacherMonthlyreport = () => {
 
       // Fetch all data from APIs
       const [attendanceRes, leavesRes, gradesRes] = await Promise.all([
-        axios.get(`${API_BASE}attendance/`),
+        // ✅ Use student_attendance for student records
+        axios.get(`${API_BASE}student_attendance/`),
         axios.get(`${API_BASE}leaves/`),
         axios.get(`${API_BASE}grades/`),
       ]);
 
       console.log("📁 All API responses received");
-      console.log("📊 Raw attendance data:", attendanceRes.data.length);
+      console.log("📊 Raw student_attendance data:", attendanceRes.data.length);
       console.log("📊 Raw leaves data:", leavesRes.data.length);
       console.log("📊 Raw grades data:", gradesRes.data.length);
 
-      // Filter attendance by student email
-      const attendance = attendanceRes.data.filter(
-        (a: any) => a.user_email?.toLowerCase() === student.email.toLowerCase()
-      );
+      // Filter attendance by student email (student_attendance fields)
+      const attendance = attendanceRes.data.filter((a: any) => {
+        const stuEmail = (
+          a.student ||
+          a.student_email ||
+          a.user_email
+        )?.toLowerCase();
+
+        if (!stuEmail || !student.email) return false;
+        return stuEmail === student.email.toLowerCase();
+      });
 
       // Filter leaves by student email (check multiple possible fields)
       const leaves = leavesRes.data.filter(
@@ -369,7 +377,7 @@ const TeacherMonthlyreport = () => {
                 <div>
                   <p className="text-green-100 text-sm font-medium">Active Class</p>
                   <p className="text-lg font-bold mt-2">
-                    {selectedClass ? `${selectedClass.class_name}-${selectedClass.section}` : 'Not Selected'}
+                    {selectedClass ? `${selectedClass.class_name}-${selectedClass.sec}` : 'Not Selected'}
                   </p>
                 </div>
                 <Users className="w-8 h-8 text-green-200" />
@@ -433,7 +441,7 @@ const TeacherMonthlyreport = () => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-800">
-                        {cls.class_name} - {cls.section}
+                        {cls.class_name} - {cls.sec}
                       </h3>
                       <p className="text-sm text-gray-600">Class ID: {cls.id}</p>
                     </div>
@@ -463,7 +471,7 @@ const TeacherMonthlyreport = () => {
                 </div>
                 <div>
                   <h2 className="text-3xl font-bold text-gray-800">
-                    Students in {selectedClass.class_name} - {selectedClass.section}
+                    Students in {selectedClass.class_name} - {selectedClass.sec}
                   </h2>
                   <p className="text-gray-600">Click on a student to view detailed performance</p>
                 </div>

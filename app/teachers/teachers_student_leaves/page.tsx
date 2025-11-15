@@ -26,8 +26,7 @@ interface LeaveApplication {
 
 interface TimetableEntry {
   teacher: string;
-  class_name: string;
-  section: string;
+  class_id: number;
 }
 
 interface TeacherClass {
@@ -77,36 +76,36 @@ const TeachersStudentLeavePage = () => {
           "https://globaltechsoftwaresolutions.cloud/school-api/api/timetable/"
         );
         
-        const teacherTimetable = timetableResponse.data.filter(
-          (item: TimetableEntry) => item.teacher === teacherEmail
+        const teacherTimetable: TimetableEntry[] = timetableResponse.data.filter(
+          (item: any) => item.teacher === teacherEmail
         );
 
-        const uniqueClasses: TeacherClass[] = Array.from(
-          new Map(
-            teacherTimetable.map((t: TimetableEntry) => [
-              `${t.class_name}-${t.section || "N/A"}`,
-              { class_name: t.class_name, section: t.section || "N/A" } as TeacherClass,
-            ])
-          ).values()
-        ) as TeacherClass[];
+        // Collect unique class_ids from timetable
+        const classIds = Array.from(
+          new Set(teacherTimetable.map((t: any) => t.class_id))
+        ).filter(Boolean);
+
+        // Fetch classes from classes API and keep only those for this teacher
+        const classesRes = await axios.get(
+          "https://globaltechsoftwaresolutions.cloud/school-api/api/classes/"
+        );
+        const allClasses = classesRes.data || [];
+
+        const uniqueClasses: TeacherClass[] = allClasses
+          .filter((cls: any) => classIds.includes(cls.id))
+          .map((cls: any) => ({
+            class_name: cls.class_name,
+            section: cls.sec || "N/A",
+          }));
 
         setTeacherClasses(uniqueClasses);
 
-        // Fetch all leave applications
-        const token = localStorage.getItem("accessToken");
-        const leavesResponse = await axios.get(
-          "https://globaltechsoftwaresolutions.cloud/school-api/api/leaves/",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        // Fetch student_attendance records (we will derive "leave" entries from these)
+        const attendanceResponse = await axios.get(
+          "https://globaltechsoftwaresolutions.cloud/school-api/api/student_attendance/"
         );
 
-        // Debug: Log raw leave data
-        console.log("📋 Raw leave applications:", leavesResponse.data);
-        console.log("📋 Sample leave structure:", leavesResponse.data[0]);
-        console.log("📋 All leave fields:", Object.keys(leavesResponse.data[0] || {}));
+        console.log("📋 Raw student_attendance records:", attendanceResponse.data);
 
         // Create teacher classes set for filtering
         const teacherClassesSet = new Set(
@@ -129,53 +128,83 @@ const TeachersStudentLeavePage = () => {
         
         console.log(`📋 Loaded ${studentsMap.size} students for lookup`);
 
-        // Enhance leaves with student information and filter
+        // Enhance attendance rows with student information and filter to this teacher's classes
         const enhancedLeaves: LeaveApplication[] = [];
         
-        for (const leave of leavesResponse.data) {
+        for (const att of attendanceResponse.data) {
           try {
-            // Debug: Check what fields are available for each leave
-            console.log(`📋 Leave ${leave.id} fields:`, {
-              applicant: leave.applicant,
-              applicant_email: leave.applicant_email,
-              allFields: Object.keys(leave)
-            });
-            
-            // Use applicant field if it exists, otherwise skip
-            if (!leave.applicant) {
-              console.log(`⚠️ Skipping leave ${leave.id} - no applicant field`);
+            // Only consider rows belonging to this teacher
+            if (att.teacher && att.teacher !== teacherEmail) {
               continue;
             }
-            
+
+            // Only consider absences (treat them as leave-like entries)
+            if (!att.status || att.status.toLowerCase() !== "absent") {
+              continue;
+            }
+
+            const studentEmail = att.student;
+            if (!studentEmail) {
+              console.log(`⚠️ Skipping attendance ${att.id} - no student email`);
+              continue;
+            }
+
             // Look up student information from the students map
-            console.log(`📋 Looking up student data for: ${leave.applicant}`);
-            const studentData = studentsMap.get(leave.applicant);
+            console.log(`📋 Looking up student data for: ${studentEmail}`);
+            const studentData = studentsMap.get(studentEmail);
             
             if (!studentData) {
-              console.log(`⚠️ Student not found for email: ${leave.applicant}`);
+              console.log(`⚠️ Student not found for email: ${studentEmail}`);
               // Try to create a basic leave entry with available information
               const basicLeave: LeaveApplication = {
-                ...leave,
-                student_name: leave.applicant_email || leave.applicant,
-                class_name: "Unknown",
-                section: "Unknown",
-                applied_date: leave.created_at,
-                teacher_remarks: leave.teacher_remarks
+                id: att.id,
+                applicant: studentEmail,
+                applicant_email: studentEmail,
+                approved_by_email: null,
+                leave_type: att.subject_name || "Attendance - Absent",
+                start_date: att.date,
+                end_date: att.date,
+                reason: "Marked absent in attendance",
+                status: att.status,
+                created_at: att.created_time,
+                updated_at: att.created_time,
+                student_name: att.student_name || studentEmail,
+                class_name: att.class_name || "Unknown",
+                section: att.section || "Unknown",
+                applied_date: att.created_time,
+                teacher_remarks: "",
               };
-              console.log(`📋 Created basic leave entry for unknown student: ${basicLeave.student_name}`);
-              continue; // Skip unknown students for now
+              console.log(`📋 Created basic leave-like entry for unknown student: ${basicLeave.student_name}`);
+              // still continue to class filter below
+              // no "continue" here so we can still check class match
             }
             
-            console.log(`📋 Student data for ${leave.applicant}:`, studentData);
+            if (studentData) {
+              console.log(`📋 Student data for ${studentEmail}:`, studentData);
+            }
             
-            // Enhance leave with student information
+            // Enhance attendance row with student information, mapping into LeaveApplication shape
             const enhancedLeave: LeaveApplication = {
-              ...leave,
-              student_name: studentData.fullname || studentData.name || leave.applicant_email,
-              class_name: studentData.class_name || studentData.class,
-              section: studentData.section || "N/A",
-              applied_date: leave.created_at,
-              teacher_remarks: leave.teacher_remarks
+              id: att.id,
+              applicant: studentEmail,
+              applicant_email: studentEmail,
+              approved_by_email: null,
+              leave_type: att.subject_name || "Attendance - Absent",
+              start_date: att.date,
+              end_date: att.date,
+              reason: "Marked absent in attendance",
+              status: att.status,
+              created_at: att.created_time,
+              updated_at: att.created_time,
+              student_name:
+                att.student_name ||
+                studentData?.fullname ||
+                studentData?.name ||
+                studentEmail,
+              class_name: att.class_name || studentData?.class_name || studentData?.class,
+              section: att.section || studentData?.section || "N/A",
+              applied_date: att.created_time,
+              teacher_remarks: "",
             };
 
             // Check if this student is in teacher's classes
@@ -193,7 +222,7 @@ const TeachersStudentLeavePage = () => {
               enhancedLeaves.push(enhancedLeave);
             }
           } catch (error) {
-            console.error(`❌ Error processing leave for ${leave.applicant}:`, error);
+            console.error(`❌ Error processing attendance row for student: ${att?.student}`, error);
             // Skip this leave if we can't process it
           }
         }

@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import DashboardLayout from "@/app/components/DashboardLayout";
 import { 
   ArrowLeft, 
   User, 
@@ -49,12 +48,19 @@ const TeachersPage = () => {
     setTimetableLoading(true);
 
     try {
+      const teacherEmail = selectedTeacher?.email?.toLowerCase();
+
       const filtered = timetable.filter((item) => {
-        return (
-          item.subject_id === subject.id ||
+        const itemTeacher = item.teacher?.toLowerCase();
+        const matchesTeacher = teacherEmail && itemTeacher === teacherEmail;
+
+        const itemSubjectId = item.subject ?? item.subject_id;
+        const matchesSubject =
+          itemSubjectId === subject.id ||
           item.subject_name?.toLowerCase() === subject.subject_name?.toLowerCase() ||
-          item.subject_code?.toLowerCase() === subject.subject_code?.toLowerCase()
-        );
+          item.subject_code?.toLowerCase() === subject.subject_code?.toLowerCase();
+
+        return matchesTeacher && matchesSubject;
       });
 
       setFilteredTimetable(filtered);
@@ -93,7 +99,7 @@ const TeachersPage = () => {
     fetchTeachers();
   }, []);
 
-  // ✅ Fetch teacher details dynamically
+  // Fetch teacher details dynamically
   const fetchTeacherDetails = async (teacher: any) => {
     setSelectedTeacher(teacher);
     setLoading(true);
@@ -170,13 +176,14 @@ const TeachersPage = () => {
 
     // Classes should be counted only where this teacher actually teaches
     const teacherSubjectIds = subjectList.map((subject: any) => subject.id);
-    const teacherName = selectedTeacher?.fullname?.toLowerCase();
+    const teacherEmail = selectedTeacher?.email?.toLowerCase();
 
     const teacherClasses = timetable.filter((item: any) => {
-      const matchesSubject = teacherSubjectIds.includes(item.subject_id);
-      const matchesTeacher = item.teacher_name
-        ? item.teacher_name.toLowerCase() === teacherName
-        : true;
+      const itemSubjectId = item.subject ?? item.subject_id;
+      const matchesSubject = teacherSubjectIds.includes(itemSubjectId);
+
+      const itemTeacher = item.teacher?.toLowerCase();
+      const matchesTeacher = teacherEmail ? itemTeacher === teacherEmail : false;
       return matchesSubject && matchesTeacher;
     });
 

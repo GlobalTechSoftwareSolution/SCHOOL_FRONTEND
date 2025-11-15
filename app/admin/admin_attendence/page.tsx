@@ -68,7 +68,8 @@ export default function ClassWiseAttendance() {
   const [principal, setPrincipal] = useState<Principal | null>(null);
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [classes, setClasses] = useState<ClassData[]>([]);
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]); // for teachers/principal/admin
+  const [studentAttendance, setStudentAttendance] = useState<any[]>([]); // from /student_attendance/
   const [selectedClassId, setSelectedClassId] = useState("");
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState("students");
@@ -127,9 +128,14 @@ export default function ClassWiseAttendance() {
         console.log("✅ Classes Fetched:", c.data);
         setClasses(c.data);
 
-        console.log("📡 Fetching Attendance API...");
+        console.log("📡 Fetching Student Attendance API (/student_attendance/)...");
+        const sa = await axios.get(`${API}/student_attendance/`);
+        console.log("✅ Student Attendance Fetched:", sa.data);
+        setStudentAttendance(sa.data);
+
+        console.log("📡 Fetching Staff Attendance API (/attendance/)...");
         const a = await axios.get(`${API}/attendance/`);
-        console.log("✅ Attendance Fetched:", a.data);
+        console.log("✅ Staff Attendance Fetched:", a.data);
         setAttendance(a.data);
 
         console.log("🎉 All API Data Loaded");
@@ -145,31 +151,30 @@ export default function ClassWiseAttendance() {
 
   // MERGE STUDENTS + CLASS + ATTENDANCE WITH PROFILE PICTURES
   const getMergedAttendance = () => {
-    console.log("🔄 Merging Students + Classes + Attendance...");
+    console.log("🔄 Merging Students + Classes + Student Attendance (student_attendance)...");
 
-    const merged = attendance
-      .map((att) => {
-        const student = students.find((s) => s.email === att.user_email);
-        if (!student) {
-          return null;
-        }
+    const merged = studentAttendance
+      .map((att: any) => {
+        // student_attendance: student (email), student_name, class_id, class_name, section, date, status, created_time
+        const student = students.find((s) => s.email === att.student);
 
-        const cls = classes.find((c) => c.id === student.class_id);
+        const classId = att.class_id ?? student?.class_id;
+        const cls = classes.find((c) => c.id === classId);
 
         return {
           id: att.id,
-          fullname: student.fullname,
-          email: student.email,
-          student_id: student.student_id,
-          class_id: student.class_id,
-          class_name: cls?.class_name,
-          section: cls?.sec,
+          fullname: att.student_name || student?.fullname || "Unknown Student",
+          email: att.student || student?.email,
+          student_id: student?.student_id,
+          class_id: classId,
+          class_name: att.class_name || cls?.class_name,
+          section: att.section || cls?.sec,
           class_teacher: cls?.class_teacher_name || "Not Assigned",
           date: att.date,
-          check_in: att.check_in,
-          check_out: att.check_out,
+          check_in: att.check_in, // may be undefined in student_attendance
+          check_out: att.check_out, // may be undefined in student_attendance
           status: att.status,
-          profile_picture: student.profile_picture || null,
+          profile_picture: student?.profile_picture || null,
         };
       })
       .filter((item): item is Exclude<typeof item, null> => item !== null);

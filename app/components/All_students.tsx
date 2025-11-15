@@ -65,8 +65,9 @@ const StudentsPage = () => {
     setLoading(true);
     try {
       const [attendanceRes, leavesRes, gradesRes] = await Promise.all([
-        axios.get(`${API_BASE}/attendance/`).catch(err => { 
-          console.log('Attendance API failed:', err.message); 
+        // Use student_attendance API for student records
+        axios.get(`${API_BASE}/student_attendance/`).catch(err => { 
+          console.log('student_attendance API failed:', err.message); 
           return { data: [] }; 
         }),
 
@@ -80,13 +81,13 @@ const StudentsPage = () => {
         }),
       ]);
 
+      // student_attendance rows have: student (email), student_name, class_id, class_name, section, date, status, created_time
       const studentAttendance = (attendanceRes.data || []).filter((a: any) => {
         const email = student.email?.toLowerCase();
         if (!email) return false;
 
-        const recordEmail = (a.user_email ?? a.student_email)?.toLowerCase();
-        const role = a.role?.toLowerCase();
-        return recordEmail === email && role === "student";
+        const recordEmail = a.student?.toLowerCase();
+        return recordEmail === email;
       });
 
       const studentLeaves = (leavesRes.data || []).filter(
@@ -306,9 +307,10 @@ const StudentsPage = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredStudents.map((student) => (
+                  {filteredStudents.map((student, index) => (
                     <div
-                      key={student.id}
+                      key={student.id ?? student.email ?? index}
+
                       onClick={() => fetchStudentDetails(student)}
                       className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer border border-gray-200/60 group relative overflow-hidden"
                     >

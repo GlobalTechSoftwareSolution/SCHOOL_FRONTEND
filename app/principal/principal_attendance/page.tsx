@@ -9,23 +9,35 @@ import jsPDF from 'jspdf';
 interface AttendanceRecord {
   id: number;
   student_email: string;
+  email?: string; // General email field for all roles
   student_name: string;
+  fullname?: string; // For teachers, admins, principals, etc.
   class_name: string;
   date: string;
   check_in: string;
   check_out: string | null;
   sec: string;
   status: "Present" | "Absent" | "Late" | string;
+  role: string;
   marked_by_role: string;
   marked_by_email?: string;
   reason?: string;
   remarks?: string;
+  department_name?: string;
 }
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api/";
+
+interface ClassData {
+  id: number;
+  class_name: string;
+  section: string;
+}
+
+const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
 const PrincipalAttendanceReport = () => {
   const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);
+  const [studentAttendance, setStudentAttendance] = useState<AttendanceRecord[]>([]);
   const [presentStudents, setPresentStudents] = useState<AttendanceRecord[]>([]);
   const [absentStudents, setAbsentStudents] = useState<AttendanceRecord[]>([]);
   const [filteredData, setFilteredData] = useState<AttendanceRecord[]>([]);
@@ -33,30 +45,94 @@ const PrincipalAttendanceReport = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "present" | "absent">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "present" | "absent" | "students">("all");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [selectedSection, setSelectedSection] = useState<string>("");
 
-  // ✅ Fetch all attendance with proper error handling
+  // ✅ Fetch all attendance (all departments) with proper error handling
   const fetchAttendance = async () => {
     try {
       setLoading(true);
       setError("");
       
-      const res = await axios.get(`${API_BASE}/attendance/`);
+      // Fetch attendance for all departments (student, teacher, principal, admin, management)
+      const [attendanceRes, teachersRes] = await Promise.all([
+        axios.get(`${API_BASE}/attendance/`),
+        axios.get(`${API_BASE}/teachers/`)
+      ]);
       
-      if (Array.isArray(res.data)) {
-        const attendanceData = res.data;
+      if (Array.isArray(attendanceRes.data)) {
+        // Create a map of teacher emails to their details (fullname and department)
+        const teacherMap = new Map<string, { fullname: string; department_name: string; email: string }>();
+        if (Array.isArray(teachersRes.data)) {
+          teachersRes.data.forEach((teacher: any) => {
+            const teacherEmail = teacher.email || teacher.user_details?.email;
+            if (!teacherEmail) return;
+
+            teacherMap.set(teacherEmail, {
+              fullname:
+                teacher.fullname ||
+                teacher.name ||
+                teacher.user_details?.fullname ||
+                "",
+              department_name:
+                teacher.department_name ||
+                teacher.department ||
+                "",
+              email: teacherEmail,
+            });
+          });
+        }
+
+        // Merge teacher details into attendance records
+        const attendanceData = attendanceRes.data.map((record: any) => {
+          // Try to match by email or student_email
+          const emailToMatch = record.email || record.student_email || record.user_email;
+          const teacherInfo = emailToMatch ? teacherMap.get(emailToMatch) : undefined;
+
+          const mergedFullname =
+            teacherInfo?.fullname ||
+            record.fullname ||
+            record.student_name ||
+            record.name ||
+            record.user_details?.fullname ||
+            "";
+
+          const mergedDepartment =
+            teacherInfo?.department_name ||
+            record.department_name ||
+            record.department ||
+            record.class_name ||
+            "";
+
+          const mergedEmail =
+            teacherInfo?.email ||
+            record.email ||
+            record.student_email ||
+            record.user_email ||
+            "";
+
+          return {
+            ...record,
+            fullname: mergedFullname,
+            email: mergedEmail,
+            department_name: mergedDepartment,
+          };
+        });
+        
         setAllAttendance(attendanceData);
         
-        // Separate present and absent students
+        // Separate present and absent
         const present = attendanceData.filter(student => student.status === "Present");
         const absent = attendanceData.filter(student => student.status === "Absent");
         
         setPresentStudents(present);
         setAbsentStudents(absent);
       } else {
-        console.error("Unexpected API response format:", res.data);
+        console.error("Unexpected API response format:", attendanceRes.data);
         setError("Received invalid data format from server");
       }
     } catch (error: any) {
@@ -68,17 +144,68 @@ const PrincipalAttendanceReport = () => {
     }
   };
 
+  // ✅ Fetch student-only attendance
+  const fetchStudentAttendance = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      
+      // Fetch student attendance only
+      const res = await axios.get(`${API_BASE}/student_attendance/`);
+      
+      if (Array.isArray(res.data)) {
+        const studentData = res.data.map(record => ({
+          ...record,
+          role: "student",
+          student_email: record.student || "",
+          sec: record.section || "",
+          check_in: record.created_time || "",
+          check_out: null,
+          marked_by_role: "teacher",
+          marked_by_email: record.teacher || ""
+        }));
+        setStudentAttendance(studentData);
+      } else {
+        console.error("Unexpected API response format:", res.data);
+        setError("Received invalid data format from server");
+      }
+    } catch (error: any) {
+      console.error("Error fetching student attendance:", error);
+      setError(error.response?.data?.message || "Failed to fetch student attendance data");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // ✅ Fetch classes and sections
+  const fetchClasses = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/classes/`);
+      if (Array.isArray(res.data)) {
+        setClasses(res.data);
+      }
+    } catch (error: any) {
+      console.error("Error fetching classes:", error);
+    }
+  };
+
   useEffect(() => {
     fetchAttendance();
+    fetchStudentAttendance();
+    fetchClasses();
   }, []);
 
   // ✅ Refresh function
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchAttendance();
+    if (activeTab === "students") {
+      await fetchStudentAttendance();
+    } else {
+      await fetchAttendance();
+    }
   };
 
-  // ✅ PDF Generation Function
   // ✅ PROFESSIONAL PDF GENERATION FUNCTION
 const generatePDF = () => {
   setRefreshing(true);
@@ -91,61 +218,62 @@ const generatePDF = () => {
     const margin = 20;
     const contentWidth = pageWidth - (2 * margin);
     
+    // Use filteredData for PDF generation
+    const pdfData = filteredData.length > 0 ? filteredData : allAttendance;
+    const pdfPresent = pdfData.filter(s => s.status === "Present");
+    const pdfAbsent = pdfData.filter(s => s.status === "Absent");
+    const pdfLate = pdfData.filter(s => s.status === "Late");
+    
     // Colors for professional design
     const colors = {
-      primary: [41, 128, 185],    // Blue
-      success: [39, 174, 96],     // Green
-      danger: [231, 76, 60],      // Red
-      warning: [243, 156, 18],    // Orange
-      dark: [44, 62, 80],         // Dark Blue
-      light: [241, 242, 246]      // Light Gray
+      primary: [41, 128, 185] as [number, number, number],
+      success: [39, 174, 96] as [number, number, number],
+      danger: [231, 76, 60] as [number, number, number],
+      warning: [243, 156, 18] as [number, number, number],
+      dark: [44, 62, 80] as [number, number, number],
+      light: [241, 242, 246] as [number, number, number]
     };
 
     // Helper function to add section headers
     const addSectionHeader = (title: string, y: number) => {
-      pdf.setFillColor(...colors.light);
+      pdf.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
       pdf.rect(margin, y, contentWidth, 12, 'F');
-      pdf.setTextColor(...colors.dark);
-      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
       pdf.setFontSize(14);
       pdf.text(title, margin + 5, y + 8);
       return y + 15;
     };
 
     // Helper function to add statistics card
-    const addStatCard = (label: string, value: string, color: number[], x: number, y: number, width: number) => {
-      pdf.setFillColor(...color);
+    const addStatCard = (label: string, value: string, color: [number, number, number], x: number, y: number, width: number) => {
+      pdf.setFillColor(color[0], color[1], color[2]);
       pdf.rect(x, y, width, 25, 'F');
       pdf.setTextColor(255, 255, 255);
-      pdf.setFont(undefined, 'bold');
       pdf.setFontSize(16);
       pdf.text(value, x + (width / 2), y + 12, { align: 'center' });
       pdf.setFontSize(8);
-      pdf.setFont(undefined, 'normal');
       pdf.text(label.toUpperCase(), x + (width / 2), y + 20, { align: 'center' });
     };
 
     // Helper function to add table
     const addTable = (headers: string[], rows: string[][], startY: number) => {
       const rowHeight = 10;
-      const colWidths = [60, 40, 30, 30, 30]; // Adjust based on content
+      const colWidths = [50, 35, 30, 25, 30];
       
       // Table header
-      pdf.setFillColor(...colors.dark);
+      pdf.setFillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
       pdf.rect(margin, startY, contentWidth, rowHeight, 'F');
       pdf.setTextColor(255, 255, 255);
-      pdf.setFont(undefined, 'bold');
       pdf.setFontSize(9);
       
       let xPos = margin + 2;
       headers.forEach((header, index) => {
         pdf.text(header, xPos, startY + 7);
-        xPos += colWidths[index];
+        xPos += colWidths[index] || 30;
       });
       
       // Table rows
       pdf.setTextColor(0, 0, 0);
-      pdf.setFont(undefined, 'normal');
       pdf.setFontSize(8);
       
       let currentY = startY + rowHeight;
@@ -156,33 +284,31 @@ const generatePDF = () => {
           currentY = 20;
           
           // Add header on new page
-          pdf.setFillColor(...colors.dark);
+          pdf.setFillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
           pdf.rect(margin, currentY, contentWidth, rowHeight, 'F');
           pdf.setTextColor(255, 255, 255);
-          pdf.setFont(undefined, 'bold');
           pdf.setFontSize(9);
           
           let xPos = margin + 2;
           headers.forEach((header, index) => {
             pdf.text(header, xPos, currentY + 7);
-            xPos += colWidths[index];
+            xPos += colWidths[index] || 30;
           });
           
           currentY += rowHeight;
           pdf.setTextColor(0, 0, 0);
-          pdf.setFont(undefined, 'normal');
         }
         
         // Alternate row colors
         if (rowIndex % 2 === 0) {
-          pdf.setFillColor(...colors.light);
+          pdf.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
           pdf.rect(margin, currentY, contentWidth, rowHeight, 'F');
         }
         
         let xPos = margin + 2;
         row.forEach((cell, cellIndex) => {
           pdf.text(cell, xPos, currentY + 7);
-          xPos += colWidths[cellIndex];
+          xPos += colWidths[cellIndex] || 30;
         });
         
         currentY += rowHeight;
@@ -192,19 +318,17 @@ const generatePDF = () => {
     };
 
     // 📄 COVER PAGE
-    pdf.setFillColor(...colors.primary);
+    pdf.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
     pdf.rect(0, 0, pageWidth, 80, 'F');
     
     pdf.setTextColor(255, 255, 255);
-    pdf.setFont(undefined, 'bold');
     pdf.setFontSize(24);
     pdf.text('ATTENDANCE REPORT', pageWidth / 2, 40, { align: 'center' });
     
     pdf.setFontSize(14);
-    pdf.setFont(undefined, 'normal');
-    pdf.text('Comprehensive Student Attendance Analysis', pageWidth / 2, 55, { align: 'center' });
+    pdf.text('Comprehensive Attendance Analysis', pageWidth / 2, 55, { align: 'center' });
     
-    pdf.setTextColor(...colors.dark);
+    pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.setFontSize(12);
     pdf.text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -212,8 +336,17 @@ const generatePDF = () => {
       day: 'numeric'
     })}`, pageWidth / 2, 120, { align: 'center' });
     
-    pdf.text(`Period: ${filterType.charAt(0).toUpperCase() + filterType.slice(1)} | ${months[selectedMonth - 1]} ${selectedYear}`, 
-             pageWidth / 2, 135, { align: 'center' });
+    let filterInfo = `Filter: ${filterType.charAt(0).toUpperCase() + filterType.slice(1)}`;
+    if (filterType === 'month' || filterType === 'year') {
+      filterInfo += ` | ${months[selectedMonth - 1]} ${selectedYear}`;
+    }
+    if (activeTab === 'students' && selectedClass) {
+      filterInfo += ` | Class: ${selectedClass}`;
+      if (selectedSection) {
+        filterInfo += ` - ${selectedSection}`;
+      }
+    }
+    pdf.text(filterInfo, pageWidth / 2, 135, { align: 'center' });
 
     // 📊 EXECUTIVE SUMMARY PAGE
     pdf.addPage();
@@ -221,28 +354,27 @@ const generatePDF = () => {
     
     yPosition = addSectionHeader('EXECUTIVE SUMMARY', yPosition);
     
-    // Overall statistics
-    const totalStudents = allAttendance.length;
-    const overallPresent = allAttendance.filter(s => s.status === "Present").length;
-    const overallAbsent = allAttendance.filter(s => s.status === "Absent").length;
-    const overallLate = allAttendance.filter(s => s.status === "Late").length;
-    const overallPercentage = totalStudents > 0 ? Math.round((overallPresent / totalStudents) * 100) : 0;
+    // Overall statistics from filtered data
+    const totalRecords = pdfData.length;
+    const totalPresent = pdfPresent.length;
+    const totalAbsent = pdfAbsent.length;
+    const totalLate = pdfLate.length;
+    const overallPercentage = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
     
     // Statistics cards
     const cardWidth = (contentWidth - 15) / 4;
-    addStatCard('Total Records', totalStudents.toString(), colors.primary, margin, yPosition, cardWidth);
-    addStatCard('Present', overallPresent.toString(), colors.success, margin + cardWidth + 5, yPosition, cardWidth);
-    addStatCard('Absent', overallAbsent.toString(), colors.danger, margin + (cardWidth * 2) + 10, yPosition, cardWidth);
-    addStatCard('Late', overallLate.toString(), colors.warning, margin + (cardWidth * 3) + 15, yPosition, cardWidth);
+    addStatCard('Total Records', totalRecords.toString(), colors.primary, margin, yPosition, cardWidth);
+    addStatCard('Present', totalPresent.toString(), colors.success, margin + cardWidth + 5, yPosition, cardWidth);
+    addStatCard('Absent', totalAbsent.toString(), colors.danger, margin + (cardWidth * 2) + 10, yPosition, cardWidth);
+    addStatCard('Late', totalLate.toString(), colors.warning, margin + (cardWidth * 3) + 15, yPosition, cardWidth);
     
     yPosition += 35;
     
     // Attendance Rate Gauge
-    pdf.setFillColor(...colors.light);
+    pdf.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
     pdf.rect(margin, yPosition, contentWidth, 40, 'F');
     
-    pdf.setTextColor(...colors.dark);
-    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.setFontSize(16);
     pdf.text(`Overall Attendance Rate: ${overallPercentage}%`, margin + 10, yPosition + 15);
     
@@ -253,16 +385,15 @@ const generatePDF = () => {
     
     const progressWidth = (barWidth * overallPercentage) / 100;
     if (overallPercentage >= 80) {
-      pdf.setFillColor(...colors.success);
+      pdf.setFillColor(colors.success[0], colors.success[1], colors.success[2]);
     } else if (overallPercentage >= 60) {
-      pdf.setFillColor(...colors.warning);
+      pdf.setFillColor(colors.warning[0], colors.warning[1], colors.warning[2]);
     } else {
-      pdf.setFillColor(...colors.danger);
+      pdf.setFillColor(colors.danger[0], colors.danger[1], colors.danger[2]);
     }
     pdf.rect(margin + 10, yPosition + 25, progressWidth, 8, 'F');
     
     pdf.setFontSize(10);
-    pdf.setFont(undefined, 'normal');
     pdf.setTextColor(100, 100, 100);
     pdf.text('0%', margin + 10, yPosition + 40);
     pdf.text('100%', margin + 10 + barWidth - 15, yPosition + 40);
@@ -270,7 +401,7 @@ const generatePDF = () => {
     yPosition += 50;
 
     // Class-wise Breakdown
-    const classBreakdown = allAttendance.reduce((acc: any, student) => {
+    const classBreakdown = pdfData.reduce((acc: any, student) => {
       const className = student.class_name || 'Unknown Class';
       if (!acc[className]) {
         acc[className] = { present: 0, absent: 0, total: 0 };
@@ -296,11 +427,10 @@ const generatePDF = () => {
       const classData = classBreakdown[className];
       const classPercentage = classData.total > 0 ? Math.round((classData.present / classData.total) * 100) : 0;
       
-      pdf.setTextColor(...colors.dark);
-      pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+      pdf.setFontSize(10);
       pdf.text(className, margin, classY);
       
-      pdf.setFont(undefined, 'normal');
       pdf.setTextColor(100, 100, 100);
       pdf.text(`Present: ${classData.present} | Absent: ${classData.absent} | Total: ${classData.total} | Rate: ${classPercentage}%`, 
                margin + 50, classY);
@@ -311,57 +441,57 @@ const generatePDF = () => {
     yPosition = classY + 10;
 
     // ✅ DETAILED ATTENDANCE RECORDS
-    if (allAttendance.length > 0) {
+    if (pdfData.length > 0) {
       pdf.addPage();
       yPosition = 20;
       
       yPosition = addSectionHeader('DETAILED ATTENDANCE RECORDS', yPosition);
       
-      const tableHeaders = ['Student Name', 'Class/Section', 'Date', 'Status', 'Check-in'];
-      const tableRows = allAttendance.slice(0, 50).map(student => [
-        student.student_name?.substring(0, 20) || 'N/A',
-        `${student.class_name?.substring(0, 8) || 'N/A'}/${student.sec || 'N/A'}`,
-        student.date ? new Date(student.date).toLocaleDateString() : 'N/A',
-        student.status || 'N/A',
-        student.check_in || 'N/A'
+      const tableHeaders = ['Name', 'Role', 'Class/Sec', 'Date', 'Status'];
+      const tableRows = pdfData.slice(0, 50).map(student => [
+        student.student_name?.substring(0, 18) || 'N/A',
+        (student.role || 'N/A').substring(0, 8),
+        `${student.class_name?.substring(0, 6) || 'N/A'}/${student.sec || 'N/A'}`,
+        student.date ? new Date(student.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A',
+        student.status || 'N/A'
       ]);
       
       yPosition = addTable(tableHeaders, tableRows, yPosition);
     }
 
     // 📈 PRESENT STUDENTS ANALYSIS
-    if (presentStudents.length > 0) {
+    if (pdfPresent.length > 0) {
       pdf.addPage();
       yPosition = 20;
       
       yPosition = addSectionHeader('PRESENT STUDENTS ANALYSIS', yPosition);
       
-      const presentHeaders = ['Student Name', 'Class', 'Date', 'Check-in', 'Section'];
-      const presentRows = presentStudents.slice(0, 40).map(student => [
-        student.student_name?.substring(0, 20) || 'N/A',
+      const presentHeaders = ['Name', 'Role', 'Class', 'Date', 'Check-in'];
+      const presentRows = pdfPresent.slice(0, 40).map(student => [
+        student.student_name?.substring(0, 18) || 'N/A',
+        (student.role || 'N/A').substring(0, 8),
         student.class_name?.substring(0, 10) || 'N/A',
-        student.date ? new Date(student.date).toLocaleDateString() : 'N/A',
-        student.check_in || 'N/A',
-        student.sec || 'N/A'
+        student.date ? new Date(student.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A',
+        student.check_in || 'N/A'
       ]);
       
       yPosition = addTable(presentHeaders, presentRows, yPosition);
     }
 
     // ⚠️ ABSENT STUDENTS ANALYSIS
-    if (absentStudents.length > 0) {
+    if (pdfAbsent.length > 0) {
       pdf.addPage();
       yPosition = 20;
       
       yPosition = addSectionHeader('ABSENT STUDENTS ANALYSIS', yPosition);
       
-      const absentHeaders = ['Student Name', 'Class', 'Date', 'Reason', 'Section'];
-      const absentRows = absentStudents.slice(0, 40).map(student => [
-        student.student_name?.substring(0, 20) || 'N/A',
+      const absentHeaders = ['Name', 'Role', 'Class', 'Date', 'Reason'];
+      const absentRows = pdfAbsent.slice(0, 40).map(student => [
+        student.student_name?.substring(0, 18) || 'N/A',
+        (student.role || 'N/A').substring(0, 8),
         student.class_name?.substring(0, 10) || 'N/A',
-        student.date ? new Date(student.date).toLocaleDateString() : 'N/A',
-        (student.reason || student.remarks || 'No reason').substring(0, 25),
-        student.sec || 'N/A'
+        student.date ? new Date(student.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A',
+        (student.reason || student.remarks || 'No reason').substring(0, 20)
       ]);
       
       yPosition = addTable(absentHeaders, absentRows, yPosition);
@@ -373,20 +503,20 @@ const generatePDF = () => {
     
     yPosition = addSectionHeader('REPORT SUMMARY & CONCLUSIONS', yPosition);
     
-    pdf.setTextColor(...colors.dark);
+    pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.setFontSize(11);
-    pdf.setFont(undefined, 'normal');
     
     const conclusions = [
-      `• Total attendance records analyzed: ${totalStudents}`,
+      `• Total attendance records analyzed: ${totalRecords}`,
       `• Overall attendance rate: ${overallPercentage}%`,
-      `• Present students: ${overallPresent} (${Math.round((overallPresent / totalStudents) * 100)}%)`,
-      `• Absent students: ${overallAbsent} (${Math.round((overallAbsent / totalStudents) * 100)}%)`,
-      `• Late arrivals: ${overallLate} (${Math.round((overallLate / totalStudents) * 100)}%)`,
+      `• Present: ${totalPresent} (${totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0}%)`,
+      `• Absent: ${totalAbsent} (${totalRecords > 0 ? Math.round((totalAbsent / totalRecords) * 100) : 0}%)`,
+      `• Late arrivals: ${totalLate} (${totalRecords > 0 ? Math.round((totalLate / totalRecords) * 100) : 0}%)`,
       `• Report period: ${months[selectedMonth - 1]} ${selectedYear}`,
       `• Data filter: ${filterType.charAt(0).toUpperCase() + filterType.slice(1)} view`,
+      activeTab === 'students' && selectedClass ? `• Class filter: ${selectedClass}${selectedSection ? ` - ${selectedSection}` : ''}` : '',
       `• Report generated on: ${new Date().toLocaleDateString()}`
-    ];
+    ].filter(line => line);
     
     conclusions.forEach((line, index) => {
       if (yPosition > pageHeight - 20) {
@@ -400,20 +530,20 @@ const generatePDF = () => {
     yPosition += 15;
     
     // Recommendations based on attendance rate
-    pdf.setFont(undefined, 'bold');
+    pdf.setFontSize(12);
     pdf.text('RECOMMENDATIONS:', margin, yPosition);
     yPosition += 8;
     
-    pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(10);
     let recommendation = '';
     if (overallPercentage >= 90) {
       recommendation = 'Excellent attendance rate! Maintain current monitoring practices.';
     } else if (overallPercentage >= 75) {
-      recommendation = 'Good attendance rate. Consider following up with frequently absent students.';
+      recommendation = 'Good attendance rate. Consider following up with frequently absent users.';
     } else if (overallPercentage >= 60) {
       recommendation = 'Moderate attendance rate. Recommended to implement attendance improvement strategies.';
     } else {
-      recommendation = 'Low attendance rate. Immediate intervention and parent communication recommended.';
+      recommendation = 'Low attendance rate. Immediate intervention and communication recommended.';
     }
     
     pdf.text(recommendation, margin + 5, yPosition);
@@ -449,12 +579,40 @@ const generatePDF = () => {
         return presentStudents;
       case "absent":
         return absentStudents;
+      case "students":
+        // Use dedicated student attendance endpoint data
+        return studentAttendance;
       default:
         return allAttendance;
     }
   };
 
   const displayData = getDisplayData();
+
+  const stats = {
+    totalRecords: filteredData.length,
+    present: filteredData.filter(item => item.status === "Present").length,
+    absent: filteredData.filter(item => item.status === "Absent").length,
+    late: filteredData.filter(item => item.status === "Late").length,
+    presentPercentage: filteredData.length > 0 ? 
+      Math.round((filteredData.filter(item => item.status === "Present").length / filteredData.length) * 100) : 0
+  };
+
+  // ✅ Get unique classes from student attendance
+  const allStudentRecords = studentAttendance.length > 0 ? studentAttendance : allAttendance.filter(record => record.role === "student");
+  const uniqueClasses = [...new Set(allStudentRecords
+    .map(record => record.class_name)
+    .filter(Boolean)
+  )].sort();
+
+  // ✅ Get unique sections for selected class from all student records
+  const uniqueSections = selectedClass
+    ? [...new Set(allStudentRecords
+        .filter(record => record.class_name === selectedClass)
+        .map(record => record.sec)
+        .filter(Boolean)
+      )].sort()
+    : [];
 
   // Month and Year options
   const months = [
@@ -464,15 +622,6 @@ const generatePDF = () => {
   
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
-
-  const stats = {
-    totalRecords: displayData.length,
-    present: displayData.filter(item => item.status === "Present").length,
-    absent: displayData.filter(item => item.status === "Absent").length,
-    late: displayData.filter(item => item.status === "Late").length,
-    presentPercentage: displayData.length > 0 ? 
-      Math.round((displayData.filter(item => item.status === "Present").length / displayData.length) * 100) : 0
-  };
 
   // ✅ Filter by day/week/month/year with proper date handling
   useEffect(() => {
@@ -514,9 +663,20 @@ const generatePDF = () => {
       });
     };
 
-    const filtered = filterByTime(displayData, filterType);
+    let filtered = filterByTime(displayData, filterType);
+    
+    // Apply class and section filters for students tab
+    if (activeTab === "students") {
+      if (selectedClass) {
+        filtered = filtered.filter(record => record.class_name === selectedClass);
+      }
+      if (selectedSection) {
+        filtered = filtered.filter(record => record.sec === selectedSection);
+      }
+    }
+    
     setFilteredData(filtered);
-  }, [allAttendance, presentStudents, absentStudents, filterType, activeTab, selectedMonth, selectedYear]);
+  }, [allAttendance, studentAttendance, presentStudents, absentStudents, filterType, activeTab, selectedMonth, selectedYear, selectedClass, selectedSection]);
 
   // ✅ Loading state
   if (loading) {
@@ -644,17 +804,40 @@ const generatePDF = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
             <div className="flex flex-wrap gap-2 mb-6">
               <button
-                onClick={() => setActiveTab("all")}
+                onClick={() => {
+                  setActiveTab("all");
+                  setSelectedClass("");
+                  setSelectedSection("");
+                }}
                 className={`px-6 py-3 rounded-xl font-medium transition-all ${
                   activeTab === "all" 
                     ? "bg-blue-600 text-white shadow-md" 
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                All Students ({allAttendance.length})
+                All Attendance ({allAttendance.length})
               </button>
               <button
-                onClick={() => setActiveTab("present")}
+                onClick={() => {
+                  setActiveTab("students");
+                  setSelectedClass("");
+                  setSelectedSection("");
+                  fetchStudentAttendance(); // Fetch student-specific data
+                }}
+                className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                  activeTab === "students" 
+                    ? "bg-indigo-600 text-white shadow-md" 
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                🎓 Students Only ({studentAttendance.length > 0 ? studentAttendance.length : allAttendance.filter(r => r.role === "student").length})
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("present");
+                  setSelectedClass("");
+                  setSelectedSection("");
+                }}
                 className={`px-6 py-3 rounded-xl font-medium transition-all ${
                   activeTab === "present" 
                     ? "bg-green-600 text-white shadow-md" 
@@ -664,7 +847,11 @@ const generatePDF = () => {
                 ✅ Present ({presentStudents.length})
               </button>
               <button
-                onClick={() => setActiveTab("absent")}
+                onClick={() => {
+                  setActiveTab("absent");
+                  setSelectedClass("");
+                  setSelectedSection("");
+                }}
                 className={`px-6 py-3 rounded-xl font-medium transition-all ${
                   activeTab === "absent" 
                     ? "bg-red-600 text-white shadow-md" 
@@ -675,9 +862,111 @@ const generatePDF = () => {
               </button>
             </div>
 
+            {/* Class and Section Filters - Show only for Students tab */}
+            {activeTab === "students" && (
+              <div className="border-t pt-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Class Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Filter by Class
+                    </label>
+                    <select
+                      value={selectedClass}
+                      onChange={(e) => {
+                        setSelectedClass(e.target.value);
+                        setSelectedSection(""); // Reset section when class changes
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                    >
+                      <option value="">All Classes</option>
+                      {uniqueClasses.map((className) => (
+                        <option key={className} value={className}>
+                          {className}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Section Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Filter by Section
+                    </label>
+                    <select
+                      value={selectedSection}
+                      onChange={(e) => setSelectedSection(e.target.value)}
+                      disabled={!selectedClass}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">All Sections</option>
+                      {uniqueSections.map((section) => (
+                        <option key={section} value={section}>
+                          {section}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Date Filters */}
-            <div className="border-t pt-6">
+            <div className={`${activeTab === "students" ? "" : "border-t"} pt-6`}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Filter Type Buttons */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Filter Range
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFilterType("day")}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                        filterType === "day"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterType("week")}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                        filterType === "week"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      This Week
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterType("month")}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                        filterType === "month"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      This Month
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterType("year")}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                        filterType === "year"
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      This Year
+                    </button>
+                  </div>
+                </div>
+
                 {/* Month Dropdown */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -685,7 +974,10 @@ const generatePDF = () => {
                   </label>
                   <select
                     value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                    onChange={(e) => {
+                      setSelectedMonth(parseInt(e.target.value));
+                      setFilterType("month");
+                    }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                   >
                     {months.map((month, index) => (
@@ -703,7 +995,10 @@ const generatePDF = () => {
                   </label>
                   <select
                     value={selectedYear}
-                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    onChange={(e) => {
+                      setSelectedYear(parseInt(e.target.value));
+                      setFilterType("month");
+                    }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                   >
                     {years.map(year => (
@@ -711,23 +1006,6 @@ const generatePDF = () => {
                         {year}
                       </option>
                     ))}
-                  </select>
-                </div>
-
-                {/* Filter Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Filter Type
-                  </label>
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value as typeof filterType)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  >
-                    <option value="day">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">Selected Month</option>
-                    <option value="year">Selected Year</option>
                   </select>
                 </div>
               </div>
@@ -766,79 +1044,208 @@ const generatePDF = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                        Student Name
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                        Class / Section
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                        Reason/Remarks
-                      </th>
+                      {activeTab === "all" ? (
+                        // Columns for All Attendance tab
+                        <>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Name
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Role
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Remarks
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Department
+                          </th>
+                        </>
+                      ) : (
+                        // Columns for Students/Present/Absent tabs
+                        <>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Name
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Role
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Class / Section
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                            Reason/Remarks
+                          </th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {filteredData.map((student) => (
                       <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {student.student_name || 'N/A'}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {student.student_email || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-700">
-                            {`${student.class_name || 'N/A'} / ${student.sec || 'N/A'}`}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-700">
-                            {student.date ? new Date(student.date).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            }) : 'N/A'}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {student.check_in && `Check-in: ${student.check_in}`}
-                            {student.check_out && ` | Check-out: ${student.check_out}`}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                            student.status === "Present" 
-                              ? "bg-green-100 text-green-800 border border-green-200"
-                              : student.status === "Absent"
-                              ? "bg-red-100 text-red-800 border border-red-200"
-                              : "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                          }`}>
-                            {student.status === "Present" && "✅ "}
-                            {student.status === "Absent" && "❌ "}
-                            {student.status === "Late" && "⏰ "}
-                            {student.status || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          <div className="max-w-xs">
-                            <div className="truncate">
-                              {student.reason || student.remarks || (
-                                <span className="text-gray-400 italic">No reason</span>
+                        {activeTab === "all" ? (
+                          // Row for All Attendance tab
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {student.fullname }
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {student.email}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                student.role === "student" 
+                                  ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                  : student.role === "teacher"
+                                  ? "bg-purple-100 text-purple-800 border border-purple-200"
+                                  : student.role === "principal"
+                                  ? "bg-indigo-100 text-indigo-800 border border-indigo-200"
+                                  : student.role === "admin"
+                                  ? "bg-pink-100 text-pink-800 border border-pink-200"
+                                  : student.role === "management"
+                                  ? "bg-orange-100 text-orange-800 border border-orange-200"
+                                  : "bg-gray-100 text-gray-800 border border-gray-200"
+                              }`}>
+                                {student.role ? student.role.toUpperCase() : 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-700">
+                                {student.date ? new Date(student.date).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                }) : 'N/A'}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {student.check_in && `Check-in: ${student.check_in}`}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                                student.status === "Present" 
+                                  ? "bg-green-100 text-green-800 border border-green-200"
+                                  : student.status === "Absent"
+                                  ? "bg-red-100 text-red-800 border border-red-200"
+                                  : "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                              }`}>
+                                {student.status === "Present" && "✅ "}
+                                {student.status === "Absent" && "❌ "}
+                                {student.status === "Late" && "⏰ "}
+                                {student.status || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-gray-700 max-w-xs">
+                                <div className="truncate">
+                                  {student.reason || student.remarks || (
+                                    <span className="text-gray-400 italic">No remarks</span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-700">
+                                {student.department_name || (
+                                  <span className="text-gray-400 italic">N/A</span>
+                                )}
+                              </div>
+                              {student.sec && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Section: {student.sec}
+                                </div>
                               )}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Marked by: {student.marked_by_role || 'N/A'}
-                            </div>
-                          </div>
-                        </td>
+                            </td>
+                          </>
+                        ) : (
+                          // Row for Students/Present/Absent tabs (unchanged)
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {student.student_name || 'N/A'}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {student.student_email || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                student.role === "student" 
+                                  ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                  : student.role === "teacher"
+                                  ? "bg-purple-100 text-purple-800 border border-purple-200"
+                                  : student.role === "principal"
+                                  ? "bg-indigo-100 text-indigo-800 border border-indigo-200"
+                                  : student.role === "admin"
+                                  ? "bg-pink-100 text-pink-800 border border-pink-200"
+                                  : student.role === "management"
+                                  ? "bg-orange-100 text-orange-800 border border-orange-200"
+                                  : "bg-gray-100 text-gray-800 border border-gray-200"
+                              }`}>
+                                {student.role ? student.role.toUpperCase() : 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-700">
+                                {`${student.class_name || 'N/A'} / ${student.sec || 'N/A'}`}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-700">
+                                {student.date ? new Date(student.date).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                }) : 'N/A'}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {student.check_in && `Check-in: ${student.check_in}`}
+                                {student.check_out && ` | Check-out: ${student.check_out}`}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                                student.status === "Present" 
+                                  ? "bg-green-100 text-green-800 border border-green-200"
+                                  : student.status === "Absent"
+                                  ? "bg-red-100 text-red-800 border border-red-200"
+                                  : "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                              }`}>
+                                {student.status === "Present" && "✅ "}
+                                {student.status === "Absent" && "❌ "}
+                                {student.status === "Late" && "⏰ "}
+                                {student.status || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              <div className="max-w-xs">
+                                <div className="truncate">
+                                  {student.reason || student.remarks || (
+                                    <span className="text-gray-400 italic">No reason</span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Marked by: {student.marked_by_role || 'N/A'}
+                                </div>
+                              </div>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>

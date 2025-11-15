@@ -91,30 +91,20 @@ const ParentAttendance = () => {
     fetchParentStudents();
   }, [parentEmail]);
 
-  // ✅ Step 3: Fetch attendance for only those students
+  // ✅ Step 3: Fetch attendance for only those students from student_attendance API
   useEffect(() => {
     if (students.length === 0) return;
 
     const fetchAttendance = async () => {
       try {
-        // Fetch attendance and classes data in parallel
-        const [attendanceRes, classesRes] = await Promise.all([
-          axios.get(`${API_BASE}/attendance/`),
-          axios.get(`${API_BASE}/classes/`)
-        ]);
-
+        const attendanceRes = await axios.get(`${API_BASE}/student_attendance/`);
         const allAttendance = attendanceRes.data;
-        const allClasses = classesRes.data;
-        console.log("📋 Total attendance records from API:", allAttendance.length);
-        console.log("🏫 Total classes from API:", allClasses.length);
+        console.log("📋 Total student_attendance records from API:", allAttendance.length);
         console.log("📝 Student emails we're looking for:", students.map((s: any) => s.email));
 
-        // ✅ Keep only attendance matching these students
+        // ✅ Keep only attendance matching these students by email (field `student`)
         const filteredAttendance = allAttendance.filter((record: any) => {
-          const isMatch = students.some(
-            (stu: any) =>
-              stu.email === record.user_email
-          );
+          const isMatch = students.some((stu: any) => stu.email === record.student);
           return isMatch;
         });
         console.log("✅ Attendance records matched to students:", filteredAttendance.length);
@@ -122,41 +112,39 @@ const ParentAttendance = () => {
           console.log("📌 Matched attendance records:", filteredAttendance);
         }
 
-        // ✅ Merge student info and class details for display
+        // ✅ Map to shape used by the UI
         const merged = filteredAttendance.map((att: any) => {
-          const stu = students.find(
-            (s: any) => s.email === att.user_email
-          );
-          
-          // Find class details using student's class_id
-          const classDetail = allClasses.find(
-            (c: any) => c.id === stu?.class_id
-          );
-
+          const stu = students.find((s: any) => s.email === att.student);
           const profilePic = stu?.profile_picture || "";
-          console.log(`📚 Class details for student ${stu?.fullname}:`, classDetail);
 
           return {
             ...att,
-            student: att.user_email,
-            status: att.check_out ? "Present" : "Absent",
-            fullname: att.user_name || stu?.fullname || "Unknown Student",
-            email: att.user_email || "N/A",
-            class_name: classDetail?.name || stu?.class_name || "N/A",
-            section: classDetail?.section || stu?.section || "N/A",
-            class_teacher: classDetail?.teacher_name || classDetail?.class_teacher || "N/A",
-            teacher_email: classDetail?.teacher_email || "N/A",
+            student: att.student,
+            status: att.status || "Present",
+            fullname: att.student_name || stu?.fullname || "Unknown Student",
+            email: att.student || "N/A",
+            class_name: att.class_name || stu?.class_name || "N/A",
+            section: att.section || stu?.section || "N/A",
+            class_teacher: stu?.class_teacher || att.teacher_name || "N/A",
+            teacher_email: att.teacher || stu?.teacher_email || "N/A",
             profile_picture: profilePic,
             student_data: stu,
-            class_data: classDetail
+            class_data: {
+              class_id: att.class_id,
+              class_name: att.class_name,
+              section: att.section
+            },
+            date: att.date,
+            remarks: att.remarks || "",
+            created_at: att.created_time,
           };
         });
 
-        console.log("👨‍👩‍👧 Final merged attendance data:", merged.length, "records ready for display");
+        console.log("👨‍👩‍👧 Final merged attendance data (student_attendance):", merged.length, "records ready for display");
         setAttendanceData(merged);
         setLoading(false);
       } catch (error) {
-        console.error("❌ Error fetching attendance:", error);
+        console.error("❌ Error fetching student attendance:", error);
         setLoading(false);
       }
     };
@@ -448,12 +436,15 @@ const ParentAttendance = () => {
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-gray-900 text-lg">{record.fullname}</h3>
                           <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                            record.status === "Present" 
-                              ? "bg-green-50 text-green-700 border-green-200" 
-                              : "bg-red-50 text-red-700 border-red-200"
+                            record.status === "Present"
+                              ? "bg-green-50 text-green-700 border-green-200"
+                              : record.status === "Absent"
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
                           }`}>
                             {record.status}
                           </span>
+
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">

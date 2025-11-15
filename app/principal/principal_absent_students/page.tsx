@@ -22,15 +22,13 @@ interface Absentee {
 const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
 const AbsentStudentsReport = () => {
-  const [attendance, setAttendance] = useState([]);
-const [filteredAbsentees, setFilteredAbsentees] = useState<Absentee[]>([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [filteredAbsentees, setFilteredAbsentees] = useState<Absentee[]>([]);
   const [filterType, setFilterType] = useState("day");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-const [selectedYear, setSelectedYear] = useState("");
-const [selectedMonth, setSelectedMonth] = useState("");
-
-
+  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   // ✅ Get date range based on filter
   const getDateRange = (type: string) => {
@@ -54,42 +52,58 @@ const [selectedMonth, setSelectedMonth] = useState("");
     return { startDate, endDate: today };
   };
 
-  // ✅ Filter absentees based on filter type
- const filterAbsentees = (data: any[]) => {
-  return data.filter((item: any) => {
-    const recordDate = new Date(item.date);
-    const isAbsent = item.status?.toLowerCase() === "absent";
+  // ✅ Filter absentees based on selected year/month
+  const filterAbsentees = (data: any[]) => {
+    return data.filter((item: any) => {
+      if (!item.date) return false;
 
-    const matchesYear = selectedYear
-      ? recordDate.getFullYear().toString() === selectedYear
-      : true;
+      const recordDate = new Date(item.date);
 
-    const matchesMonth =
-      selectedMonth !== ""
-        ? recordDate.getMonth() === Number(selectedMonth)
+      // Treat multiple possible representations of "absent"
+      const status = (item.status || "").toString().toLowerCase();
+      const isExplicitAbsent = status === "absent";
+      const isFlagAbsent = item.is_absent === true || item.is_present === false;
+      const isAbsent = isExplicitAbsent || isFlagAbsent;
+
+      if (!isAbsent) return false;
+
+      const matchesYear = selectedYear
+        ? recordDate.getFullYear().toString() === selectedYear
         : true;
 
-    return isAbsent && matchesYear && matchesMonth;
-  });
-};
+      const matchesMonth =
+        selectedMonth !== ""
+          ? recordDate.getMonth() === Number(selectedMonth)
+          : true;
 
-useEffect(() => {
-  if (attendance.length > 0) {
-    const filtered = filterAbsentees(attendance);
-    setFilteredAbsentees(filtered);
-  }
-}, [attendance, selectedYear, selectedMonth]);
+      return matchesYear && matchesMonth;
+    });
+  };
 
+  useEffect(() => {
+    if (attendance.length > 0) {
+      const filtered = filterAbsentees(attendance);
+      setFilteredAbsentees(filtered);
+    }
+  }, [attendance, selectedYear, selectedMonth]);
 
-
-  // ✅ Fetch Attendance
+  // ✅ Fetch Student Attendance (only source of absentees)
   const fetchAttendance = async () => {
     setRefreshing(true);
     try {
-      const res = await axios.get(`${API_BASE}/attendance/`);
-      setAttendance(res.data || []);
+      const res = await axios.get(`${API_BASE}/student_attendance/`);
+      const data = Array.isArray(res.data) ? res.data : [];
+
+      // Normalize records so class_name and sec are consistently available
+      const normalized = data.map((item: any) => ({
+        ...item,
+        class_name: item.class_name || item.class || "",
+        sec: item.sec || item.section || "",
+      }));
+
+      setAttendance(normalized);
     } catch (error) {
-      console.error("Error fetching attendance:", error);
+      console.error("Error fetching student attendance:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);

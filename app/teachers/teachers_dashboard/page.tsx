@@ -81,8 +81,9 @@ const TeachersDashboard = () => {
             console.warn("Leaves API failed:", err.message);
             return { data: [] };
           }),
-          axios.get(`${API_BASE}attendance/`).catch(err => {
-            console.warn("Attendance API failed:", err.message);
+          // Use student_attendance for student records
+          axios.get(`${API_BASE}student_attendance/`).catch(err => {
+            console.warn("student_attendance API failed:", err.message);
             return { data: [] };
           }),
           axios.get(`${API_BASE}students/`).catch(err => {
@@ -160,9 +161,9 @@ const TeachersDashboard = () => {
           .filter((l: any) => l.status === "Approved")
           .slice(0, 4);
 
-        // Calculate student stats
+        // Calculate student stats from student_attendance for this teacher
         const teacherAttendance = attendanceRes.data.filter(
-          (a: any) => a.marked_by_email === teacherEmail
+          (a: any) => a.teacher === teacherEmail
         );
         const present = teacherAttendance.filter((a: any) => a.status === "Present").length;
         

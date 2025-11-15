@@ -1,13 +1,9 @@
 import React from 'react'
-import DashboardLayout from '../components/DashboardLayout'
+import PrincipalDashboard from '@/app/principal/principal_dashboard/page'
 
 const page = () => {
   return (
-    <DashboardLayout role='principal'>
-      <div>
-      this is principal page
-    </div>
-    </DashboardLayout>
+    <PrincipalDashboard />
   )
 }
 

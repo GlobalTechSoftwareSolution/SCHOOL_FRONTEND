@@ -398,7 +398,7 @@ const PrincipalDashboard = () => {
                 <div className="p-6 border-b border-gray-200">
                   <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <FiCalendar className="w-5 h-5 text-orange-500" />
-                    Upcoming Events
+                    Upcoming Activities
                   </h2>
                   <p className="text-gray-600 text-sm mt-1">Events in the next 7 days</p>
                 </div>
