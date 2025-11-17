@@ -124,7 +124,7 @@ const TeacherDocumentsPage = () => {
       const studentsRes = await axios.get(`${API_URL}students/`);
       const teacherStudents = studentsRes.data.filter((s: any) =>
         classList.some(
-          (cls) =>
+          (cls: any) =>
             cls.class_name === s.class_name && cls.section === s.section
         )
       );

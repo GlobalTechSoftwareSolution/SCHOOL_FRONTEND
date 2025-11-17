@@ -10,6 +10,29 @@ import DashboardLayout from "@/app/components/DashboardLayout";
 
 const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
+// Type definitions
+interface AttendanceData {
+  date: string;
+  Present: number;
+  Absent: number;
+  Total: number;
+}
+
+interface ClassDistribution {
+  name: string;
+  students: number;
+  teacher: string;
+}
+
+interface RecentActivity {
+  id: number;
+  name: string;
+  action: string;
+  time: string;
+  type: string;
+  avatar: string;
+}
+
 // Color palettes for charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 const STATUS_COLORS = {
@@ -30,9 +53,9 @@ export default function AdminDashboard() {
     pendingLeaves: 0,
     totalReports: 0
   });
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [attendanceData, setAttendanceData] = useState([]);
-  const [classDistribution, setClassDistribution] = useState([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
+  const [classDistribution, setClassDistribution] = useState<ClassDistribution[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminEmail, setAdminEmail] = useState("");
 
@@ -74,8 +97,8 @@ export default function AdminDashboard() {
 
         // Calculate stats
         const today = new Date().toISOString().split('T')[0];
-        const todayAttendance = attendance.filter(a => a.date === today);
-        const presentToday = todayAttendance.filter(a => a.status === 'Present').length;
+        const todayAttendance = attendance.filter((a: any) => a.date === today);        
+        const presentToday = todayAttendance.filter((a: any) => a.status === 'Present').length;
 
         setStats({
           totalStudents: students.length,
@@ -89,9 +112,9 @@ export default function AdminDashboard() {
         });
 
         // Prepare class distribution data
-        const classData = classes.map(cls => ({
+        const classData = classes.map((cls: any) => ({
           name: `${cls.class_name} - ${cls.sec}`,
-          students: students.filter(s => s.class_id == cls.id).length,
+          students: students.filter((s: any) => s.class_id == cls.id).length,
           teacher: cls.class_teacher_name
         }));
         setClassDistribution(classData);
@@ -104,9 +127,9 @@ export default function AdminDashboard() {
         }).reverse();
 
         const trendData = last7Days.map(date => {
-          const dayAttendance = attendance.filter(a => a.date === date);
-          const present = dayAttendance.filter(a => a.status === 'Present').length;
-          const absent = dayAttendance.filter(a => a.status === 'Absent').length;
+          const dayAttendance = attendance.filter((a: any) => a.date === date);
+          const present = dayAttendance.filter((a: any) => a.status === 'Present').length;
+          const absent = dayAttendance.filter((a: any) => a.status === 'Absent').length;
           
           return {
             date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -119,10 +142,10 @@ export default function AdminDashboard() {
 
         // Prepare recent activity
         const sortedAttendance = attendance
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 8);
 
-        const activity = sortedAttendance.map(record => ({
+        const activity = sortedAttendance.map((record: any) => ({
           id: record.id,
           name: record.user_name || record.user_email,
           action: record.status === 'Present' ? 'Checked in' : 'Marked absent',
@@ -143,8 +166,8 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const getInitials = (name) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const getInitials = (name: string) => {
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
   };
 
   if (loading) {
@@ -382,8 +405,8 @@ export default function AdminDashboard() {
 }
 
 // Stat Card Component
-function StatCard({ title, value, icon, color, trend }) {
-  const colorClasses = {
+function StatCard({ title, value, icon, color, trend }: { title: string; value: number; icon: string; color: 'blue' | 'green' | 'purple' | 'orange'; trend: string }) {
+  const colorClasses: Record<'blue' | 'green' | 'purple' | 'orange', string> = {
     blue: 'bg-blue-50 text-blue-600 border-blue-200',
     green: 'bg-green-50 text-green-600 border-green-200',
     purple: 'bg-purple-50 text-purple-600 border-purple-200',
@@ -409,7 +432,7 @@ function StatCard({ title, value, icon, color, trend }) {
 }
 
 // Quick Action Button Component
-function QuickActionButton({ icon, title, description, href }) {
+function QuickActionButton({ icon, title, description, href }: { icon: string; title: string; description: string; href: string }) {
   return (
     <a 
       href={href}

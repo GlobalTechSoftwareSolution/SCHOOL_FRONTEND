@@ -122,7 +122,7 @@ const TeachersProgramsPage = () => {
 
     // Status filter
     if (selectedStatus !== "all") {
-      filtered = filtered.filter(program => program.calculated_status === selectedStatus);
+      filtered = filtered.filter(program => program.status === selectedStatus);
     }
 
     setFilteredPrograms(filtered);
@@ -157,7 +157,7 @@ const TeachersProgramsPage = () => {
 
   // Get status color based on calculated status
   const getStatusColor = (program: Program) => {
-    const status = program.calculated_status || calculateProgramStatus(program);
+    const status = program.status || calculateProgramStatus(program);
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800 border-green-200';
       case 'upcoming': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -422,7 +422,7 @@ const TeachersProgramsPage = () => {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                             getStatusColor(program)
                           }`}>
-                            {program.calculated_status?.charAt(0).toUpperCase() + program.calculated_status?.slice(1)}
+                            {program.status?.charAt(0).toUpperCase() + program.status?.slice(1)}
                           </span>
                         </div>
                       </div>
@@ -466,7 +466,7 @@ const TeachersProgramsPage = () => {
 
                     {/* Days Remaining/Progress */}
                     <div className="mt-4">
-                      {program.calculated_status === 'upcoming' && (
+                      {program.status === 'upcoming' && (
                         <>
                           <div className="flex justify-between text-sm text-gray-600 mb-1">
                             <span>Starts in</span>
@@ -480,12 +480,12 @@ const TeachersProgramsPage = () => {
                           </div>
                         </>
                       )}
-                      {program.calculated_status === 'active' && (
+                      {program.status === 'active' && (
                         <div className="text-center py-2 bg-green-50 rounded-lg border border-green-200">
                           <span className="text-sm font-medium text-green-700">Currently Active</span>
                         </div>
                       )}
-                      {program.calculated_status === 'completed' && (
+                      {program.status === 'completed' && (
                         <div className="text-center py-2 bg-gray-50 rounded-lg border border-gray-200">
                           <span className="text-sm font-medium text-gray-700">Program Completed</span>
                         </div>
@@ -521,7 +521,7 @@ const TeachersProgramsPage = () => {
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                               getStatusColor(program)
                             }`}>
-                              {program.calculated_status?.charAt(0).toUpperCase() + program.calculated_status?.slice(1)}
+                              {program.status?.charAt(0).toUpperCase() + program.status?.slice(1)}
                             </span>
                           </div>
                           
@@ -586,7 +586,7 @@ const TeachersProgramsPage = () => {
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
                               getStatusColor(selectedProgram)
                             }`}>
-                              {selectedProgram.calculated_status?.charAt(0).toUpperCase() + selectedProgram.calculated_status?.slice(1)}
+                              {selectedProgram.status?.charAt(0).toUpperCase() + selectedProgram.status?.slice(1)}
                             </span>
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
                               getProgramTypeColor(selectedProgram)
@@ -645,7 +645,7 @@ const TeachersProgramsPage = () => {
                           <Target className="h-5 w-5 text-orange-600" />
                           <div>
                             <p className="text-sm text-gray-600">Program Status</p>
-                            <p className="font-semibold text-gray-900 capitalize">{selectedProgram.calculated_status}</p>
+                            <p className="font-semibold text-gray-900 capitalize">{calculateProgramStatus(selectedProgram)}</p>
                             <p className="text-xs text-orange-600 mt-1">
                               Based on current date
                             </p>
@@ -725,7 +725,7 @@ const TeachersProgramsPage = () => {
                               </div>
                               <div>
                                 <p className="text-sm text-gray-600">Status</p>
-                                <p className="font-medium text-gray-900 capitalize">{selectedProgram.calculated_status}</p>
+                                <p className="font-medium text-gray-900 capitalize">{calculateProgramStatus(selectedProgram)}</p>
                               </div>
                               <div>
                                 <p className="text-sm text-gray-600">Database Status</p>
@@ -859,18 +859,35 @@ const TeachersProgramsPage = () => {
                               <div className="p-4 bg-white rounded-lg border border-green-200">
                                 <p className="font-medium text-gray-900 mb-2">Program Status</p>
                                 <p className="text-sm text-gray-600">
-                                  This program is currently <span className="font-semibold text-green-600 capitalize">{selectedProgram.calculated_status}</span>.
-                                  {selectedProgram.calculated_status === 'upcoming' && ' Registration is open for interested participants.'}
-                                  {selectedProgram.calculated_status === 'active' && ' The program is currently running and accepting participants.'}
-                                  {selectedProgram.calculated_status === 'completed' && ' This program has concluded. View certificates if available.'}
+                                  {(() => {
+                                    const status = calculateProgramStatus(selectedProgram);
+                                    return (
+                                      <>
+                                        This program is currently <span className="font-semibold text-green-600 capitalize">{status}</span>.
+                                        {status === 'upcoming' && ' Registration is open for interested participants.'}
+                                        {status === 'active' && ' The program is currently running and accepting participants.'}
+                                        {status === 'completed' && ' This program has concluded. View certificates if available.'}
+                                      </>
+                                    );
+                                  })()}
                                 </p>
                               </div>
                               <div className="p-4 bg-white rounded-lg border border-blue-200">
                                 <p className="font-medium text-gray-900 mb-2">Next Steps</p>
                                 <p className="text-sm text-gray-600">
-                                  {selectedProgram.calculated_status === 'upcoming' && 'Prepare for the program start date and ensure all requirements are met.'}
-                                  {selectedProgram.calculated_status === 'active' && 'Continue participating in program activities and complete all assignments.'}
-                                  {selectedProgram.calculated_status === 'completed' && 'Program has ended. Thank you for your participation.'}
+                                  {(() => {
+                                    const status = calculateProgramStatus(selectedProgram);
+                                    if (status === 'upcoming') {
+                                      return 'Prepare for the program start date and ensure all requirements are met.';
+                                    }
+                                    if (status === 'active') {
+                                      return 'Continue participating in program activities and complete all assignments.';
+                                    }
+                                    if (status === 'completed') {
+                                      return 'Program has ended. Thank you for your participation.';
+                                    }
+                                    return null;
+                                  })()}
                                 </p>
                               </div>
                             </div>

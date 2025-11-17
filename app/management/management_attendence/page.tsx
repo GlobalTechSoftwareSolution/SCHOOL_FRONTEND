@@ -37,7 +37,7 @@ export default function AttendanceByRole() {
   const [classes, setClasses] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // ui
   const [mode, setMode] = useState<
@@ -80,7 +80,7 @@ export default function AttendanceByRole() {
         setLoading(false);
       } catch (e) {
         console.error("❌ fetch error:", e);
-        setError(e);
+        setError(e instanceof Error ? e.message : String(e));
         setLoading(false);
       }
     };
@@ -203,7 +203,7 @@ export default function AttendanceByRole() {
     teachers: { label: "Teachers", icon: Users, color: "green" },
     principal: { label: "Principal", icon: Crown, color: "purple" },
     management: { label: "Management", icon: Shield, color: "orange" },
-    admin: { label: "Admin", color: "red" }
+    admin: { label: "Admin", icon: Settings, color: "red" }
   };
 
   if (loading) {

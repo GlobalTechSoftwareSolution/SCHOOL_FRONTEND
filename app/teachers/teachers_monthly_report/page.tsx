@@ -693,7 +693,7 @@ const TeacherMonthlyreport = () => {
                         outerRadius={100}
                         innerRadius={60}
                         paddingAngle={2}
-                        label={({ subject, percentage }) => `${subject}: ${percentage}%`}
+                        label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(1)}%`}
                       >
                         {gradesData.map((entry, i) => (
                           <Cell

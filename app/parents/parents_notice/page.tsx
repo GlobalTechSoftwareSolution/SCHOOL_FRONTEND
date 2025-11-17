@@ -20,8 +20,12 @@ export default function ParentNoticesPage() {
   // Fetch parent email from localStorage
   if (typeof window !== "undefined") {
     try {
-      const userData = JSON.parse(localStorage.getItem("userData"));
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const userDataStr = localStorage.getItem("userData");
+      const userInfoStr = localStorage.getItem("userInfo");
+      
+      const userData = userDataStr ? JSON.parse(userDataStr) : null;
+      const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+      
       parentEmail = userData?.email || userInfo?.email || null;
     } catch (e) {
       console.log("❌ LocalStorage error:", e);
@@ -49,7 +53,7 @@ export default function ParentNoticesPage() {
       const stuRes = await axios.get(`${API}/students/`);
       console.log("👦 Students API:", stuRes.data);
 
-      const myKids = stuRes.data.filter((s) =>
+      const myKids = stuRes.data.filter((s: any) =>
         normalizeEmail(s.parent) === normalizeEmail(parentEmail)
       );
 
@@ -71,7 +75,7 @@ export default function ParentNoticesPage() {
       const class_id = myKids[0].class_id;
 
       const classRes = await axios.get(`${API}/classes/`);
-      const info = classRes.data.find((c) => c.id === class_id);
+      const info = classRes.data.find((c: any) => c.id === class_id);
 
       setClassInfo(info);
       console.log("🏫 Class Info:", info);
@@ -88,7 +92,7 @@ export default function ParentNoticesPage() {
   // ======================================================
   // 2️⃣ Load Notices (all) - we'll filter per student when selected
   // ======================================================
-  const loadNotices = async (kids) => {
+  const loadNotices = async (kids: any) => {
     try {
       const noticeRes = await axios.get(`${API}/notices/`);
       console.log("📜 Notices API:", noticeRes.data);
@@ -108,12 +112,12 @@ export default function ParentNoticesPage() {
   // ======================================================
   // Filter notices by selected student
   // ======================================================
-  const handleStudentSelect = (student) => {
+  const handleStudentSelect = (student: any) => {
     setSelectedStudent(student);
     if (student) {
       const studentEmail = normalizeEmail(student.email);
       // Backend stores the target student email in `email`
-      const base = (notices || []).filter((n) => {
+      const base = (notices || []).filter((n: any) => {
         const targetEmail = normalizeEmail(n.email);
         return targetEmail && targetEmail === studentEmail;
       });
@@ -133,7 +137,7 @@ export default function ParentNoticesPage() {
   // ======================================================
   // Filter notices by category/priority
   // ======================================================
-  const filterNoticesByType = (type) => {
+  const filterNoticesByType = (type: string) => {
     setActiveTab(type);
     const base = selectedStudent ? studentBaseNotices : notices;
 
@@ -143,7 +147,7 @@ export default function ParentNoticesPage() {
     }
 
     if (type === "important") {
-      const importantNotices = base.filter(n =>
+      const importantNotices = base.filter((n: any) =>
         n.important === true ||
         n.title?.toLowerCase().includes("important") ||
         n.title?.toLowerCase().includes("urgent")
@@ -154,7 +158,7 @@ export default function ParentNoticesPage() {
     }
 
     if (type === "academic") {
-      const academicNotices = base.filter(n =>
+      const academicNotices = base.filter((n: any) =>
         n.category === "Academic" ||
         n.title?.toLowerCase().includes("exam") ||
         n.title?.toLowerCase().includes("result") ||
@@ -165,7 +169,7 @@ export default function ParentNoticesPage() {
     }
 
     if (type === "general") {
-      const generalNotices = base.filter(n =>
+      const generalNotices = base.filter((n: any) =>
         n.category === "General" ||
         (!n.category && n.priority !== "High")
       );
@@ -177,7 +181,7 @@ export default function ParentNoticesPage() {
   // ======================================================
   // Get notice priority badge
   // ======================================================
-  const getPriorityBadge = (notice) => {
+  const getPriorityBadge = (notice: any) => {
     if (notice.priority === "High" || notice.title?.toLowerCase().includes("urgent")) {
       return { label: "Urgent", class: "bg-red-100 text-red-800 border-red-200" };
     }
@@ -297,7 +301,7 @@ export default function ParentNoticesPage() {
                           { id: "important", label: "Important", icon: "⚠️" },
                           { id: "academic", label: "Academic", icon: "📚" },
                           { id: "general", label: "General", icon: "💬" }
-                        ].map((tab) => (
+                        ].map((tab: any) => (
                           <button
                             key={tab.id}
                             onClick={() => filterNoticesByType(tab.id)}
@@ -328,7 +332,7 @@ export default function ParentNoticesPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {filteredNotices.map((notice) => {
+                        {filteredNotices.map((notice: any) => {
                           const priorityBadge = getPriorityBadge(notice);
                           return (
                             <div
