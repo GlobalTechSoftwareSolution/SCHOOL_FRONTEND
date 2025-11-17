@@ -6,10 +6,13 @@ import DashboardLayout from "@/app/components/DashboardLayout";
 // Interfaces
 interface Attendance {
   id: number;
-  student: string;
+  student?: string;
+  student_name?: string;
   date: string;
-  status: "present" | "absent";
-  subject: string;
+  status: string;
+  subject_name?: string;
+  class_name?: string;
+  section?: string;
 }
 interface Assignment {
   id: number;
@@ -96,19 +99,19 @@ const StudentDashboard = () => {
         const token = localStorage.getItem("accessToken");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        // Attendance
-        const attendanceRes = await axios.get(`${API_BASE}attendance/`, { headers }).catch(err => {
-          console.warn("Attendance API failed:", err.message);
+        // Attendance (student specific)
+        const attendanceRes = await axios.get(`${API_BASE}student_attendance/`, { headers }).catch(err => {
+          console.warn("student_attendance API failed:", err.message);
           return { data: [] };
         });
         const attendanceData = Array.isArray(attendanceRes.data)
           ? attendanceRes.data
           : [attendanceRes.data];
-        const studentAttendance = attendanceData.filter(
-          (a: any) =>
-            a.student?.toLowerCase?.() === studentInfo.email?.toLowerCase() ||
-            a.student_id === studentInfo.student_id
-        );
+        const emailLower = studentInfo.email?.toLowerCase();
+        const studentAttendance = attendanceData.filter((record: any) => {
+          const recordEmail = (record.student || record.student_email || record.user_email)?.toLowerCase?.();
+          return recordEmail && recordEmail === emailLower;
+        });
         setAttendance(studentAttendance);
         // Marks
         const marksRes = await axios.get(`${API_BASE}grades/`, { headers }).catch(err => {
@@ -178,7 +181,7 @@ const StudentDashboard = () => {
   // Attendance calculations
   const totalDays = attendance.length;
   const presentDays = attendance.filter(
-    (a) => a.status.toLowerCase() === "present"
+    (a) => a.status?.toLowerCase?.() === "present"
   ).length;
   const absentDays = totalDays - presentDays;
   const attendancePercentage =

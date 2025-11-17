@@ -74,6 +74,10 @@ export default function ClassWiseAttendance() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState("students");
   const [adminEmail, setAdminEmail] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const t = new Date();
+    return t.toISOString().slice(0, 10); // YYYY-MM-DD
+  });
 
   // READ ADMIN EMAIL FROM LOCALSTORAGE
   useEffect(() => {
@@ -149,7 +153,7 @@ export default function ClassWiseAttendance() {
     loadData();
   }, []);
 
-  // MERGE STUDENTS + CLASS + ATTENDANCE WITH PROFILE PICTURES
+  // MERGE STUDENTS + CLASS + ATTENDANCE WITH PROFILE PICTURES (filtered by selectedDate)
   const getMergedAttendance = () => {
     console.log("🔄 Merging Students + Classes + Student Attendance (student_attendance)...");
 
@@ -177,18 +181,23 @@ export default function ClassWiseAttendance() {
           profile_picture: student?.profile_picture || null,
         };
       })
-      .filter((item): item is Exclude<typeof item, null> => item !== null);
+      .filter((item): item is Exclude<typeof item, null> => item !== null)
+      .filter((item) => {
+        // Ensure date is compared as YYYY-MM-DD
+        const d = String(item.date || "").split("T")[0];
+        return d === selectedDate;
+      });
 
     console.log("✅ Merged Attendance:", merged);
     return merged;
   };
 
-  // STUDENT FILTER
+  // STUDENT FILTER (by class + selectedDate via getMergedAttendance)
   const filteredStudentAttendance = selectedClassId
     ? getMergedAttendance().filter((i) => i.class_id === parseInt(selectedClassId as string))
     : [];
 
-  // TEACHER FILTER WITH PROFILE PICTURE
+  // TEACHER FILTER WITH PROFILE PICTURE (filtered by selectedDate)
   const teacherAttendance = attendance
     .map((a) => {
       const teacher = teachers.find((t) => t.email === a.user_email);
@@ -198,9 +207,10 @@ export default function ClassWiseAttendance() {
         profile_picture: teacher?.profile_picture || null,
       };
     })
-    .filter((a) => a.role?.toLowerCase() === "teacher");
+    .filter((a) => a.role?.toLowerCase() === "teacher")
+    .filter((a) => String(a.date || "").split("T")[0] === selectedDate);
 
-  // PRINCIPAL FILTER WITH PROFILE PICTURE
+  // PRINCIPAL FILTER WITH PROFILE PICTURE (filtered by selectedDate)
   const principalAttendance = attendance
     .map((a) => {
       return {
@@ -209,9 +219,10 @@ export default function ClassWiseAttendance() {
         profile_picture: principal?.profile_picture || null,
       };
     })
-    .filter((a) => a.role?.toLowerCase() === "principal");
+    .filter((a) => a.role?.toLowerCase() === "principal")
+    .filter((a) => String(a.date || "").split("T")[0] === selectedDate);
 
-  // ADMIN ATTENDANCE FILTER WITH PROFILE PICTURE
+  // ADMIN ATTENDANCE FILTER WITH PROFILE PICTURE (filtered by selectedDate)
   const adminAttendance = attendance
     .map((a) => {
       return {
@@ -220,7 +231,8 @@ export default function ClassWiseAttendance() {
         profile_picture: admin?.profile_picture || null,
       };
     })
-    .filter((a) => a.user_email === adminEmail);
+    .filter((a) => a.user_email === adminEmail)
+    .filter((a) => String(a.date || "").split("T")[0] === selectedDate);
 
   console.log("👨‍💼 Admin Attendance Records:", adminAttendance);
 
@@ -239,9 +251,20 @@ export default function ClassWiseAttendance() {
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Attendance Management</h1>
-            <p className="text-gray-600">View and manage attendance records for all users</p>
+          <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Attendance Management</h1>
+              <p className="text-gray-600">View and manage attendance records for all users</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Date</label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              />
+            </div>
           </div>
 
           {/* Mode Selection Cards */}

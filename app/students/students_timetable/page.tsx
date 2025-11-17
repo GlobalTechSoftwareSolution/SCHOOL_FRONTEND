@@ -21,18 +21,6 @@ interface Timetable {
   subject_color?: string;
 }
 
-interface Attendance {
-  id: number;
-  user_email?: string;
-  student_name: string;
-  date: string;
-  status: string;
-  remarks: string;
-  section?: string;
-  class_id?: number;
-  subject?: string;
-}
-
 interface Student {
   id: number;
   email: string;
@@ -46,50 +34,28 @@ interface Student {
 interface ClassInfo {
   id: number;
   class_name: string;
-  section: string;
+  sec: string;
   class_teacher_name?: string;
   class_teacher_email?: string;
 }
 
-interface AttendanceStats {
-  present: number;
-  absent: number;
-  late: number;
-  total: number;
-  percentage: number;
-  streak: number;
-  monthlyTrend: number;
-}
-
-type ViewMode = "calendar" | "timetable" | "attendance" | "analytics";
+type ViewMode = "calendar" | "timetable";
 
 const Student_Timetable = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
-  const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [filteredTimetable, setFilteredTimetable] = useState<Timetable[]>([]);
-  const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("calendar");
-  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats>({
-    present: 0,
-    absent: 0,
-    late: 0,
-    total: 0,
-    percentage: 0,
-    streak: 0,
-    monthlyTrend: 0
-  });
   const [currentWeek, setCurrentWeek] = useState<Date[]>([]);
   const [hoveredClass, setHoveredClass] = useState<string | null>(null);
 
   const STUDENT_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/students/";
   const CLASS_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/classes/";
   const TIMETABLE_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/timetable/";
-  const ATTENDANCE_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/";
 
   // Color palette for subjects
   const subjectColors = [
@@ -125,51 +91,6 @@ const Student_Timetable = () => {
       week.push(day);
     }
     return week;
-  }, []);
-
-  // Calculate attendance statistics
-  const calculateAttendanceStats = useCallback((attendanceData: Attendance[]) => {
-    const present = attendanceData.filter(a => a.status?.toLowerCase() === "present").length;
-    const absent = attendanceData.filter(a => a.status?.toLowerCase() === "absent").length;
-    const late = attendanceData.filter(a => a.status?.toLowerCase() === "late").length;
-    const total = attendanceData.length;
-    const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-
-    // Calculate current streak
-    let streak = 0;
-    const sortedDates = attendanceData
-      .filter(a => a.status?.toLowerCase() === "present")
-      .map(a => new Date(a.date))
-      .sort((a, b) => b.getTime() - a.getTime());
-
-    const today = new Date();
-    for (let i = 0; i < sortedDates.length; i++) {
-      const expectedDate = new Date(today);
-      expectedDate.setDate(today.getDate() - i);
-      if (sortedDates[i]?.toDateString() === expectedDate.toDateString()) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-
-    // Calculate monthly trend (simplified)
-    const currentMonth = new Date().getMonth();
-    const lastMonthAttendance = attendanceData.filter(a => {
-      const date = new Date(a.date);
-      return date.getMonth() === (currentMonth - 1 + 12) % 12;
-    }).filter(a => a.status?.toLowerCase() === "present").length;
-
-    const currentMonthAttendance = attendanceData.filter(a => {
-      const date = new Date(a.date);
-      return date.getMonth() === currentMonth;
-    }).filter(a => a.status?.toLowerCase() === "present").length;
-
-    const monthlyTrend = lastMonthAttendance > 0 
-      ? Math.round(((currentMonthAttendance - lastMonthAttendance) / lastMonthAttendance) * 100)
-      : 0;
-
-    return { present, absent, late, total, percentage, streak, monthlyTrend };
   }, []);
 
   // Fetch student and class information
@@ -238,8 +159,8 @@ const Student_Timetable = () => {
         });
 
         // Add colors to subjects
-        const subjects = [...new Set(sortedTimetable.map(t => t.subject_name))];
-        const timetableWithColors = sortedTimetable.map((item, index) => ({
+        const subjects = [...new Set(sortedTimetable.map((t: Timetable) => t.subject_name))];
+        const timetableWithColors = sortedTimetable.map((item: Timetable, index: number) => ({
           ...item,
           subject_color: subjectColors[index % subjectColors.length]
         }));
@@ -254,41 +175,6 @@ const Student_Timetable = () => {
 
     fetchTimetable();
   }, [student]);
-
-  // Fetch attendance data
-  useEffect(() => {
-    const fetchAttendance = async () => {
-      if (!student?.email) return;
-      
-      try {
-        const res = await axios.get(ATTENDANCE_API);
-        const allAttendance = res.data || [];
-
-        const filtered = allAttendance.filter(
-          (a: any) =>
-            a.user_email?.toLowerCase() === student.email.toLowerCase() ||
-            a.student_email?.toLowerCase() === student.email.toLowerCase()
-        );
-
-        setAttendance(filtered);
-        setAttendanceStats(calculateAttendanceStats(filtered));
-        console.log("📋 Loaded", filtered.length, "attendance records");
-      } catch (err) {
-        console.error("❌ Failed to fetch attendance:", err);
-        setError("Unable to load attendance data");
-      }
-    };
-
-    fetchAttendance();
-  }, [student, calculateAttendanceStats]);
-
-  // ✅ Utility to fix timezone issue (use local date instead of UTC)
-const getLocalDateString = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 // Initialize current week
 useEffect(() => {
@@ -306,45 +192,8 @@ const handleDateClick = useCallback(
       (t) => t.day_of_week.toLowerCase() === dayName.toLowerCase()
     );
     setFilteredTimetable(filtered);
-
-    // ✅ Fix: use local date string (no UTC offset issue)
-    const dateStr = getLocalDateString(date);
-    const matchedAttendance = attendance.find((a) => a.date === dateStr);
-    setSelectedAttendance(matchedAttendance || null);
-
-    console.log("📅 Selected Date (Local):", dateStr);
-    console.log("🔍 Matched Attendance:", matchedAttendance);
   },
-  [timetable, attendance]
-);
-
-// ✅ Enhanced calendar tile content (timezone-safe)
-const tileContent = useCallback(
-  ({ date, view }: { date: Date; view: string }) => {
-    if (view !== "month") return null;
-
-    const dateStr = getLocalDateString(date);
-    const att = attendance.find((a) => a.date === dateStr);
-
-    if (att) {
-      const statusColor =
-        {
-          present: "bg-gradient-to-r from-green-400 to-green-600",
-          absent: "bg-gradient-to-r from-red-400 to-red-600",
-          late: "bg-gradient-to-r from-yellow-400 to-yellow-600",
-        }[att.status.toLowerCase()] || "bg-gray-400";
-
-      return (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className={`w-3 h-3 rounded-full mx-auto mt-1 ${statusColor} shadow-sm`}
-        />
-      );
-    }
-    return null;
-  },
-  [attendance]
+  [timetable]
 );
 
 // Format time for display
@@ -390,6 +239,10 @@ const formatTime = (timeString: string) => {
   };
 
   const currentPeriod = getCurrentPeriod();
+  const viewTabs: Array<{ id: ViewMode; label: string; icon: string }> = [
+    { id: "calendar", label: "🌌 Calendar", icon: "📅" },
+    { id: "timetable", label: "🕐 Visual Schedule", icon: "🕒" },
+  ];
 
   if (loading) {
     return (
@@ -458,7 +311,7 @@ const formatTime = (timeString: string) => {
               {classInfo && (
                 <div className="space-y-2">
                   <p className="text-xl text-gray-700 font-medium">
-                    {classInfo.class_name} • Section {classInfo.section}
+                    {classInfo.class_name} • {classInfo.sec}  Section 
                   </p>
                   {classInfo.class_teacher_name && (
                     <p className="text-blue-600 font-semibold">
@@ -497,11 +350,7 @@ const formatTime = (timeString: string) => {
             className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 mb-8"
           >
             <div className="flex overflow-x-auto">
-              {[
-                { id: "calendar", label: "🌌 Calendar", icon: "📅" },
-                { id: "timetable", label: "🕐 Visual Schedule", icon: "🕒" },
-                { id: "analytics", label: "📈 Insights", icon: "🔍" }
-              ].map((tab) => (
+              {viewTabs.map((tab) => (
                 <motion.button
                   key={tab.id}
                   whileHover={{ scale: 1.02 }}
@@ -540,58 +389,12 @@ const formatTime = (timeString: string) => {
                     <Calendar
                       onClickDay={handleDateClick}
                       value={selectedDate}
-                      tileContent={tileContent}
                       className="rounded-2xl border-0 w-full react-calendar-advanced shadow-inner bg-white/50"
                     />
                   </div>
 
                   {/* Side Panel */}
                   <div className="space-y-6">
-                    {/* Stats Overview */}
-                    <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        📊 Orbit Statistics
-                      </h3>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Mission Success</span>
-                          <span className="font-bold text-green-500 text-lg">
-                            {attendanceStats.present}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Mission Failed</span>
-                          <span className="font-bold text-red-500 text-lg">
-                            {attendanceStats.absent}
-                          </span>
-                        </div>
-                        <div className="pt-4 border-t border-gray-200">
-                          <div className="flex justify-between items-center mb-3">
-                            <span className="text-gray-700 font-semibold">Success Rate</span>
-                            <span className="font-bold text-blue-600 text-xl">
-                              {attendanceStats.percentage}%
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-3">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${attendanceStats.percentage}%` }}
-                              transition={{ duration: 1, ease: "easeOut" }}
-                              className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full shadow-lg"
-                            />
-                          </div>
-                        </div>
-                        {attendanceStats.streak > 0 && (
-                          <div className="flex justify-between items-center pt-3">
-                            <span className="text-gray-600">Consecutive Success</span>
-                            <span className="font-bold text-orange-500 flex items-center gap-1">
-                              🔥 {attendanceStats.streak}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
                     {/* Selected Date Details */}
                     <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-6">
                       <h3 className="text-xl font-bold text-gray-800 mb-4">
@@ -610,7 +413,7 @@ const formatTime = (timeString: string) => {
                         </h4>
                         {filteredTimetable.length > 0 ? (
                           <div className="space-y-3">
-                            {filteredTimetable.map((item, index) => (
+                            {filteredTimetable.map((item: Timetable, index: number) => (
                               <motion.div
                                 key={item.id}
                                 initial={{ opacity: 0, x: -20 }}
@@ -637,34 +440,6 @@ const formatTime = (timeString: string) => {
                         )}
                       </div>
 
-                      {/* Attendance */}
-                      {selectedAttendance && (
-                        <div>
-                          <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                            ✅ Mission Report
-                          </h4>
-                          <motion.div
-                            initial={{ scale: 0.9 }}
-                            animate={{ scale: 1 }}
-                            className={`p-4 rounded-xl border shadow-sm ${
-                              selectedAttendance.status.toLowerCase() === 'present' 
-                                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
-                                : selectedAttendance.status.toLowerCase() === 'late'
-                                ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200'
-                                : 'bg-gradient-to-r from-red-50 to-pink-50 border-red-200'
-                            }`}
-                          >
-                            <div className="font-bold text-lg capitalize">
-                              {selectedAttendance.status}
-                            </div>
-                            {selectedAttendance.remarks && (
-                              <div className="text-sm text-gray-600 mt-2 italic">
-                                " {selectedAttendance.remarks} "
-                              </div>
-                            )}
-                          </motion.div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -685,7 +460,7 @@ const formatTime = (timeString: string) => {
 
                   {Object.keys(timetableByDay).length > 0 ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {Object.entries(timetableByDay).map(([day, classes]) => (
+                      {Object.entries(timetableByDay).map(([day, classes]: [string, Timetable[]]) => (
                         <motion.div
                           key={day}
                           initial={{ opacity: 0, scale: 0.9 }}
@@ -697,7 +472,7 @@ const formatTime = (timeString: string) => {
                             <h3 className="font-bold text-lg text-center">{day}</h3>
                           </div>
                           <div className="p-4 space-y-3">
-                            {classes.map((classItem) => (
+                            {classes.map((classItem: Timetable) => (
                               <motion.div
                                 key={classItem.id}
                                 whileHover={{ scale: 1.05 }}
@@ -740,157 +515,6 @@ const formatTime = (timeString: string) => {
                 </div>
               )}
 
-              {/* Analytics View */}
-              {viewMode === "analytics" && (
-                <div className="grid lg:grid-cols-4 gap-6">
-                  {/* Stats Overview */}
-                  <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {[
-                      { label: "Present", value: attendanceStats.present, color: "from-green-400 to-emerald-500", icon: "✅" },
-                      { label: "Absent", value: attendanceStats.absent, color: "from-red-400 to-pink-500", icon: "❌" },
-                      { label: "Late", value: attendanceStats.late, color: "from-yellow-400 to-orange-500", icon: "⏰" },
-                      { label: "Success Rate", value: `${attendanceStats.percentage}%`, color: "from-blue-400 to-purple-500", icon: "📈" }
-                    ].map((stat, index) => (
-                      <motion.div
-                        key={stat.label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.05, y: -5 }}
-                        className={`bg-gradient-to-br ${stat.color} text-white rounded-2xl p-6 shadow-xl`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-2xl font-bold">{stat.value}</p>
-                            <p className="text-blue-100 text-sm font-medium">{stat.label}</p>
-                          </div>
-                          <div className="text-2xl">{stat.icon}</div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {/* Detailed Analytics */}
-                  <div className="lg:col-span-4 grid lg:grid-cols-2 gap-6">
-                    {/* Attendance History */}
-                    <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        📋 Mission Log
-                      </h3>
-                      {attendance.length > 0 ? (
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
-                          {attendance
-                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                            .map((record, index) => (
-                              <motion.div
-                                key={record.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-white transition-colors group"
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className={`w-3 h-3 rounded-full ${
-                                    record.status.toLowerCase() === 'present' ? 'bg-green-400' :
-                                    record.status.toLowerCase() === 'late' ? 'bg-yellow-400' : 'bg-red-400'
-                                  }`} />
-                                  <div>
-                                    <div className="font-semibold text-gray-900">
-                                      {new Date(record.date).toLocaleDateString()}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                      {record.subject || 'General Mission'}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${
-                                    record.status.toLowerCase() === 'present' 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : record.status.toLowerCase() === 'late'
-                                      ? 'bg-yellow-100 text-yellow-800'
-                                      : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {record.status}
-                                  </span>
-                                </div>
-                              </motion.div>
-                            ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-12">
-                          <div className="text-6xl mb-4">📊</div>
-                          <p className="text-gray-600">No mission data available yet</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Performance Metrics */}
-                    <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        🎯 Performance Metrics
-                      </h3>
-                      <div className="space-y-6">
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-gray-700 font-medium">Current Streak</span>
-                            <span className="text-2xl font-bold text-orange-500">
-                              {attendanceStats.streak} days
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-gradient-to-r from-orange-400 to-red-500 h-2 rounded-full"
-                              style={{ width: `${Math.min(attendanceStats.streak * 10, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-gray-700 font-medium">Monthly Trend</span>
-                            <span className={`text-lg font-bold ${
-                              attendanceStats.monthlyTrend >= 0 ? 'text-green-500' : 'text-red-500'
-                            }`}>
-                              {attendanceStats.monthlyTrend >= 0 ? '+' : ''}{attendanceStats.monthlyTrend}%
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Compared to last month
-                          </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-gray-200">
-                          <h4 className="font-semibold text-gray-800 mb-3">Quick Stats</h4>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div className="text-center p-3 bg-blue-50 rounded-lg">
-                              <div className="font-bold text-blue-600">{attendanceStats.present}</div>
-                              <div className="text-gray-600">Present</div>
-                            </div>
-                            <div className="text-center p-3 bg-green-50 rounded-lg">
-                              <div className="font-bold text-green-600">{attendanceStats.percentage}%</div>
-                              <div className="text-gray-600">Rate</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Insights View */}
-              {viewMode === "analytics" && (
-                <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 mt-8">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                    <span className="text-3xl">🔍</span>
-                    Deep Space Insights
-                  </h2>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Add more insightful components here */}
-                  </div>
-                </div>
-              )}
             </motion.div>
           </AnimatePresence>
         </div>

@@ -382,7 +382,15 @@ const fetchTeacherDetails = async (teacher: any) => {
           );
           
           if (hasTeacherData) {
-            attendance = data;
+            // Filter to only this teacher's records (email + role)
+            attendance = data.filter((record: any) => {
+              const roleMatch = String(record.role || "").toLowerCase() === "teacher";
+              const emailMatch =
+                record.teacher_email === teacher.email ||
+                record.email === teacher.email ||
+                record.user_email === teacher.email;
+              return roleMatch && emailMatch;
+            });
             console.log("✅ Found teacher attendance data from:", endpoint);
             break;
           } else {
@@ -444,7 +452,10 @@ const refreshAttendanceData = async () => {
           );
           
           if (hasTeacherData) {
-            attendance = data;
+            // Filter to only teacher role
+            attendance = data.filter((record: any) =>
+              String(record.role || "").toLowerCase() === "teacher"
+            );
             break;
           }
         }
@@ -512,35 +523,36 @@ const refreshStudentAttendanceData = async () => {
   try {
     console.log("🔄 Refreshing student attendance data for:", studentAttendanceMonth);
     
-    // Try attendance endpoints with new month
-    try {
-      console.log("🔍 Trying primary attendance endpoint:", `${API_BASE}/attendance/?student_email=${selectedStudent.email}&year=${year}&month=${month}`);
-      const attendanceResponse = await axios.get(`${API_BASE}/attendance/?student_email=${selectedStudent.email}&year=${year}&month=${month}`);
-      const rawAttendance = attendanceResponse.data || [];
-      
-      // Filter client-side
-      attendance = rawAttendance.filter((record: any) => 
+    // Fetch all student_attendance records, then filter by email + month/year client-side
+    console.log("🔍 Fetching all student_attendance records for client-side filtering");
+    const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
+    let rawAttendance = attendanceResponse.data || [];
+
+    if (!Array.isArray(rawAttendance)) {
+      rawAttendance = Object.values(rawAttendance);
+    }
+
+    console.log("📊 Raw Student Attendance:", rawAttendance);
+    console.log("📊 Attendance length:", rawAttendance.length);
+
+    attendance = rawAttendance.filter((record: any) => {
+      const emailMatch =
+        record.student === selectedStudent.email ||
         record.student_email === selectedStudent.email ||
         record.email === selectedStudent.email ||
-        record.student_id === selectedStudent.email
-      );
-      
-      console.log("✅ Updated student attendance:", attendance);
-    } catch (err: any) {
-      console.log("❌ Primary attendance failed, trying alternatives");
-      try {
-        const attendanceResponse = await axios.get(`${API_BASE}/attendance/?student_email=${selectedStudent.email}`);
-        const rawAttendance = attendanceResponse.data || [];
-        
-        attendance = rawAttendance.filter((record: any) => 
-          record.student_email === selectedStudent.email ||
-          record.email === selectedStudent.email ||
-          record.student_id === selectedStudent.email
-        );
-      } catch (err2: any) {
-        console.log("❌ All attendance endpoints failed");
+        record.student_id === selectedStudent.email;
+
+      const recordDate = record.date || record.attendance_date;
+      let monthMatch = true;
+      if (recordDate && typeof recordDate === "string") {
+        const recMonth = recordDate.split("T")[0]?.slice(0, 7); // YYYY-MM
+        monthMatch = recMonth === studentAttendanceMonth;
       }
-    }
+
+      return emailMatch && monthMatch;
+    });
+
+    console.log("✅ Updated student attendance (filtered by email + month):", attendance);
 
     // Update state with new attendance data
     setStudentExtra(prev => ({
@@ -862,139 +874,40 @@ const fetchClasses = async (subjectId: number) => {
         }
       }
 
-      // Try attendance endpoints
+      // Fetch attendance from student_attendance and filter by email + selected month
       try {
-        console.log("🔍 Trying primary attendance endpoint:", `${API_BASE}/attendance/?student_email=${student.email}&year=${year}&month=${month}`);
-        console.log("👤 Student email being searched:", student.email);
-        console.log("📅 Year/Month being searched:", year, month);
-        
-        const attendanceResponse = await axios.get(`${API_BASE}/attendance/`);
-        const rawAttendance = attendanceResponse.data || [];
-        console.log("📊 Raw attendance data from primary endpoint:");
-        console.log("  - Type:", typeof rawAttendance);
-        console.log("  - Length:", rawAttendance.length);
-        console.log("  - Data:", rawAttendance);
-        
-        if (rawAttendance.length > 0) {
-          console.log("🔍 Sample attendance record structure:");
-          console.log("  - First record keys:", Object.keys(rawAttendance[0] || {}));
-          console.log("  - First record:", rawAttendance[0]);
+        console.log("🔍 Fetching student_attendance for:", student.email, "month:", selectedMonth);
+
+        const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
+        let rawAttendance = attendanceResponse.data || [];
+
+        if (!Array.isArray(rawAttendance)) {
+          rawAttendance = Object.values(rawAttendance);
         }
-        
-        // Always filter client-side to ensure we only get student's attendance
+
+        console.log("📊 Raw student_attendance data:", rawAttendance.length);
+
         attendance = rawAttendance.filter((record: any) => {
-          console.log("🔍 Checking attendance record:", record);
-          
-          // Extract clean email from student_email field (remove "(Student) - Approved" etc.)
-          const cleanStudentEmail = record.student_email ? record.student_email.split(' (')[0] : null;
-          const cleanEmail = record.email ? record.email.split(' (')[0] : null;
-          
-          console.log("🎯 Matching check:");
-          console.log("  - Original student_email:", record.student_email);
-          console.log("  - Clean student_email:", cleanStudentEmail);
-          console.log("  - Looking for:", student.email);
-          
-          const matches = cleanStudentEmail === student.email ||
-                         record.student_email === student.email ||
-                         cleanEmail === student.email ||
-                         record.email === student.email ||
-                         record.student_id === student.email ||
-                         record.studentid === student.email ||
-                         record.user_email === student.email;
-          
-          console.log("  - cleanStudentEmail === student.email:", cleanStudentEmail, "==", student.email, ":", cleanStudentEmail === student.email);
-          console.log("  - record.student_email === student.email:", record.student_email, "==", student.email, ":", record.student_email === student.email);
-          console.log("  - Final match result:", matches);
-          
-          if (matches) {
-            console.log("✅ Matched attendance record:", record);
+          const emailMatch =
+            record.student === student.email ||
+            record.student_email === student.email ||
+            record.email === student.email ||
+            record.student_id === student.email;
+
+          const recordDate = record.date || record.attendance_date;
+          let monthMatch = true;
+          if (recordDate && typeof recordDate === "string") {
+            const recMonth = recordDate.split("T")[0]?.slice(0, 7); // YYYY-MM
+            monthMatch = recMonth === selectedMonth;
           }
-          return matches;
+
+          return emailMatch && monthMatch;
         });
-        
-        console.log("🎯 Filtered attendance for student", student.email, ":", attendance);
-        console.log("📈 Attendance summary:");
-        console.log("  - Total records:", attendance.length);
-        if (attendance.length > 0) {
-          const present = attendance.filter((a: any) => a.status === "Present").length;
-          const absent = attendance.filter((a: any) => a.status === "Absent").length;
-          const late = attendance.filter((a: any) => a.status === "Late").length;
-          console.log("  - Present:", present);
-          console.log("  - Absent:", absent);
-          console.log("  - Late:", late);
-        }
-        
+
+        console.log("🎯 Filtered student_attendance for", student.email, ":", attendance.length);
+
       } catch (err: any) {
-        console.log("❌ Attendance API failed, trying alternatives:", err?.response?.status);
-        console.log("❌ Error details:", err);
-        
-        try {
-          console.log("🔍 Trying alternative attendance endpoint:", `${API_BASE}/attendance/?student_email=${student.email}`);
-          const attendanceResponse = await axios.get(`${API_BASE}/attendance/?student_email=${student.email}`);
-          const rawAttendance = attendanceResponse.data || [];
-          console.log("📊 Raw attendance data from alternative endpoint:", rawAttendance);
-          
-          // Filter client-side with clean email extraction
-          attendance = rawAttendance.filter((record: any) => {
-            const cleanStudentEmail = record.student_email ? record.student_email.split(' (')[0] : null;
-            return cleanStudentEmail === student.email ||
-                   record.student_email === student.email ||
-                   record.email === student.email ||
-                   record.student_id === student.email;
-          });
-          
-          console.log("🎯 Filtered attendance from alternative:", attendance);
-          
-        } catch (err2: any) {
-          console.log("❌ Alternative attendance API also failed");
-          // Try fetching all attendance and filter client-side
-          try {
-            console.log("🔍 Trying all attendance endpoint for client-side filtering");
-            const allAttendanceResponse = await axios.get(`${API_BASE}/attendance/`);
-            const allAttendance = allAttendanceResponse.data || [];
-            console.log("📊 Raw attendance data from all endpoint:");
-            console.log("  - Total records in DB:", allAttendance.length);
-            console.log("  - Sample records:", allAttendance.slice(0, 3));
-            console.log("👤 Looking for student email:", student.email);
-            
-            // Filter by student_email with detailed logging and clean email extraction
-            const filteredAttendance = allAttendance.filter((record: any) => {
-              console.log("🔍 Checking record:", record);
-              const cleanStudentEmail = record.student_email ? record.student_email.split(' (')[0] : null;
-              
-              const matches = cleanStudentEmail === student.email ||
-                             record.student_email === student.email ||
-                             record.email === student.email ||
-                             record.student_id === student.email;
-              
-              if (matches) {
-                console.log("✅ Found matching attendance record:", record);
-              }
-              return matches;
-            });
-            
-            if (filteredAttendance.length > 0) {
-              attendance = filteredAttendance;
-              console.log("✅ Found attendance via client-side filtering:", filteredAttendance);
-            } else {
-              console.log("⚠️ No attendance found for student:", student.email);
-              // Show sample of available attendance for debugging
-              console.log("📝 Sample available attendance (first 3):", allAttendance.slice(0, 3));
-              console.log("🔍 Available student emails in sample:");
-              allAttendance.slice(0, 3).forEach((record: any, index: number) => {
-                const cleanStudentEmail = record.student_email ? record.student_email.split(' (')[0] : null;
-                console.log(`  - Record ${index + 1}:`, {
-                  original: record.student_email,
-                  cleaned: cleanStudentEmail,
-                  email: record.email,
-                  student_id: record.student_id
-                });
-              });
-            }
-          } catch (err3: any) {
-            console.log("❌ All attendance endpoint also failed:", err3?.response?.status);
-          }
-        }
+        console.log("❌ student_attendance API failed:", err?.response?.status);
       }
 
       console.log("📊 Final Student Data:");
@@ -1069,34 +982,55 @@ const fetchClasses = async (subjectId: number) => {
         }
       }
 
-      // Try attendance endpoints
+      // Try attendance endpoints (role-based principal from /attendance/)
       try {
-        console.log("🔍 Trying principal attendance endpoint:", `${API_BASE}/attendance/?principal_email=${principal.email}&year=${year}&month=${month}`);
+        console.log("🔍 Trying principal attendance (role-based) from /attendance/ for:", principal.email);
         const attendanceResponse = await axios.get(`${API_BASE}/attendance/`);
         const rawAttendance = attendanceResponse.data || [];
         console.log("📊 Raw principal attendance data:", rawAttendance);
         
-        // Filter client-side to ensure we only get principal's attendance
+        // Filter by email + role = Principal
         attendance = rawAttendance.filter((record: any) => {
-          const matches = record.principal_email === principal.email ||
-                         record.email === principal.email ||
-                         record.staff_email === principal.email;
-          return matches;
+          const recRole = String(record.role || "").trim().toLowerCase();
+          const roleMatch = recRole === "principal";
+
+          const recEmail = String(principal.email || "").toLowerCase();
+          const emailMatch = [
+            record.principal_email,
+            record.email,
+            record.staff_email,
+            record.user_email,
+          ]
+            .filter(Boolean)
+            .some((val: any) => String(val).toLowerCase() === recEmail);
+
+          return roleMatch && emailMatch;
         });
         
         console.log("🎯 Filtered attendance for principal", principal.email, ":", attendance);
         
       } catch (err: any) {
-        console.log("❌ Principal attendance API failed, trying alternatives:", err?.response?.status);
+        console.log("❌ Principal attendance API failed, trying email-filtered endpoint:", err?.response?.status);
         try {
           const attendanceResponse = await axios.get(`${API_BASE}/attendance/?principal_email=${principal.email}`);
           const rawAttendance = attendanceResponse.data || [];
           
-          attendance = rawAttendance.filter((record: any) => 
-            record.principal_email === principal.email ||
-            record.email === principal.email ||
-            record.staff_email === principal.email
-          );
+          attendance = rawAttendance.filter((record: any) => {
+            const recRole = String(record.role || "").trim().toLowerCase();
+            const roleMatch = recRole === "principal";
+
+            const recEmail = String(principal.email || "").toLowerCase();
+            const emailMatch = [
+              record.principal_email,
+              record.email,
+              record.staff_email,
+              record.user_email,
+            ]
+              .filter(Boolean)
+              .some((val: any) => String(val).toLowerCase() === recEmail);
+
+            return roleMatch && emailMatch;
+          });
           
         } catch (err2: any) {
           console.log("❌ Alternative principal attendance API also failed");

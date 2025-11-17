@@ -125,14 +125,20 @@ const StudentFeesPage = () => {
         const structures = await fetchFeeStructures(studentData.class_name, studentData.section);
         const feesRes = await axios.get(FEES_API);
 
-        const studentName = studentData.fullname || studentData.name;
+        const normalizedEmail = (studentData.email || "").toLowerCase().trim();
+        const normalizedName = (studentData.fullname || studentData.name || "").toLowerCase().trim();
 
         const filteredFees = feesRes.data
-          .filter((f: FeeDetails) =>
-            f.student_name?.toLowerCase().trim() === studentName?.toLowerCase().trim()
-          )
+          .filter((f: FeeDetails) => {
+            const feeEmail = (f.student || "").toLowerCase().trim();
+            const feeName = (f.student_name || "").toLowerCase().trim();
+            if (feeEmail && normalizedEmail) {
+              return feeEmail === normalizedEmail;
+            }
+            return feeName === normalizedName;
+          })
           .map((f: FeeDetails) => {
-            const matchedStructure = structures.find((fs) => fs.id === f.fee_structure);
+            const matchedStructure = structures.find((fs: FeeStructure) => fs.id === f.fee_structure);
             const total = matchedStructure ? parseFloat(matchedStructure.amount || "0") : 0;
             const paid = parseFloat(f.amount_paid || "0");
             const remaining = Math.max(total - paid, 0).toFixed(2);
@@ -406,13 +412,22 @@ const StudentFeesPage = () => {
   );
 };
 
+type SummaryCardColor = "green" | "red" | "blue" | "orange";
+
+interface SummaryCardProps {
+  title: string;
+  value: string | number;
+  color: SummaryCardColor;
+  icon: React.ReactNode;
+}
+
 // ✅ Enhanced Summary Card Component
-const SummaryCard = ({ title, value, color, icon }: any) => {
-  const colorClasses = {
+const SummaryCard = ({ title, value, color, icon }: SummaryCardProps) => {
+  const colorClasses: Record<SummaryCardColor, string> = {
     green: "from-emerald-500 to-green-500",
     red: "from-rose-500 to-red-500",
     blue: "from-blue-500 to-cyan-500",
-    orange: "from-amber-500 to-orange-500"
+    orange: "from-amber-500 to-orange-500",
   };
 
   return (

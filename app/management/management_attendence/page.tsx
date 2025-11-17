@@ -50,22 +50,30 @@ export default function AttendanceByRole() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    console.log("🔄 AttendanceByRole: starting fetch for attendance, students, classes");
+    console.log("🔄 AttendanceByRole: starting fetch for student attendance, students, classes");
     const load = async () => {
       try {
         const [attRes, stuRes, teaRes, clsRes] = await Promise.all([
-          axios.get(`${API}/attendance/`),
+          axios.get(`${API}/student_attendance/`),
           axios.get(`${API}/students/`),
           axios.get(`${API}/teachers/`),
           axios.get(`${API}/classes/`),
         ]);
 
-        console.log("📅 attendance count:", attRes.data.length);
+        const normalizedAttendance = (attRes.data || []).map((item: any) => ({
+          ...item,
+          // ensure fields used by the existing UI are present
+          role: "student",
+          user_email: item.student || item.student_email || item.email || "",
+          user_name: item.student_name || item.user_name || "",
+        }));
+
+        console.log("📅 student attendance count:", normalizedAttendance.length);
         console.log("🎓 students count:", stuRes.data.length);
         console.log("👩‍🏫 teachers count:", teaRes.data.length);
         console.log("🏫 classes count:", clsRes.data.length);
 
-        setAttendance(attRes.data || []);
+        setAttendance(normalizedAttendance);
         setStudents(stuRes.data || []);
         setTeachers(teaRes.data || []);
         setClasses(clsRes.data || []);

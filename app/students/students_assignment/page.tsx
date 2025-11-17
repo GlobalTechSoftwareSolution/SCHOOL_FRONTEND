@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { 
@@ -377,7 +377,8 @@ const AssignmentCard: React.FC<{
   assignment: Assignment;
   student: Student | null;
   submitted?: boolean;
-}> = ({ assignment, student, submitted }) => {
+  onSubmitted: () => Promise<void>;
+}> = ({ assignment, student, submitted, onSubmitted }) => {
   const [open, setOpen] = useState(false);
   const status = AssignmentUtils.getStatus(assignment.due_date, submitted);
   const StatusIcon = status.icon;
@@ -473,7 +474,7 @@ const AssignmentCard: React.FC<{
         onClose={() => setOpen(false)}
         assignment={assignment}
         student={student}
-        onSuccess={() => window.location.reload()}
+        onSuccess={onSubmitted}
       />
     </>
   );
@@ -504,30 +505,46 @@ const StudentAssignmentsPage = () => {
   };
 
   const fetchSubmittedAssignments = async (email: string) => {
-    const res = await axios.get(`${API_BASE}/submitted_assignments/?student=${email}`);
-    return res.data;
+    const res = await axios.get(`${API_BASE}/submitted_assignments/`).catch((err) => {
+      console.warn("submitted_assignments API failed:", err.message);
+      return { data: [] };
+    });
+
+    const data: SubmittedAssignment[] = Array.isArray(res.data) ? res.data : [res.data];
+    const filtered = data.filter(
+      (record) => record?.student?.toLowerCase?.() === email.toLowerCase()
+    );
+    console.log("📥 Submitted assignments fetched:", filtered.length);
+    return filtered;
   };
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const studentData = await fetchStudent();
-        setStudent(studentData);
-        const [assignList, submittedList] = await Promise.all([
-          fetchAssignments(studentData.class_id),
-          fetchSubmittedAssignments(studentData.email),
-        ]);
-        setAssignments(assignList);
-        setSubmitted(submittedList);
-      } catch (err) {
-        console.error("❌ Load error:", err);
-        setPopup({ message: "Failed to load assignments. Please try again.", type: "error" });
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const studentData = await fetchStudent();
+      setStudent(studentData);
+      const [assignList, submittedList] = await Promise.all([
+        fetchAssignments(studentData.class_id),
+        fetchSubmittedAssignments(studentData.email),
+      ]);
+      setAssignments(assignList);
+      setSubmitted(submittedList);
+    } catch (err) {
+      console.error("❌ Load error:", err);
+      setPopup({ message: "Failed to load assignments. Please try again.", type: "error" });
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleSubmissionSuccess = useCallback(async () => {
+    await loadData();
+    setPopup({ message: "Assignment submitted successfully!", type: "success" });
+  }, [loadData]);
 
   const isSubmitted = (assignmentId: number) =>
     submitted.some((s) => s.assignment === assignmentId);
@@ -774,6 +791,7 @@ const StudentAssignmentsPage = () => {
                     assignment={assignment}
                     student={student}
                     submitted={isSubmitted(assignment.id)}
+                    onSubmitted={handleSubmissionSuccess}
                   />
                 ))}
               </div>
