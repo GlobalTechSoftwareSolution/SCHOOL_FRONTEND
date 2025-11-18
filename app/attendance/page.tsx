@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import axios from "axios";
 
 export default function AttendanceScanner() {
-  const videoRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [message, setMessage] = useState("");
 
   const API_URL =
@@ -33,6 +33,13 @@ export default function AttendanceScanner() {
       canvas.width = 400;
       canvas.height = 400;
       const ctx = canvas.getContext("2d");
+
+      if (!video || !ctx) {
+        console.error("❌ Unable to capture face: video or context not available");
+        resolve(null);
+        return;
+      }
+
       ctx.drawImage(video, 0, 0, 400, 400);
 
       canvas.toBlob((blob) => {
@@ -43,13 +50,16 @@ export default function AttendanceScanner() {
   };
 
   // Send Attendance
-  const sendAttendance = async (faceBlob, coords) => {
+  const sendAttendance = async (
+    faceBlob: Blob,
+    coords: { latitude: number; longitude: number }
+  ) => {
     console.log("📡 Sending attendance...");
 
     const formData = new FormData();
     formData.append("face_image", faceBlob); // ✔ correct field name
-    formData.append("latitude", coords.latitude);
-    formData.append("longitude", coords.longitude);
+    formData.append("latitude", coords.latitude.toString());
+    formData.append("longitude", coords.longitude.toString());
 
     console.log("📤 Sending FACE BLOB");
 
@@ -73,8 +83,19 @@ export default function AttendanceScanner() {
     console.log("▶ Starting face scan...");
 
     try {
-      const coords = await getLocation();
-      const faceBlob = await captureFace();
+      const coords = (await getLocation()) as {
+        latitude: number;
+        longitude: number;
+      };
+
+      const faceBlob = (await captureFace()) as Blob | null;
+
+      if (!faceBlob) {
+        console.error("❌ No face image captured");
+        setMessage("Unable to capture face. Please try again.");
+        return;
+      }
+
       const result = await sendAttendance(faceBlob, coords);
 
       console.log("🔍 FACE MATCH RESULT:", result);
