@@ -130,23 +130,23 @@ const AllNotice = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-3 sm:py-4 lg:py-6 px-3 sm:px-4 lg:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Notice Board</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+        <div className="text-center mb-6 sm:mb-8 lg:mb-10">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">Notice Board</h1>
+          <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-3xl mx-auto px-3 sm:px-4">
             Stay informed with the latest announcements, updates, and important information
           </p>
         </div>
 
         {/* Controls Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+        <div className="bg-white rounded-xl shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start lg:items-center justify-between">
             {/* Search Box */}
             <div className="relative flex-1 w-full lg:max-w-md">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -155,15 +155,15 @@ const AllNotice = () => {
                 placeholder="Search notices by title, content, or author..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-2xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-300 rounded-lg sm:rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
               />
             </div>
 
             {/* Filter Buttons */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
               <button
                 onClick={clearFilters}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
                 Clear All
               </button>
@@ -171,16 +171,16 @@ const AllNotice = () => {
           </div>
 
           {/* Filter Sections */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="mt-3 sm:mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {/* Type Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">Filter by Type</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Filter by Type</label>
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 {['all', 'general', 'maintenance', 'update', 'security'].map((type) => (
                   <button
                     key={type}
                     onClick={() => setFilter(type)}
-                    className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                    className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-lg transition-all ${
                       filter === type
                         ? 'bg-blue-500 text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -194,13 +194,13 @@ const AllNotice = () => {
 
             {/* Priority Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">Filter by Priority</label>
-              <div className="flex flex-wrap gap-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Filter by Priority</label>
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 {['all', 'high', 'medium', 'low'].map((priority) => (
                   <button
                     key={priority}
                     onClick={() => setPriorityFilter(priority)}
-                    className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                    className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-lg transition-all ${
                       priorityFilter === priority
                         ? 'bg-blue-500 text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -215,14 +215,14 @@ const AllNotice = () => {
         </div>
 
         {/* Results Count */}
-        <div className="mb-6 flex justify-between items-center">
-          <p className="text-gray-600">
+        <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <p className="text-xs sm:text-sm text-gray-600">
             Showing <span className="font-semibold">{filteredNotices.length}</span> of <span className="font-semibold">{notices.length}</span> notices
           </p>
           {(filter !== 'all' || priorityFilter !== 'all' || searchTerm) && (
             <button
               onClick={clearFilters}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
             >
               Clear filters
             </button>
@@ -230,103 +230,105 @@ const AllNotice = () => {
         </div>
 
         {/* Stats Footer */}
-        <div className="mt-12 bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div className="mt-6 sm:mt-8 bg-white rounded-xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-blue-600">{notices.length}</div>
-              <div className="text-sm text-gray-600">Total Notices</div>
+              <div className="text-base sm:text-lg lg:text-xl font-bold text-blue-600">{notices.length}</div>
+              <div className="text-xs text-gray-600">Total Notices</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-base sm:text-lg lg:text-xl font-bold text-green-600">
                 {notices.filter(n => n.priority === 'low').length}
               </div>
-              <div className="text-sm text-gray-600">Low Priority</div>
+              <div className="text-xs text-gray-600">Low Priority</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-orange-600">
+              <div className="text-base sm:text-lg lg:text-xl font-bold text-orange-600">
                 {notices.filter(n => n.priority === 'medium').length}
               </div>
-              <div className="text-sm text-gray-600">Medium Priority</div>
+              <div className="text-xs text-gray-600">Medium Priority</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-base sm:text-lg lg:text-xl font-bold text-red-600">
                 {notices.filter(n => n.priority === 'high').length}
               </div>
-              <div className="text-sm text-gray-600">High Priority</div>
+              <div className="text-xs text-gray-600">High Priority</div>
             </div>
           </div>
         </div>
 
         {/* Loading, Error, or Notices Grid */}
         {loading ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+          <div className="text-center py-8 sm:py-12 bg-white rounded-xl shadow-lg">
             <div className="max-w-md mx-auto">
-              <div className="text-6xl mb-4">⏳</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Loading notices...</h3>
-              <p className="text-gray-600 mb-6">
+              <div className="text-3xl sm:text-4xl lg:text-5xl mb-2 sm:mb-3">⏳</div>
+              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-2">Loading notices...</h3>
+              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                 Please wait while we fetch the latest notices.
               </p>
             </div>
           </div>
         ) : error ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+          <div className="text-center py-8 sm:py-12 bg-white rounded-xl shadow-lg">
             <div className="max-w-md mx-auto">
-              <div className="text-6xl mb-4">⚠️</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Error loading notices</h3>
-              <p className="text-gray-600 mb-6">
+              <div className="text-3xl sm:text-4xl lg:text-5xl mb-2 sm:mb-3">⚠️</div>
+              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-2">Error loading notices</h3>
+              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                 {error}
               </p>
             </div>
           </div>
         ) : filteredNotices.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
             {filteredNotices.map((notice) => (
               <div
                 key={notice.id}
-                className={`bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${getPriorityStyles(notice.priority)}`}
+                className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${getPriorityStyles(notice.priority)}`}
               >
-                <div className="p-6">
+                <div className="p-3 sm:p-4 lg:p-5">
                   {/* Header */}
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-2 sm:mb-3">
                     <div className="flex items-center space-x-2">
-                      <span className="text-lg">{getTypeIcon(notice.type)}</span>
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getTypeColor(notice.type)}`}>
+                      <span className="text-sm sm:text-base">{getTypeIcon(notice.type)}</span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(notice.type)}`}>
                         {notice.type}
                       </span>
                     </div>
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getPriorityBadge(notice.priority)}`}>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPriorityBadge(notice.priority)}`}>
                       {notice.priority.toUpperCase()}
                     </span>
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 line-clamp-2">
                     {notice.title}
                   </h3>
 
                   {/* Content */}
-                  <p className="text-gray-600 mb-4 line-clamp-3 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-3 leading-relaxed">
                     {notice.content}
                   </p>
 
                   {/* Category */}
-                  <div className="mb-4">
-                    <span className="inline-block px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">
+                  <div className="mb-2 sm:mb-3">
+                    <span className="inline-block px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">
                       {notice.category}
                     </span>
                   </div>
 
                   {/* Footer */}
-                  <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center pt-2 sm:pt-3 border-t border-gray-200">
                     <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-semibold text-blue-600">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-semibold text-blue-600">
                           {(notice.author || 'U').charAt(0)}
                         </span>
                       </div>
-                      <span className="text-sm text-gray-600 font-medium">{notice.author}</span>
+                      <span className="text-xs text-gray-600 font-medium truncate max-w-[80px] sm:max-w-[100px]">
+                        {notice.author}
+                      </span>
                     </div>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-xs text-gray-500">
                       {notice.date
                         ? new Date(notice.date).toLocaleDateString('en-US', {
                             year: 'numeric',
@@ -342,16 +344,16 @@ const AllNotice = () => {
           </div>
         ) : (
           /* Empty State */
-          <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
+          <div className="text-center py-8 sm:py-12 bg-white rounded-xl shadow-lg">
             <div className="max-w-md mx-auto">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">No notices found</h3>
-              <p className="text-gray-600 mb-6">
+              <div className="text-3xl sm:text-4xl lg:text-5xl mb-2 sm:mb-3">🔍</div>
+              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-2">No notices found</h3>
+              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                 Try adjusting your search terms or filters to find what you're looking for.
               </p>
               <button
                 onClick={clearFilters}
-                className="px-6 py-3 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                className="px-3 sm:px-4 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors text-xs sm:text-sm"
               >
                 Clear all filters
               </button>

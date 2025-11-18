@@ -88,7 +88,6 @@ const TeacherDocumentsPage = () => {
     if (stored) {
       const user = JSON.parse(stored);
       setTeacherEmail(user.email);
-      console.log("🧑‍🏫 Logged-in teacher:", user.email);
     }
   }, []);
 
@@ -98,7 +97,6 @@ const TeacherDocumentsPage = () => {
       setLoading(true);
       const res = await axios.get(`${API_URL}documents/`);
       setDocuments(res.data);
-      console.log("📂 All documents:", res.data.length);
     } catch (err) {
       console.error("❌ Error fetching documents:", err);
     } finally {
@@ -109,8 +107,6 @@ const TeacherDocumentsPage = () => {
   // ✅ Step 3: Fetch teacher's students via timetable
   const fetchTeacherStudents = async (teacherEmail: string) => {
     try {
-      console.log("🎓 Fetching students for teacher:", teacherEmail);
-
       const timetableRes = await axios.get(`${API_URL}timetable/`);
       const teacherClasses = timetableRes.data.filter(
         (t: any) => t.teacher?.toLowerCase() === teacherEmail.toLowerCase()
@@ -129,7 +125,6 @@ const TeacherDocumentsPage = () => {
         )
       );
 
-      console.log("👩‍🎓 Students under teacher:", teacherStudents.length);
       setStudents(teacherStudents);
     } catch (err) {
       console.error("❌ Error fetching teacher students:", err);
@@ -159,7 +154,6 @@ const TeacherDocumentsPage = () => {
       .filter(Boolean) as Student[];
 
     const combinedPending = [...missingDocs, ...incompleteDocs];
-    console.log("⚠️ Pending/Incomplete Students:", combinedPending.length);
     setPendingStudents(combinedPending);
   };
 
@@ -209,8 +203,6 @@ const TeacherDocumentsPage = () => {
       setUploading(true);
       setUploadProgress(prev => ({ ...prev, [documentType]: 0 }));
 
-      console.log(`📤 Uploading ${documentType} for teacher:`, teacherEmail);
-
       // First check if teacher already has a document entry
       const existingDoc = documents.find(d => d.email === teacherEmail);
       
@@ -220,9 +212,7 @@ const TeacherDocumentsPage = () => {
           [documentType]: `https://example.com/${documentType}_${Date.now()}.pdf` // Simulate upload URL
         };
         
-        console.log("🔄 Updating existing document:", existingDoc.id);
         const updateResponse = await axios.patch(`${API_URL}documents/${existingDoc.id}/`, updateData);
-        console.log("✅ Update successful:", updateResponse.data);
       } else {
         // Create new document entry
         const newDocData = {
@@ -231,9 +221,7 @@ const TeacherDocumentsPage = () => {
           uploaded_at: new Date().toISOString()
         };
         
-        console.log("🆕 Creating new document entry");
         const createResponse = await axios.post(`${API_URL}documents/`, newDocData);
-        console.log("✅ Creation successful:", createResponse.data);
       }
       
       // Refresh documents after upload

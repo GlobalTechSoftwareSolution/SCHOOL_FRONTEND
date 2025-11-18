@@ -83,10 +83,8 @@ const All_reports = () => {
         created_by: email || null,
       };
       
-      console.log("📤 Sending report data:", reportData);
       
       const response = await axios.post(API_URL, reportData, getAxiosConfig());
-      console.log("✅ Report created successfully:", response.data);
       
       setShowAddForm(false);
       setNewReport({

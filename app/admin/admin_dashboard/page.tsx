@@ -182,23 +182,23 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout role="admin">
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-gray-600 mt-2">Welcome back, {adminEmail || 'Admin'}! Here's your overview.</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-2">Welcome back, {adminEmail || 'Admin'}! Here's your overview.</p>
               </div>
-              <div className="text-sm text-gray-500 bg-white px-4 py-2 rounded-lg border">
+              <div className="text-xs sm:text-sm text-gray-500 bg-white px-3 sm:px-4 py-2 rounded-lg border self-stretch sm:self-auto">
                 Last updated: {new Date().toLocaleString()}
               </div>
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <StatCard
               title="Total Students"
               value={stats.totalStudents}
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Additional Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <StatCard
               title="Total Leaves"
               value={stats.totalLeaves}
@@ -255,11 +255,11 @@ export default function AdminDashboard() {
           </div>
 
           {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {/* Attendance Trend */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Attendance Trend (Last 7 Days)</h3>
-              <div className="h-80">
+            <div className="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Attendance Trend (Last 7 Days)</h3>
+              <div className="h-72 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={attendanceData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -293,9 +293,9 @@ export default function AdminDashboard() {
             </div>
 
             {/* Class Distribution */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Class Distribution</h3>
-              <div className="h-80">
+            <div className="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Class Distribution</h3>
+              <div className="h-72 sm:h-80 -mx-4 sm:mx-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={classDistribution}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -327,24 +327,24 @@ export default function AdminDashboard() {
           </div>
 
           {/* Recent Activity & Quick Stats */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Recent Activity */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            <div className="lg:col-span-2 bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Recent Activity</h3>
+                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium self-start sm:self-auto">
                   View All
                 </button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mx-auto sm:mx-0">
                         {activity.avatar}
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 text-center sm:text-left">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {activity.name}
                       </p>
@@ -352,9 +352,9 @@ export default function AdminDashboard() {
                         {activity.action}
                       </p>
                     </div>
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-sm text-gray-500">{activity.time}</p>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    <div className="flex-shrink-0 text-center sm:text-right">
+                      <p className="text-xs sm:text-sm text-gray-500">{activity.time}</p>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium ${
                         activity.type === 'present' 
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
@@ -368,8 +368,8 @@ export default function AdminDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Quick Actions</h3>
+            <div className="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-sm border border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Quick Actions</h3>
               <div className="space-y-3">
                 <QuickActionButton 
                   icon="📊"
@@ -414,17 +414,17 @@ function StatCard({ title, value, icon, color, trend }: { title: string; value: 
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
+    <div className="bg-white p-4 sm:p-5 md:p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{(value || 0).toLocaleString()}</p>
-          <p className={`text-sm mt-2 ${(trend || '').includes('+') ? 'text-green-600' : 'text-gray-500'}`}>
+          <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">{title}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900">{(value || 0).toLocaleString()}</p>
+          <p className={`text-xs sm:text-sm mt-2 ${(trend || '').includes('+') ? 'text-green-600' : 'text-gray-500'}`}>
             {trend || '0%'}
           </p>
         </div>
-        <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-          <span className="text-2xl">{icon}</span>
+        <div className={`p-2.5 sm:p-3 rounded-lg ${colorClasses[color]}`}>
+          <span className="text-xl sm:text-2xl">{icon}</span>
         </div>
       </div>
     </div>
@@ -436,17 +436,19 @@ function QuickActionButton({ icon, title, description, href }: { icon: string; t
   return (
     <a 
       href={href}
-      className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
+      className="flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group text-center sm:text-left"
     >
-      <div className="flex-shrink-0">
-        <span className="text-2xl group-hover:scale-110 transition-transform">{icon}</span>
+      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full">
+        <div className="flex-shrink-0">
+          <span className="text-2xl sm:text-2xl group-hover:scale-110 transition-transform">{icon}</span>
+        </div>
+        <div className="flex-1">
+          <h4 className="font-semibold text-gray-900 group-hover:text-blue-700 text-sm sm:text-base">{title}</h4>
+          <p className="text-xs sm:text-sm text-gray-500">{description}</p>
+        </div>
       </div>
-      <div className="flex-1">
-        <h4 className="font-semibold text-gray-900 group-hover:text-blue-700">{title}</h4>
-        <p className="text-sm text-gray-500">{description}</p>
-      </div>
-      <div className="flex-shrink-0">
-        <span className="text-gray-400 group-hover:text-blue-600">→</span>
+      <div className="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-center">
+        <span className="text-gray-400 group-hover:text-blue-600 transition-colors">→</span>
       </div>
     </a>
   );

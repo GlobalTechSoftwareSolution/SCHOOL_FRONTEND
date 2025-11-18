@@ -108,8 +108,8 @@ const HolidayCalendar: React.FC = () => {
 
   // Simple Calendar Header
   const CalendarHeader = () => (
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="flex items-center justify-between gap-3">
         <button
           onClick={goToPreviousMonth}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300"
@@ -137,7 +137,7 @@ const HolidayCalendar: React.FC = () => {
 
       <button
         onClick={goToToday}
-        className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors"
+        className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors w-full sm:w-auto text-center"
       >
         Today
       </button>
@@ -148,11 +148,11 @@ const HolidayCalendar: React.FC = () => {
   const WeekDaysHeader = () => {
     const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return (
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1">
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center py-2 text-xs font-semibold text-gray-600"
+            className="text-center py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold text-gray-600"
           >
             {day}
           </div>
@@ -172,7 +172,7 @@ const HolidayCalendar: React.FC = () => {
 
     // Empty days for the start of the month
     for (let i = 0; i < startingDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-20 border border-gray-200 bg-gray-50"></div>);
+      days.push(<div key={`empty-${i}`} className="h-16 sm:h-20 border border-gray-200 bg-gray-50"></div>);
     }
 
     // Actual days of the month
@@ -189,7 +189,7 @@ const HolidayCalendar: React.FC = () => {
       days.push(
         <div
           key={day}
-          className={`h-20 border border-gray-200 p-1 cursor-pointer transition-all ${
+          className={`h-16 sm:h-20 border border-gray-200 p-1 cursor-pointer transition-all ${
             isSelected 
               ? "bg-blue-500 text-white" 
               : isToday 
@@ -226,7 +226,7 @@ const HolidayCalendar: React.FC = () => {
       );
     }
 
-    return <div className="grid grid-cols-7 gap-1 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden">{days}</div>;
+    return <div className="grid grid-cols-7 gap-0.5 sm:gap-1 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden">{days}</div>;
   };
 
   // Holiday Cards for the bottom section
@@ -243,9 +243,9 @@ const HolidayCalendar: React.FC = () => {
 
     return (
       <div className="mt-8">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">All Holidays ({year})</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 text-center sm:text-left">All Holidays ({year})</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {Object.entries(holidaysByMonth).map(([monthNum, monthHolidays]) => (
             <div key={monthNum} className="bg-white rounded-lg border border-gray-200 p-4">
               <h3 className="text-lg font-semibold text-gray-800 mb-3 pb-2 border-b">
@@ -285,21 +285,21 @@ const HolidayCalendar: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 mb-1">Holiday Calendar</h1>
-          <p className="text-gray-600 text-sm">View company holidays for {year}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1 text-center sm:text-left">Holiday Calendar</h1>
+          <p className="text-gray-600 text-xs sm:text-sm text-center sm:text-left">View company holidays for {year}</p>
         </div>
 
         {/* Year Selector */}
-        <div className="flex items-center gap-2 mb-4">
-          <label className="text-sm font-medium text-gray-700">Year:</label>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-2 mb-4">
+          <label className="text-xs sm:text-sm font-medium text-gray-700">Year:</label>
           <select
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="border rounded px-2 py-1"
+            className="border rounded px-2 py-1 text-sm w-full sm:w-auto"
           >
             {Array.from(new Set(holidays.map(h => new Date(h.date).getFullYear())))
               .sort()
@@ -309,10 +309,10 @@ const HolidayCalendar: React.FC = () => {
           </select>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Main Calendar - Smaller */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
               <CalendarHeader />
               <WeekDaysHeader />
               <CalendarGrid />
@@ -322,10 +322,10 @@ const HolidayCalendar: React.FC = () => {
           {/* Right Sidebar - Compact */}
           <div className="space-y-4">
             {/* Selected Date */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <h2 className="text-md font-semibold text-gray-800 mb-3">Selected Date</h2>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
+              <h2 className="text-sm sm:text-md font-semibold text-gray-800 mb-3">Selected Date</h2>
               <div className="mb-3 p-3 bg-gray-50 rounded border border-gray-200">
-                <div className="text-sm font-semibold text-gray-800">
+                <div className="text-xs sm:text-sm font-semibold text-gray-800">
                   {new Date(selectedDate).toLocaleDateString("en-US", {
                     weekday: "long",
                     year: "numeric",
@@ -336,7 +336,7 @@ const HolidayCalendar: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-medium text-gray-700 text-sm">Holidays:</h3>
+                <h3 className="font-medium text-gray-700 text-xs sm:text-sm">Holidays:</h3>
                 {selectedDateHolidays.length > 0 ? (
                   selectedDateHolidays.map((h, i) => (
                     <div key={i} className="p-2 rounded border border-gray-200 bg-white">
@@ -361,11 +361,11 @@ const HolidayCalendar: React.FC = () => {
             </div>
 
             {/* Quick Stats - Compact */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <h2 className="text-md font-semibold text-gray-800 mb-3">Overview</h2>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
+              <h2 className="text-sm sm:text-md font-semibold text-gray-800 mb-3">Overview</h2>
               <div className="grid grid-cols-1 gap-3">
                 <div className="text-center p-3 bg-blue-50 rounded border border-blue-200">
-                  <div className="text-lg font-bold text-blue-600">
+                  <div className="text-base sm:text-lg font-bold text-blue-600">
                     {holidays.filter(h => new Date(h.date).getFullYear() === year).length}
                   </div>
                   <div className="text-xs text-blue-600">Total Holidays</div>

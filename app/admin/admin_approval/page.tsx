@@ -24,7 +24,6 @@ const Approvalpage: React.FC = () => {
     "https://globaltechsoftwaresolutions.cloud/school-api/";
 
   const fetchUsers = useCallback(async () => {
-    console.log("📡 Fetching users...");
     setLoading(true);
     setError(null);
 
@@ -45,24 +44,18 @@ const Approvalpage: React.FC = () => {
       const data: User[] = await response.json();
       const rejected = JSON.parse(localStorage.getItem("rejectedUsers") || "[]");
       const filtered = data.filter(u => !rejected.includes(u.email));
-      console.log("✅ Users fetched (filtered):", filtered);
       setUsers(filtered);
     } catch (err: unknown) {
-      console.log("❌ Error fetching users:", err);
       setUsers([]);
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
-      console.log("📡 Fetching users ended.");
     }
   }, [apiBase]);
 
   const handleApprove = async (email: string) => {
-    console.log("🟢 Approving user:", email);
     try {
       const token = localStorage.getItem("accessToken");
-      console.log("🪪 Using token:", token);
-      console.log("🔗 API URL:", `${apiBase}api/users/${encodeURIComponent(email)}/`);
       const response = await fetch(`${apiBase}api/users/${encodeURIComponent(email)}/`, {
         method: "PATCH",
         headers: {
@@ -71,24 +64,21 @@ const Approvalpage: React.FC = () => {
         },
         body: JSON.stringify({ is_approved: true }),
       });
-      const resData = await response.json();
-      console.log("📬 PATCH response:", resData);
+      await response.json();
 
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
 
-      console.log("✅ Updated user approval for:", email);
       fetchUsers();
     } catch (err: unknown) {
-      console.log("❌ Error approving user:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
     }
   };
 
   const handleReject = async (email: string) => {
-    console.log("🔴 Rejecting user via DELETE API:", email);
     try {
       const token = localStorage.getItem("accessToken");
+
       if (!token) throw new Error("Missing authentication token");
 
       const response = await fetch(`${apiBase}api/users/${encodeURIComponent(email)}/`, {
@@ -99,16 +89,12 @@ const Approvalpage: React.FC = () => {
       });
 
       if (response.status === 204) {
-        console.log(`🚫 User ${email} successfully deleted.`);
         setUsers((prev) => prev.filter((u) => u.email !== email));
       } else {
-        console.error("❌ Failed to delete user:", response.status, response.statusText);
-        const text = await response.text();
-        console.error("Response body:", text);
+        await response.text();
         alert(`Failed to reject user (${response.status}).`);
       }
     } catch (err) {
-      console.error("❌ Error rejecting user:", err);
       alert("Error rejecting user. Check console for details.");
     }
   };
@@ -122,8 +108,8 @@ const Approvalpage: React.FC = () => {
 
   return (
     <DashboardLayout role="admin">
-      <div className="p-4 md:p-6 max-w-7xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-bold mb-6 text-gray-800 text-center underline">
+      <div className="px-3 py-4 sm:px-4 sm:py-6 lg:px-8 max-w-7xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-gray-800 text-center underline break-words">
           User Management
         </h1>
 
@@ -146,11 +132,11 @@ const Approvalpage: React.FC = () => {
         )}
 
         {/* Pending Approval */}
-        <section>
-          <h2 className="text-2xl md:text-3xl font-semibold mb-4 text-yellow-700">
+        <section className="mt-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 text-yellow-700">
             Pending Approval
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {pendingUsers.length === 0 && (
               <p className="text-gray-500 col-span-full text-center">
                 No users pending approval.
@@ -159,12 +145,14 @@ const Approvalpage: React.FC = () => {
             {pendingUsers.map((user, index) => (
               <div
                 key={`pending-${index}`}
-                className="bg-white border border-gray-200 rounded-lg shadow-md p-4 md:p-6 flex flex-col justify-between hover:shadow-xl transition-shadow duration-300"
+                className="bg-white border border-gray-200 rounded-lg shadow-md p-4 md:p-6 flex flex-col justify-between hover:shadow-xl transition-shadow duration-300 text-sm sm:text-base break-words"
               >
-                <p><span className="font-medium">Email:</span> {user.email}</p>
-                <p><span className="font-medium">Role:</span> {user.role}</p>
-                <p><span className="font-medium">Staff:</span> {user.is_staff ? "Yes" : "No"}</p>
-                <p><span className="font-medium">Active:</span> {user.is_active ? "Yes" : "No"}</p>
+                <div className="space-y-1">
+                  <p><span className="font-medium">Email:</span> {user.email}</p>
+                  <p><span className="font-medium">Role:</span> {user.role}</p>
+                  <p><span className="font-medium">Staff:</span> {user.is_staff ? "Yes" : "No"}</p>
+                  <p><span className="font-medium">Active:</span> {user.is_active ? "Yes" : "No"}</p>
+                </div>
 
                 <div className="flex flex-col sm:flex-row gap-2 mt-3">
                   <button
@@ -187,22 +175,24 @@ const Approvalpage: React.FC = () => {
 
         {/* Approved Users */}
         <section className="mt-10 mb-10">
-          <h2 className="text-2xl md:text-3xl font-semibold mb-5 text-green-700">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-5 text-green-700">
             Approved Users
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {approvedUsers.length === 0 && (
               <p className="text-gray-500 col-span-full text-center">No approved users.</p>
             )}
             {approvedUsers.map((user, index) => (
               <div
                 key={`approved-${index}`}
-                className="bg-white border border-gray-200 rounded-lg shadow-md p-4 md:p-6 flex flex-col justify-between"
+                className="bg-white border border-gray-200 rounded-lg shadow-md p-4 md:p-6 flex flex-col justify-between text-sm sm:text-base break-words"
               >
-                <p><span className="font-medium">Email:</span> {user.email}</p>
-                <p><span className="font-medium">Role:</span> {user.role}</p>
-                <p><span className="font-medium">Staff:</span> {user.is_staff ? "Yes" : "No"}</p>
-                <p><span className="font-medium">Active:</span> {user.is_active ? "Yes" : "No"}</p>
+                <div className="space-y-1">
+                  <p><span className="font-medium">Email:</span> {user.email}</p>
+                  <p><span className="font-medium">Role:</span> {user.role}</p>
+                  <p><span className="font-medium">Staff:</span> {user.is_staff ? "Yes" : "No"}</p>
+                  <p><span className="font-medium">Active:</span> {user.is_active ? "Yes" : "No"}</p>
+                </div>
               </div>
             ))}
           </div>

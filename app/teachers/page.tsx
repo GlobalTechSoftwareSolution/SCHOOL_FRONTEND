@@ -65,7 +65,6 @@ const TeachersDashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        console.log("Fetching teacher dashboard data for:", teacherEmail);
         
         // Fetch all dashboard data with proper error handling
         const [timetableRes, gradesRes, leavesRes, attendanceRes, studentsRes] = await Promise.all([
@@ -91,23 +90,13 @@ const TeachersDashboard = () => {
           })
         ]);
 
-        console.log("API Responses received:", {
-          timetable: timetableRes.data.length,
-          grades: gradesRes.data.length,
-          leaves: leavesRes.data.length,
-          attendance: attendanceRes.data.length,
-          students: studentsRes.data.length
-        });
 
         // Filter teacher's timetable by email
         const timetable = timetableRes.data.filter(
           (t: any) => t.teacher === teacherEmail
         );
 
-        // Debug: Log the first timetable entry to see available fields
-        if (timetable.length > 0) {
-          console.log("Sample timetable entry:", timetable[0]);
-        }
+        
 
         // Get today's weekday name
         const today = new Date().toLocaleString("en-US", { weekday: "long" });
@@ -142,8 +131,6 @@ const TeachersDashboard = () => {
           return acc;
         }, []);
 
-        // Debug: Log the unique classes to see what data we have
-        console.log("Unique classes:", uniqueClasses);
 
         // Compute average grades for teacher
         const teacherGrades = gradesRes.data.filter(

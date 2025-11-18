@@ -107,6 +107,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Programs", path: "/admin/admin_programs" },
     { name: "Reports", path: "/admin/admin_reports" },
     { name: "Raise Issues", path: "/admin/admin_issues" },
+    { name: "Projects", path: "/admin/admin_projects" },
     { name: "ID card", path: "/admin/admin_id_card" },
     { name: "Profile", path: "/admin/admin_profile" },
   ],

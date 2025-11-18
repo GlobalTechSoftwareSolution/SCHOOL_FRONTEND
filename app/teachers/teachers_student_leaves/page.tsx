@@ -105,17 +105,12 @@ const TeachersStudentLeavePage = () => {
           "https://globaltechsoftwaresolutions.cloud/school-api/api/student_attendance/"
         );
 
-        console.log("📋 Raw student_attendance records:", attendanceResponse.data);
-
         // Create teacher classes set for filtering
         const teacherClassesSet = new Set(
           uniqueClasses.map((cls: TeacherClass) => `${cls.class_name}-${cls.section}`)
         );
 
-        console.log("📋 Teacher classes set:", Array.from(teacherClassesSet));
-
         // Fetch all students first to avoid 404 errors
-        console.log("📋 Fetching all students data...");
         const studentsResponse = await axios.get(
           "https://globaltechsoftwaresolutions.cloud/school-api/api/students/"
         );
@@ -125,8 +120,6 @@ const TeachersStudentLeavePage = () => {
         studentsResponse.data.forEach((student: any) => {
           studentsMap.set(student.email, student);
         });
-        
-        console.log(`📋 Loaded ${studentsMap.size} students for lookup`);
 
         // Enhance attendance rows with student information and filter to this teacher's classes
         const enhancedLeaves: LeaveApplication[] = [];
@@ -145,16 +138,13 @@ const TeachersStudentLeavePage = () => {
 
             const studentEmail = att.student;
             if (!studentEmail) {
-              console.log(`⚠️ Skipping attendance ${att.id} - no student email`);
               continue;
             }
 
             // Look up student information from the students map
-            console.log(`📋 Looking up student data for: ${studentEmail}`);
             const studentData = studentsMap.get(studentEmail);
             
             if (!studentData) {
-              console.log(`⚠️ Student not found for email: ${studentEmail}`);
               // Try to create a basic leave entry with available information
               const basicLeave: LeaveApplication = {
                 id: att.id,
@@ -174,13 +164,8 @@ const TeachersStudentLeavePage = () => {
                 applied_date: att.created_time,
                 teacher_remarks: "",
               };
-              console.log(`📋 Created basic leave-like entry for unknown student: ${basicLeave.student_name}`);
               // still continue to class filter below
               // no "continue" here so we can still check class match
-            }
-            
-            if (studentData) {
-              console.log(`📋 Student data for ${studentEmail}:`, studentData);
             }
             
             // Enhance attendance row with student information, mapping into LeaveApplication shape
@@ -212,11 +197,7 @@ const TeachersStudentLeavePage = () => {
             // Also try with "Grade" prefix for compatibility
             const gradeClassKey = `Grade ${enhancedLeave.class_name}-${enhancedLeave.section}`;
             
-            console.log(`📋 Checking leave: ${enhancedLeave.student_name} - Class: "${enhancedLeave.class_name}" Section: "${enhancedLeave.section}"`);
-            console.log(`📋 Trying keys: "${leaveClassKey}" and "${gradeClassKey}"`);
-            
             const matches = teacherClassesSet.has(leaveClassKey) || teacherClassesSet.has(gradeClassKey);
-            console.log(`📋 Matches teacher classes: ${matches}`);
             
             if (matches) {
               enhancedLeaves.push(enhancedLeave);
@@ -227,8 +208,6 @@ const TeachersStudentLeavePage = () => {
           }
         }
 
-        console.log("📋 Teacher's classes:", uniqueClasses);
-        console.log("📋 Enhanced and filtered leave applications:", enhancedLeaves);
         setLeaves(enhancedLeaves);
 
       } catch (error) {
@@ -314,7 +293,7 @@ const TeachersStudentLeavePage = () => {
   if (loading) {
     return (
       <DashboardLayout role="teachers">
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-center min-h-[400px]">
               <div className="text-center">
@@ -330,26 +309,26 @@ const TeachersStudentLeavePage = () => {
 
   return (
     <DashboardLayout role="teachers">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">My Classes - Student Leave Management</h1>
-                <p className="text-gray-600">Review and manage leave applications from students in your classes</p>
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
+              <div className="text-center md:text-left">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">My Classes - Student Leave Management</h1>
+                <p className="text-gray-600 text-sm sm:text-base">Review and manage leave applications from students in your classes</p>
               </div>
-              <div className="mt-4 md:mt-0">
-                <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-blue-100 p-3 rounded-full">
-                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-full md:w-auto">
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 border border-gray-200">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="bg-blue-100 p-2 sm:p-3 rounded-full">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Leave Coordinator</h3>
-                      <p className="text-sm text-gray-600">{stats.pending} pending applications</p>
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Leave Coordinator</h3>
+                      <p className="text-xs sm:text-sm text-gray-600">{stats.pending} pending applications</p>
                     </div>
                   </div>
                 </div>
@@ -358,57 +337,57 @@ const TeachersStudentLeavePage = () => {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Applications</p>
-                  <p className="text-2xl font-bold text-blue-600 mt-1">{stats.total}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Applications</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{stats.total}</p>
                 </div>
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-blue-100 p-2 sm:p-3 rounded-full">
+                  <svg className="w-4 w-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                  <p className="text-2xl font-bold text-orange-600 mt-1">{stats.pending}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Pending Review</p>
+                  <p className="text-xl sm:text-2xl font-bold text-orange-600 mt-1">{stats.pending}</p>
                 </div>
-                <div className="bg-orange-100 p-3 rounded-full">
-                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-orange-100 p-2 sm:p-3 rounded-full">
+                  <svg className="w-4 w-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Approved</p>
-                  <p className="text-2xl font-bold text-green-600 mt-1">{stats.approved}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Approved</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-600 mt-1">{stats.approved}</p>
                 </div>
-                <div className="bg-green-100 p-3 rounded-full">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-green-100 p-2 sm:p-3 rounded-full">
+                  <svg className="w-4 w-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Rejected</p>
-                  <p className="text-2xl font-bold text-red-600 mt-1">{stats.rejected}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Rejected</p>
+                  <p className="text-xl sm:text-2xl font-bold text-red-600 mt-1">{stats.rejected}</p>
                 </div>
-                <div className="bg-red-100 p-3 rounded-full">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-red-100 p-2 sm:p-3 rounded-full">
+                  <svg className="w-4 w-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -417,27 +396,27 @@ const TeachersStudentLeavePage = () => {
           </div>
 
           {/* Filters Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               {/* Search Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Search</label>
                 <input
                   type="text"
                   placeholder="Search by student or leave type..."
                   value={filters.search}
                   onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
               </div>
 
               {/* Status Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="all">All Status</option>
                   <option value="Pending">Pending</option>
@@ -448,11 +427,11 @@ const TeachersStudentLeavePage = () => {
 
               {/* Class Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Class</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Class</label>
                 <select
                   value={filters.class}
                   onChange={(e) => setFilters(prev => ({ ...prev, class: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="all">All Classes</option>
                   {uniqueClasses.map(className => (
@@ -463,98 +442,115 @@ const TeachersStudentLeavePage = () => {
             </div>
           </div>
 
-          {/* Leave Applications Table */}
+          {/* Leave Applications Cards Grid */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Leave Applications</h2>
-              <p className="text-gray-600 text-sm mt-1">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Leave Applications</h2>
+              <p className="text-gray-600 text-xs sm:text-sm mt-1">
                 Showing {filteredLeaves.length} of {leaves.length} applications
               </p>
             </div>
 
             {filteredLeaves.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class & Section</th> */}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Range</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th> */}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredLeaves.map((leave) => (
-                      <tr key={leave.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{leave.student_name || 'N/A'}</div>
-                        </td>
-                        {/* <td className="px-6 py-4 whitespace-nowrap flex flex-col-2">
-                          <div className="text-sm text-gray-900 ml-2">{leave.class_name || 'N/A'}</div>
-                          <div className="text-sm text-gray-500 ml-3">{leave.section || 'N/A'}</div>
-                        </td> */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{leave.leave_type || 'N/A'}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
+              <div className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {filteredLeaves.map((leave) => (
+                    <div
+                      key={leave.id}
+                      className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-all duration-200 group"
+                    >
+                      {/* Student Info Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 text-base sm:text-lg mb-1 line-clamp-1">
+                            {leave.student_name || 'N/A'}
+                          </h3>
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                              {leave.class_name || 'N/A'}
+                            </span>
+                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                              {leave.section || 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
+                          leave.status?.toLowerCase() === 'approved' 
+                            ? 'bg-green-100 text-green-800' 
+                            : leave.status?.toLowerCase() === 'rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {leave.status || 'Pending'}
+                        </span>
+                      </div>
+
+                      {/* Leave Details */}
+                      <div className="space-y-3 mb-4">
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Leave Type</p>
+                          <p className="text-sm font-semibold text-gray-900">{leave.leave_type || 'N/A'}</p>
+                        </div>
+                        
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Date Range</p>
+                          <p className="text-sm text-gray-900">
                             {leave.start_date && leave.end_date 
                               ? `${new Date(leave.start_date).toLocaleDateString()} - ${new Date(leave.end_date).toLocaleDateString()}`
                               : 'N/A'
                             }
-                          </div>
-                          <div className="text-sm text-gray-500">
+                          </p>
+                          <p className="text-xs text-gray-500">
                             {leave.start_date && leave.end_date 
                               ? `${Math.ceil((new Date(leave.end_date).getTime() - new Date(leave.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1} days`
                               : 'N/A'
                             }
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {leave.applied_date ? new Date(leave.applied_date).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                            leave.status?.toLowerCase() === 'approved' 
-                              ? 'bg-green-100 text-green-800' 
-                              : leave.status?.toLowerCase() === 'rejected'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {leave.status || 'Pending'}
-                          </span>
-                        </td>
-                        {/* <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedLeave(leave);
-                              setShowActionModal(true);
-                            }}
-                            disabled={leave.status !== 'Pending'}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              leave.status !== 'Pending'
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                            }`}
-                          >
-                            Review
-                          </button>
-                        </td> */}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Applied Date</p>
+                          <p className="text-sm text-gray-900">
+                            {leave.applied_date ? new Date(leave.applied_date).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Reason</p>
+                          <p className="text-sm text-gray-900 line-clamp-2 mt-1 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                            {leave.reason || 'No reason provided'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <div className="flex justify-end pt-3 border-t border-gray-100">
+                        <button
+                          onClick={() => {
+                            setSelectedLeave(leave);
+                            setShowActionModal(true);
+                          }}
+                          disabled={leave.status !== 'Pending'}
+                          className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                            leave.status !== 'Pending'
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
+                        >
+                          Review
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
-              <div className="text-center py-12">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="text-center py-8 sm:py-12">
+                <svg className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No leave applications found</h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <h3 className="mt-2 text-sm sm:text-base font-medium text-gray-900">No leave applications found</h3>
+                <p className="mt-1 text-xs sm:text-sm text-gray-500">
                   {filters.status !== 'all' || filters.class !== 'all' || filters.search !== '' 
                     ? 'Try adjusting your filters' 
                     : 'No leave applications have been submitted yet.'}
@@ -566,14 +562,14 @@ const TeachersStudentLeavePage = () => {
 
         {/* Action Modal */}
         {showActionModal && selectedLeave && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 rounded-t-2xl">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-2xl font-bold">Review Leave Application</h2>
-                    <p className="text-blue-100">Take action on this leave request</p>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl sm:text-2xl font-bold">Review Leave Application</h2>
+                    <p className="text-blue-100 text-sm sm:text-base">Take action on this leave request</p>
                   </div>
                   <button
                     onClick={() => {
@@ -581,9 +577,9 @@ const TeachersStudentLeavePage = () => {
                       setRemarks("");
                       setSelectedLeave(null);
                     }}
-                    className="text-white hover:text-blue-200 transition-colors"
+                    className="text-white hover:text-blue-200 transition-colors flex-shrink-0 ml-2"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -591,29 +587,29 @@ const TeachersStudentLeavePage = () => {
               </div>
 
               {/* Modal Body */}
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Student Information */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Student Name</label>
-                    <p className="text-lg font-semibold text-gray-900">{selectedLeave.student_name || 'N/A'}</p>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Student Name</label>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedLeave.student_name || 'N/A'}</p>
                   </div>
-                  {/* <div>
-                    <label className="text-sm font-medium text-gray-500">Class & Section</label>
-                    <p className="text-lg font-semibold text-gray-900">{selectedLeave.class_name || 'N/A'} • {selectedLeave.section || 'N/A'}</p>
-                  </div> */}
+                  <div>
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Class & Section</label>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedLeave.class_name || 'N/A'} • {selectedLeave.section || 'N/A'}</p>
+                  </div>
                 </div>
 
                 {/* Leave Details */}
-                <div className="border-t border-b border-gray-200 py-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="border-t border-b border-gray-200 py-3 sm:py-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Leave Type</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedLeave.leave_type || 'N/A'}</p>
+                      <label className="text-xs sm:text-sm font-medium text-gray-500">Leave Type</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedLeave.leave_type || 'N/A'}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Duration</label>
-                      <p className="text-lg font-semibold text-gray-900">
+                      <label className="text-xs sm:text-sm font-medium text-gray-500">Duration</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">
                         {selectedLeave.start_date && selectedLeave.end_date 
                           ? `${Math.ceil((new Date(selectedLeave.end_date).getTime() - new Date(selectedLeave.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1} days`
                           : 'N/A'
@@ -621,9 +617,9 @@ const TeachersStudentLeavePage = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <label className="text-sm font-medium text-gray-500">Date Range</label>
-                    <p className="text-lg font-semibold text-gray-900">
+                  <div className="mt-2 sm:mt-3">
+                    <label className="text-xs sm:text-sm font-medium text-gray-500">Date Range</label>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900">
                       {selectedLeave.start_date && selectedLeave.end_date 
                         ? `${new Date(selectedLeave.start_date).toLocaleDateString()} - ${new Date(selectedLeave.end_date).toLocaleDateString()}`
                         : 'N/A'
@@ -634,15 +630,15 @@ const TeachersStudentLeavePage = () => {
 
                 {/* Reason */}
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Reason for Leave</label>
-                  <p className="text-gray-900 mt-2 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <label className="text-xs sm:text-sm font-medium text-gray-500">Reason for Leave</label>
+                  <p className="text-gray-900 mt-2 bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200 text-sm sm:text-base">
                     {selectedLeave.reason || 'No reason provided'}
                   </p>
                 </div>
 
                 {/* Teacher Remarks */}
                 <div>
-                  <label className="text-sm font-medium text-gray-500 mb-2 block">
+                  <label className="text-xs sm:text-sm font-medium text-gray-500 mb-2 block">
                     Your Remarks {selectedLeave.teacher_remarks && `(Previous: "${selectedLeave.teacher_remarks}")`}
                   </label>
                   <textarea
@@ -650,17 +646,17 @@ const TeachersStudentLeavePage = () => {
                     onChange={(e) => setRemarks(e.target.value)}
                     placeholder="Enter your remarks or feedback for the student..."
                     rows={3}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm sm:text-base"
                   />
                 </div>
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
-                <div className="flex justify-end space-x-3">
+              <div className="border-t border-gray-200 p-4 sm:p-6 bg-gray-50 rounded-b-xl sm:rounded-b-2xl">
+                <div className="flex flex-col xs:flex-row justify-end gap-2 sm:gap-3">
                   <button
                     onClick={() => setShowActionModal(false)}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-4 sm:px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base order-2 xs:order-1"
                     disabled={actionLoading}
                   >
                     Cancel
@@ -668,14 +664,14 @@ const TeachersStudentLeavePage = () => {
                   <button
                     onClick={() => handleLeaveAction("reject")}
                     disabled={actionLoading}
-                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                    className="px-4 sm:px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 text-sm sm:text-base order-3 xs:order-2"
                   >
                     {actionLoading ? "Processing..." : "Reject"}
                   </button>
                   <button
                     onClick={() => handleLeaveAction("approve")}
                     disabled={actionLoading}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    className="px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm sm:text-base order-1 xs:order-3"
                   >
                     {actionLoading ? "Processing..." : "Approve"}
                   </button>

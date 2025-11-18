@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+
 import axios from 'axios';
 import { Download, IdCardIcon, ShieldCheck, Users } from 'lucide-react';
 
@@ -10,7 +11,8 @@ interface IdCardRecord {
   id: number;
   user_email: string;
   user_name: string;
-  id_card_url: string;
+  id_card_url?: string; // Make optional
+  pdf_url?: string; // Alternative field name
   created_at: string;
   updated_at: string;
 }
@@ -24,44 +26,30 @@ interface StudentRecord {
 }
 
 interface IdCardFormProps {
-  onSubmit: (data: {
-    user_email: string;
-    user_name: string;
-    id_card_url: string;
-  }) => Promise<void>;
+  onSubmit: () => Promise<void>;
   onCancel: () => void;
   defaultName: string;
   defaultEmail: string;
 }
 
 const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultName, defaultEmail }) => {
-  const [formData, setFormData] = useState({
-    user_name: defaultName,
-    user_email: defaultEmail,
-    id_card_url: ''
-  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.id_card_url) {
-      setError('Please provide a link to your ID card file.');
-      return;
-    }
 
     try {
       setSubmitting(true);
       setError('');
-      await onSubmit(formData);
+      await onSubmit();
     } catch (err: any) {
-      console.error('ID card creation failed:', err);
-      setError(err?.response?.data?.detail || 'Unable to create ID card. Please try again.');
+      console.error('ID card generation failed:', err);
+      const errorMessage = err?.response?.data?.detail || 
+                          err?.response?.data?.error || 
+                          err?.response?.data?.message || 
+                          'Unable to generate ID card. The backend service may be experiencing issues. Please contact your administrator or try again later.';
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -69,46 +57,20 @@ const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultName
 
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Your ID Card</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Generate Your ID Card</h2>
       <p className="text-gray-600 mb-6">
-        Provide the link to your digital ID card. Our team will review and activate it for you.
+        Click the button below to automatically generate your digital ID card for the logged-in account.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-          <input
-            type="text"
-            name="user_name"
-            value={formData.user_name}
-            onChange={handleChange}
-            readOnly
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-500"
-          />
-        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
           <input
             type="email"
-            name="user_email"
-            value={formData.user_email}
-            onChange={handleChange}
+            value={defaultEmail}
             readOnly
             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">ID Card URL *</label>
-          <input
-            type="url"
-            name="id_card_url"
-            value={formData.id_card_url}
-            onChange={handleChange}
-            placeholder="https://example.com/your-id-card.pdf"
-            required
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
           />
         </div>
 
@@ -124,7 +86,7 @@ const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultName
             disabled={submitting}
             className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-60"
           >
-            {submitting ? 'Submitting...' : 'Submit'}
+            {submitting ? 'Generating...' : 'Generate ID Card'}
           </button>
           <button
             type="button"
@@ -146,6 +108,8 @@ const AllIdCards = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
 
   const userInfo =
     (typeof window !== 'undefined' && localStorage.getItem('userInfo')) ||
@@ -159,15 +123,25 @@ const AllIdCards = () => {
       try {
         setLoading(true);
         setError('');
-        const [cardsRes, studentsRes] = await Promise.all([
-          axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`),
-          axios.get<StudentRecord[]>(`${API_BASE}/students/`),
-        ]);
-
+        
+        const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
+        
+        
         setIdCards(cardsRes.data || []);
-        setStudents(studentsRes.data || []);
-      } catch (err) {
+        
+        // Only fetch students if needed
+        try {
+          const studentsRes = await axios.get<StudentRecord[]>(`${API_BASE}/students/`);
+          setStudents(studentsRes.data || []);
+        } catch (studErr) {
+          console.warn('Failed to fetch students:', studErr);
+          // Continue even if students fetch fails
+        }
+      } catch (err: any) {
         console.error('ID cards fetch error:', err);
+        console.error('Error response:', err?.response);
+        console.error('Error status:', err?.response?.status);
+        console.error('Error data:', err?.response?.data);
         setError('Unable to load ID cards. Please try again later.');
       } finally {
         setLoading(false);
@@ -191,20 +165,42 @@ const AllIdCards = () => {
   const isStudent = (userRole || '').toLowerCase() === 'student';
 
   const filteredCards = useMemo(() => {
-    if (!userEmail) return [];
+    if (!userEmail) {
+      return [];
+    }
     const emailLower = userEmail.toLowerCase();
-    return idCards.filter((card) => card.user_email?.toLowerCase() === emailLower);
+    const cards = idCards.filter((card) => card.user_email?.toLowerCase() === emailLower);
+    return cards;
   }, [idCards, userEmail]);
 
-  const handleCreateCard = async (payload: {
-    user_email: string;
-    user_name: string;
-    id_card_url: string;
-  }) => {
-    await axios.post(`${API_BASE}/id_cards/`, payload);
-    const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
-    setIdCards(cardsRes.data || []);
-    setShowForm(false);
+  const handleCreateCard = async () => {
+    try {
+      if (!userEmail) {
+        throw new Error('No user email found in localStorage. Please log in again.');
+      }
+
+      
+      // Use the correct API endpoint for generating ID cards
+      const response = await axios.post(`${API_BASE}/id_cards/generate/`, { 
+        email: userEmail 
+      });
+      
+      
+      
+      // Refresh the ID cards list after generation
+      const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
+      setIdCards(cardsRes.data || []);
+      setShowForm(false);
+    } catch (err: any) {
+      console.error('ID card generation error details:', {
+        message: err?.message,
+        response: err?.response?.data,
+        status: err?.response?.status,
+        statusText: err?.response?.statusText
+      });
+      // Re-throw so the form can handle it
+      throw err;
+    }
   };
 
   if (loading) {
@@ -254,13 +250,13 @@ const AllIdCards = () => {
           <IdCardIcon className="w-16 h-16 text-purple-400 mx-auto mb-4" />
           <h3 className="text-2xl font-semibold text-gray-900 mb-2">No ID card found</h3>
           <p className="text-gray-600 mb-6">
-            We couldn&apos;t find a digital ID card linked to your account. You can request one now.
+            We couldn&apos;t find a digital ID card linked to your account. Generate one now automatically.
           </p>
           <button
             onClick={() => setShowForm(true)}
             className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
           >
-            Create your new card
+            Generate ID Card
           </button>
         </div>
       )}
@@ -306,15 +302,66 @@ const AllIdCards = () => {
                     </span>
                   </div>
 
-                  <a
-                    href={card.id_card_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download ID Card
-                  </a>
+                  {card.id_card_url ? (
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewUrl(card.id_card_url!);
+                          setTimeout(() => {
+                            if (previewRef.current) {
+                              previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                          }, 0);
+                        }}
+                        className="inline-flex items-center justify-center gap-2 flex-1 px-4 py-3 bg-white text-purple-700 border border-purple-300 rounded-xl font-semibold shadow-sm hover:shadow-md hover:bg-purple-50 transition-all"
+                      >
+                        <IdCardIcon className="w-4 h-4" />
+                        View ID Card
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = card.id_card_url!;
+                          link.download = 'id_card.pdf';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="inline-flex items-center justify-center gap-2 flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download ID Card
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-sm text-yellow-800">
+                        ⚠️ ID card is being generated. Please wait or try regenerating.
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await axios.post(`${API_BASE}/id_cards/generate/`,{ 
+                              email: card.user_email 
+                            });
+                            // Refresh the list
+                            const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
+                            setIdCards(cardsRes.data || []);
+                            alert('ID card regeneration started. Please refresh in a moment.');
+                          } catch (err: any) {
+                            console.error('Regeneration error:', err);
+                            alert('Failed to regenerate ID card. Please try again.');
+                          }
+                        }}
+                        className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all"
+                      >
+                        <IdCardIcon className="w-4 h-4" />
+                        Regenerate ID Card
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -329,6 +376,25 @@ const AllIdCards = () => {
           onSubmit={handleCreateCard}
           onCancel={() => setShowForm(false)}
         />
+      )}
+
+      {previewUrl && (
+        <div
+          ref={previewRef}
+          className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 space-y-4"
+        >
+          <h2 className="text-xl font-bold text-gray-900 mb-2">ID Card Preview</h2>
+          <p className="text-gray-600 text-sm mb-4">
+            This is a preview of your ID card. Use the Download ID Card button above if you want to save it.
+          </p>
+          <div className="w-full aspect-[3/4] max-w-md mx-auto border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
+            <iframe
+              src={previewUrl}
+              title="ID Card Preview"
+              className="w-full h-full"
+            />
+          </div>
+        </div>
       )}
     </div>
   );

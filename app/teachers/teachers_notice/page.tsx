@@ -68,7 +68,6 @@ const TeacherNoticePage = () => {
     const userData = localStorage.getItem("userData");
     if (userData) {
       const parsed = JSON.parse(userData);
-      console.log("✅ Logged-in teacher:", parsed);
       setUser(parsed);
     } else {
       console.error("❌ No user found in localStorage");
@@ -79,9 +78,7 @@ const TeacherNoticePage = () => {
   const fetchNotices = async () => {
     try {
       setLoading(true);
-      console.log("📡 Fetching notices...");
       const res = await axios.get(`${API_BASE}notices/`);
-      console.log("✅ Notices fetched:", res.data);
       setNotices(res.data);
     } catch (err) {
       console.error("❌ Error fetching notices:", err);
@@ -100,7 +97,6 @@ const TeacherNoticePage = () => {
     const fetchStudents = async () => {
       try {
         const res = await axios.get(`${API_BASE}students/`);
-        console.log("✅ Students fetched:", res.data);
         setStudents(res.data);
         setFilteredStudents(res.data);
       } catch (err) {
@@ -168,14 +164,12 @@ const TeacherNoticePage = () => {
       notice_by: user.email,
       notice_to: selectedStudent.email,
     };
-
-    console.log("📝 Creating new notice payload:", noticePayload);
+       
 
     try {
       setSubmitting(true);
       setError("");
       const res = await axios.post(`${API_BASE}notices/`, noticePayload);
-      console.log("✅ Notice created:", res.data);
 
       // Refresh notices list after adding
       await fetchNotices();

@@ -80,12 +80,10 @@ const TeachersProgramsPage = () => {
   useEffect(() => {
     const fetchPrograms = async () => {
       try {
-        console.log('🚀 [TEACHER_PROGRAMS] Fetching programs...');
         setLoading(true);
         setError("");
 
         const response = await axios.get(`${API_BASE}programs/`);
-        console.log('📦 [TEACHER_PROGRAMS] Programs data:', response.data);
         
         // Add calculated status to each program
         const programsWithCalculatedStatus = response.data.map((program: Program) => ({
@@ -100,7 +98,6 @@ const TeachersProgramsPage = () => {
         setError("Failed to load programs. Please try again later.");
       } finally {
         setLoading(false);
-        console.log('✅ [TEACHER_PROGRAMS] Programs fetch completed');
       }
     };
 
@@ -131,7 +128,6 @@ const TeachersProgramsPage = () => {
   // Fetch detailed program information
   const fetchProgramDetails = async (programId: number) => {
     try {
-      console.log(`📋 [TEACHER_PROGRAMS] Fetching details for program ID: ${programId}`);
       setLoadingDetails(true);
 
       const program = programs.find(p => p.id === programId);

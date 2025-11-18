@@ -61,7 +61,6 @@ export default function Attendance() {
       const userData = JSON.parse(localStorage.getItem("userData") || "{}");
       const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
       userEmail = userData?.email || userInfo?.email || null;
-      console.log("👨‍🏫 Logged-in teacher email (attendance page):", userEmail);
     } catch {}
   }
 
@@ -88,8 +87,6 @@ export default function Attendance() {
   const loadTeacherClasses = async () => {
     setLoading(true);
     try {
-      console.log("📘 Loading timetable…");
-
       const timeRes = await axios.get(`${API}/timetable/`);
       const timetableEntries: TimetableEntry[] = timeRes.data || [];
       const teacherClasses = timetableEntries.filter(
@@ -118,14 +115,10 @@ export default function Attendance() {
         {} as Record<number, SubjectOption[]>
       );
 
-      console.log("🔥 Unique class IDs:", uniqueClassIds);
-
       const classRes = await axios.get(`${API}/classes/`);
       const classes = classRes.data.filter((cls: any) =>
         uniqueClassIds.includes(cls.id)
       );
-
-      console.log("🏫 Final Classes with name & section:", classes);
 
       setClassesList(classes);
       setClassSubjectsMap(subjectsByClass);
@@ -202,7 +195,6 @@ export default function Attendance() {
       return;
     }
     const normalizedEmail = email.toLowerCase();
-    console.log("📝 Locally marking attendance:", normalizedEmail, status, "date:", selectedDate);
     setPendingAttendance((prev) => ({ ...prev, [normalizedEmail]: status }));
   };
 
@@ -224,7 +216,6 @@ export default function Attendance() {
 
       const emails = Object.keys(pendingAttendance);
       if (emails.length === 0) {
-        console.log("ℹ️ No pending attendance changes to submit");
         return;
       }
 
@@ -245,16 +236,10 @@ export default function Attendance() {
         student_name: students.find((stu) => stu.email?.toLowerCase() === email)?.fullname,
       }));
 
-      console.log("📨 Submitting bulk student_attendance payload:", payload);
       const resp = await axios.post(`${API}/student_attendance/bulk_create/`, payload);
-      console.log("✅ student_attendance bulk_create HTTP status:", resp.status);
-      console.log("✅ student_attendance bulk_create response body:", resp.data);
 
       // Extra logging if backend returns partial-success structure
       if (resp.data && typeof resp.data === "object") {
-        if (typeof resp.data.created_count !== "undefined") {
-          console.log("📊 created_count:", resp.data.created_count);
-        }
         if (Array.isArray(resp.data.errors) && resp.data.errors.length > 0) {
           console.warn("⚠️ Validation errors from bulk_create:", resp.data.errors);
         }
@@ -262,12 +247,11 @@ export default function Attendance() {
 
       setPendingAttendance({});
       await loadStudentAttendance();
-      console.log("🔄 Reloaded student_attendance after submit");
     } catch (err: any) {
-      console.log("❌ Error submitting attendance:", err);
+      console.error("❌ Error submitting attendance:", err);
       if (err.response) {
-        console.log("❌ Backend error status:", err.response.status);
-        console.log("❌ Backend error data:", err.response.data);
+        console.error("❌ Backend error status:", err.response.status);
+        console.error("❌ Backend error data:", err.response.data);
       }
     }
   };
@@ -366,54 +350,54 @@ export default function Attendance() {
   /* ============================ ENHANCED UI ============================ */
   return (
     <DashboardLayout role="teachers">
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
         {/* Header Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Attendance Management</h1>
-          <p className="text-gray-600">Track and manage attendance records</p>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Attendance Management</h1>
+          <p className="text-gray-600 text-sm sm:text-base">Track and manage attendance records</p>
         </div>
 
         {/* Control Panel */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
           {/* Section Toggle */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
+            <div className="flex gap-1 sm:gap-2 bg-gray-100 p-1 rounded-lg w-full sm:w-auto">
               <button
                 onClick={() => setSection("teacher")}
-                className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm ${
                   section === "teacher" 
                     ? "bg-white text-blue-600 shadow-sm border border-gray-200" 
                     : "text-gray-600 hover:text-gray-800"
                 }`}
               >
-                👨‍🏫 Teacher Attendance
+                👨‍🏫 Teacher
               </button>
               <button
                 onClick={() => setSection("student")}
-                className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm ${
                   section === "student" 
                     ? "bg-white text-green-600 shadow-sm border border-gray-200" 
                     : "text-gray-600 hover:text-gray-800"
                 }`}
               >
-                👥 Student Attendance
+                👥 Student
               </button>
             </div>
 
             {/* Date Controls */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2">
-                <span className="text-gray-500">📅</span>
+            <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2 flex-1">
+                <span className="text-gray-500 text-sm">📅</span>
                 <input
                   type="date"
-                  className="outline-none bg-transparent"
+                  className="outline-none bg-transparent w-full text-sm sm:text-base"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                 />
               </div>
               <button
                 onClick={() => setSelectedDate(new Date().toISOString().split("T")[0])}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 font-medium"
+                className="px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 font-medium text-xs sm:text-sm"
               >
                 Today
               </button>
@@ -422,16 +406,16 @@ export default function Attendance() {
 
           {/* Class Selector for Student Section */}
           {section === "student" && (
-            <div className="flex flex-col gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-3">
-                <label className="font-semibold text-gray-700 min-w-fit">Select Class:</label>
+            <div className="flex flex-col gap-3 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <label className="font-semibold text-gray-700 min-w-fit text-sm">Select Class:</label>
                 <select
-                value={selectedClass ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSelectedClass(value ? parseInt(value, 10) : null);
-                }}
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={selectedClass ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedClass(value ? parseInt(value, 10) : null);
+                  }}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 >
                   {classesList.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -440,15 +424,15 @@ export default function Attendance() {
                   ))}
                 </select>
               </div>
-              <div className="flex items-center gap-3">
-                <label className="font-semibold text-gray-700 min-w-fit">Select Subject:</label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <label className="font-semibold text-gray-700 min-w-fit text-sm">Select Subject:</label>
                 <select
                   value={selectedSubject ?? ""}
                   onChange={(e) => {
                     const value = e.target.value;
                     setSelectedSubject(value ? parseInt(value, 10) : null);
                   }}
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   disabled={!selectedClass || !(classSubjectsMap[selectedClass]?.length)}
                 >
                   {(classSubjectsMap[selectedClass || -1] || []).map((subject) => (
@@ -459,7 +443,7 @@ export default function Attendance() {
                 </select>
               </div>
               {selectedClass && subjectOptions.length === 0 && (
-                <div className="text-sm text-red-600">
+                <div className="text-xs sm:text-sm text-red-600">
                   No subjects are assigned to you for this class. Please contact the admin team.
                 </div>
               )}
@@ -469,50 +453,31 @@ export default function Attendance() {
 
         {/* Loading State */}
         {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="flex justify-center items-center py-8 sm:py-12">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-500"></div>
           </div>
         )}
 
         {/* ============================ TEACHER ATTENDANCE ============================ */}
         {section === "teacher" && !loading && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800 flex items-center gap-2">
                 📊 Your Attendance Records
               </h2>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700">Date</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700">Check In</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700">Check Out</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
+            {attendance.length > 0 ? (
+              <div className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {attendance.map((a) => (
-                    <tr key={a.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="py-4 px-6 text-gray-800 font-medium">{a.date}</td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          a.check_in ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {a.check_in ?? "Not Recorded"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          a.check_out ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {a.check_out ?? "Not Recorded"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    <div
+                      key={a.id}
+                      className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-gray-900 text-base sm:text-lg">Attendance Record</h3>
+                        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
                           a.status === 'Present' 
                             ? 'bg-green-100 text-green-800' 
                             : a.status === 'Absent'
@@ -521,46 +486,70 @@ export default function Attendance() {
                         }`}>
                           {a.status}
                         </span>
-                      </td>
-                    </tr>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">Date</p>
+                          <p className="text-sm font-semibold text-gray-900">{a.date}</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs font-medium text-gray-500">Check In</p>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              a.check_in ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {a.check_in ?? "Not Recorded"}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-gray-500">Check Out</p>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              a.check_out ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {a.check_out ?? "Not Recorded"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-              
-              {attendance.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="text-6xl mb-4">📊</div>
-                  <p className="text-lg">No attendance records found</p>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 sm:py-12 text-gray-500">
+                <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">📊</div>
+                <p className="text-base sm:text-lg">No attendance records found</p>
+              </div>
+            )}
           </div>
         )}
 
         {/* ============================ STUDENT ATTENDANCE ============================ */}
         {section === "student" && !loading && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Class Info Header */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-1">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
+                <div className="text-center sm:text-left">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1">
                     Students of {classInfo?.class_name} {classInfo?.sec}
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 text-sm sm:text-base">
                     {currentSubjectName
                       ? `Manage attendance for ${currentSubjectName} on ${selectedDate}`
                       : "Select a subject assigned to you before marking attendance"}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">Total Students</div>
-                    <div className="text-2xl font-bold text-blue-600">{students.length}</div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  <div className="text-center sm:text-right">
+                    <div className="text-xs sm:text-sm text-gray-500">Total Students</div>
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">{students.length}</div>
                   </div>
                   <button
                     onClick={submitAttendance}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs sm:text-sm font-medium"
                   >
                     Submit Attendance
                   </button>
@@ -568,78 +557,77 @@ export default function Attendance() {
               </div>
             </div>
 
-            {/* Students Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700">Student Name</th>
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700">Email</th>
-                      <th className="text-left py-4 px-6 font-semibold text-gray-700">Attendance Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {students.map((stu, index) => {
-                      const status = getStudentStatus(stu.email);
-                      const isPresent = status === "Present";
-                      const isAbsent = status === "Absent";
-                      const rowKey = stu.email || `${stu.fullname || "student"}-${index}`;
+            {/* Students Cards Grid */}
+            {students.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {students.map((stu, index) => {
+                  const status = getStudentStatus(stu.email);
+                  const isPresent = status === "Present";
+                  const isAbsent = status === "Absent";
+                  const rowKey = stu.email || `${stu.fullname || "student"}-${index}`;
 
-                      return (
-                        <tr key={rowKey} className="hover:bg-gray-50 transition-colors duration-150">
-                          <td className="py-4 px-6">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                                {stu.fullname?.charAt(0) || 'S'}
-                              </div>
-                              <span className="font-medium text-gray-800">{stu.fullname}</span>
-                            </div>
-                          </td>
-                          <td className="py-4 px-6 text-gray-600">{stu.email}</td>
-                          <td className="py-4 px-6">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => markAttendance(stu.email, "Present")}
-                                  className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                                    isPresent
-                                      ? "bg-green-500 text-white shadow-sm"
-                                      : "bg-green-100 text-green-700 hover:bg-green-200"
-                                  }`}
-                                >
-                                  ✓ Present
-                                </button>
-                                <button
-                                  onClick={() => markAttendance(stu.email, "Absent")}
-                                  className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                                    isAbsent
-                                      ? "bg-red-500 text-white shadow-sm"
-                                      : "bg-red-100 text-red-700 hover:bg-red-200"
-                                  }`}
-                                >
-                                  ✗ Absent
-                                </button>
-                              </div>
-                              <span className={`px-4 py-1 rounded-full text-sm font-medium ${getStatusStyles(status)}`}>
-                                {status || "Not Marked"}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                
-                {students.length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
-                    <div className="text-6xl mb-4">👥</div>
-                    <p className="text-lg">No students found for this class</p>
-                  </div>
-                )}
+                  return (
+                    <div
+                      key={rowKey}
+                      className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-all duration-200 group"
+                    >
+                      {/* Student Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm sm:text-base">
+                            {stu.fullname?.charAt(0) || 'S'}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">
+                              {stu.fullname}
+                            </h3>
+                            <p className="text-gray-600 text-xs sm:text-sm truncate">
+                              {stu.email}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Current Status */}
+                      <div className="mb-4">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusStyles(status)}`}>
+                          {status || "Not Marked"}
+                        </span>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => markAttendance(stu.email, "Present")}
+                          className={`w-full px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 text-xs sm:text-sm ${
+                            isPresent
+                              ? "bg-green-500 text-white shadow-sm"
+                              : "bg-green-100 text-green-700 hover:bg-green-200"
+                          }`}
+                        >
+                          ✓ Present
+                        </button>
+                        <button
+                          onClick={() => markAttendance(stu.email, "Absent")}
+                          className={`w-full px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 text-xs sm:text-sm ${
+                            isAbsent
+                              ? "bg-red-500 text-white shadow-sm"
+                              : "bg-red-100 text-red-700 hover:bg-red-200"
+                          }`}
+                        >
+                          ✗ Absent
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
+                <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">👥</div>
+                <p className="text-base sm:text-lg text-gray-500">No students found for this class</p>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -130,7 +130,6 @@ const TeachersAssignmentsPage = () => {
         attachment: null,
       };
 
-      console.log("Submitting Assignment:", assignmentData);
 
       await axios.post(API_URL, assignmentData);
       showPopup('success', "Assignment added successfully!");
@@ -228,14 +227,12 @@ const TeachersAssignmentsPage = () => {
       if (studentsData.length === 0) {
         const studentsResponse = await axios.get(`${API_URL.replace('assignments/', 'students/')}`);
         setStudentsData(studentsResponse.data);
-        console.log("📚 Students data fetched:", studentsResponse.data.length);
       }
       
       // Fetch classes data if not already loaded
       if (classesData.length === 0) {
         const classesResponse = await axios.get(`${API_URL.replace('assignments/', 'classes/')}`);
         setClassesData(classesResponse.data);
-        console.log("🏫 Classes data fetched:", classesResponse.data.length);
       }
       
       const response = await axios.get(`https://globaltechsoftwaresolutions.cloud/school-api/api/submitted_assignments/`);
@@ -245,11 +242,9 @@ const TeachersAssignmentsPage = () => {
         (item: any) => item.assignment === assignmentId || item.assignment_id === assignmentId
       );
       
-      console.log(`📝 Submitted assignments for assignment ${assignmentId}:`, assignmentSubmissions);
       setSubmittedAssignments(assignmentSubmissions);
       setShowSubmittedAssignments(true);
     } catch (err) {
-      console.error("Error fetching submitted assignments:", err);
       showPopup('error', "Failed to fetch submitted assignments.");
     } finally {
       setLoadingSubmittedAssignments(false);
