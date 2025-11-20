@@ -209,7 +209,6 @@ const SubmitAssignmentModal: React.FC<{
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error("❌ Submission error:", err.response?.data || err);
       const msg =
         err.response?.data?.error ||
         "Failed to submit assignment. Please check your class or try again.";
@@ -506,7 +505,6 @@ const StudentAssignmentsPage = () => {
 
   const fetchSubmittedAssignments = async (email: string) => {
     const res = await axios.get(`${API_BASE}/submitted_assignments/`).catch((err) => {
-      console.warn("submitted_assignments API failed:", err.message);
       return { data: [] };
     });
 
@@ -514,7 +512,6 @@ const StudentAssignmentsPage = () => {
     const filtered = data.filter(
       (record) => record?.student?.toLowerCase?.() === email.toLowerCase()
     );
-    console.log("📥 Submitted assignments fetched:", filtered.length);
     return filtered;
   };
 
@@ -530,7 +527,6 @@ const StudentAssignmentsPage = () => {
       setAssignments(assignList);
       setSubmitted(submittedList);
     } catch (err) {
-      console.error("❌ Load error:", err);
       setPopup({ message: "Failed to load assignments. Please try again.", type: "error" });
     } finally {
       setLoading(false);

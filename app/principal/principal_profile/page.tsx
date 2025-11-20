@@ -10,11 +10,11 @@ interface Principal {
   fullname: string;
   phone: string;
   qualification: string;
-  total_experience: string;
+  total_experience: string | null;
   bio: string;
   office_address: string;
-  date_of_birth: string;
-  date_joined: string;
+  date_of_birth: string | null;
+  date_joined: string | null;
   profile_picture: string;
 }
 
@@ -34,16 +34,18 @@ const PrincipalProfilePage = () => {
       const userData = localStorage.getItem("userData");
       return userData ? JSON.parse(userData)?.email : "";
     } catch (error) {
-      console.error("Error parsing userData:", error);
       return "";
     }
   };
 
   const email = getPrincipalEmail();
+  
+  // 🔄 TEMPORARY: Override to test with test8@example.com
+  const testEmail = "test8@example.com";
 
   // ✅ Fetch principal info by email
   useEffect(() => {
-    if (!email) {
+    if (!testEmail) {
       setError("No email found in localStorage");
       return;
     }
@@ -52,24 +54,35 @@ const PrincipalProfilePage = () => {
       setIsLoading(true);
       setError("");
       try {
-        const res = await axios.get(`${API_BASE}/principals/?email=${encodeURIComponent(email)}`);
-        if (res.data?.length > 0) {
-          const principalData = res.data[0];
+        const res = await axios.get(`${API_BASE}/principals/${encodeURIComponent(testEmail)}/`);
+        
+        if (res.data && res.data.email) {
+          const principalData = res.data;
           setPrincipal(principalData);
           setPreviewImage(principalData.profile_picture || "/default-avatar.png");
         } else {
           setError("Principal not found");
         }
-      } catch (error) {
-        console.error("❌ Error fetching principal:", error);
-        setError("Failed to load profile data");
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          // Try to fetch all principals to see what's available
+          try {
+            const allPrincipalsRes = await axios.get(`${API_BASE}/principals/`);
+            const availableEmails = allPrincipalsRes.data.map((p: any) => p.email).join(", ");
+            setError(`Principal with email "${testEmail}" not found. Available principals: ${availableEmails}`);
+          } catch (fallbackError) {
+            setError("Principal not found in database and couldn't fetch available principals");
+          }
+        } else {
+          setError("Failed to load profile data: " + (error.response?.data?.message || error.message));
+        }
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchPrincipal();
-  }, [email]);
+  }, [testEmail]);
 
   // ✅ Input change handler
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,15 +125,15 @@ const PrincipalProfilePage = () => {
     try {
       const formData = new FormData();
       
-      // Append only changed fields or all required fields
-      const fields: (keyof Principal)[] = [
-        'fullname', 'phone', 'qualification', 'total_experience', 
-        'bio', 'office_address', 'date_of_birth', 'date_joined'
-      ];
-      
-      fields.forEach(field => {
-        formData.append(field, principal[field] || "");
-      });
+      // Append all fields properly
+      formData.append("fullname", principal.fullname || "");
+      formData.append("phone", principal.phone || "");
+      formData.append("qualification", principal.qualification || "");
+      formData.append("total_experience", principal.total_experience || "");
+      formData.append("bio", principal.bio || "");
+      formData.append("office_address", principal.office_address || "");
+      formData.append("date_of_birth", principal.date_of_birth || "");
+      formData.append("date_joined", principal.date_joined || "");
 
       if (selectedImage) {
         formData.append("profile_picture", selectedImage);
@@ -135,10 +148,10 @@ const PrincipalProfilePage = () => {
       );
 
       // 🔄 Refresh data after save
-      const refreshed = await axios.get(`${API_BASE}/principals/?email=${encodeURIComponent(email)}`);
-      if (refreshed.data?.length > 0) {
-        setPrincipal(refreshed.data[0]);
-        setPreviewImage(refreshed.data[0].profile_picture || "/default-avatar.png");
+      const refreshed = await axios.get(`${API_BASE}/principals/${encodeURIComponent(testEmail)}/`);
+      if (refreshed.data) {
+        setPrincipal(refreshed.data);
+        setPreviewImage(refreshed.data.profile_picture || "/default-avatar.png");
       }
 
       setIsEditing(false);
@@ -148,7 +161,6 @@ const PrincipalProfilePage = () => {
       setTimeout(() => setShowSuccess(false), 3000);
       
     } catch (error) {
-      console.error("❌ Error updating profile:", error);
       setError("Failed to update profile. Please try again.");
     } finally {
       setIsLoading(false);
@@ -289,7 +301,7 @@ const PrincipalProfilePage = () => {
 
               <div>
                 <label className="block text-gray-700 font-medium mb-1">
-                  Qualification
+                  qualification
                 </label>
                 <input
                   type="text"
@@ -298,12 +310,13 @@ const PrincipalProfilePage = () => {
                   onChange={handleChange}
                   disabled={!isEditing || isLoading}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 disabled:bg-gray-100"
+                  placeholder="Enter your qualification"
                 />
               </div>
 
               <div>
                 <label className="block text-gray-700 font-medium mb-1">
-                  Total Experience
+                  Total Experience (years)
                 </label>
                 <input
                   type="text"
@@ -312,6 +325,7 @@ const PrincipalProfilePage = () => {
                   onChange={handleChange}
                   disabled={!isEditing || isLoading}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 disabled:bg-gray-100"
+                  placeholder="Enter total years of experience"
                 />
               </div>
 
@@ -350,7 +364,7 @@ const PrincipalProfilePage = () => {
                 <input
                   type="date"
                   name="date_joined"
-                  value={principal.date_joined || ""}
+                  value={principal.date_joined   || ""}
                   onChange={handleChange}
                   disabled={!isEditing || isLoading}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 disabled:bg-gray-100"
@@ -360,7 +374,7 @@ const PrincipalProfilePage = () => {
 
             <div>
               <label className="block text-gray-700 font-medium mb-1">
-                Bio
+                bio
               </label>
               <input
                 type="text"

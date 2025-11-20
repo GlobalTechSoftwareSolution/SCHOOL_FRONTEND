@@ -199,7 +199,10 @@ const ManagementProfilePage = () => {
         if (!updateData[key as keyof typeof updateData]) delete updateData[key as keyof typeof updateData];
       });
 
-      const response = await axios.patch(`${API_BASE}/management/${email}/`, updateData);
+      const response = await axios.patch(
+        `${API_BASE}/management/${encodeURIComponent(email)}/`,
+        updateData
+      );
 
       showSuccess();
       setManagement(response.data);
@@ -225,7 +228,10 @@ const ManagementProfilePage = () => {
             email: email
           };
           
-          const response = await axios.put(`${API_BASE}/management/${email}/`, updateData);
+          const response = await axios.put(
+            `${API_BASE}/management/${encodeURIComponent(email)}/`,
+            updateData
+          );
           showSuccess();
           setManagement(response.data);
           setEditing(false);

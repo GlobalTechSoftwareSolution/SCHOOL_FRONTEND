@@ -14,7 +14,9 @@ import {
   Clock,
   Users,
   BookOpen,
-  MapPin
+  MapPin,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface TimeSlot {
@@ -86,6 +88,8 @@ export default function Timetablecreation() {
     room: '',
     subject: ''
   });
+  const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
 
   const [newEntry, setNewEntry] = useState({
     class_id: '',
@@ -99,7 +103,6 @@ export default function Timetablecreation() {
   });
 
   const days = [
-    { key: 'time', label: 'Time', shortLabel: 'Time' },
     { key: 'monday', label: 'Monday', shortLabel: 'Mon' },
     { key: 'tuesday', label: 'Tuesday', shortLabel: 'Tue' },
     { key: 'wednesday', label: 'Wednesday', shortLabel: 'Wed' },
@@ -175,18 +178,14 @@ export default function Timetablecreation() {
     }
   };
 
-  // Load "subjects" from departments API so each option represents a department
   const fetchSubjects = async () => {
     try {
       const res = await axios.get(`${API_BASE}/departments/`);
       const data = Array.isArray(res.data) ? res.data : [];
-
-      // Map department response into SubjectInfo shape
       const mapped: SubjectInfo[] = data.map((dept: any) => ({
         id: dept.id,
         name: dept.department_name || dept.name || '',
       }));
-
       setSubjects(mapped);
     } catch (err) {
       console.error('Failed to load subjects (departments):', err);
@@ -210,7 +209,6 @@ export default function Timetablecreation() {
       ? entries 
       : entries.filter(e => e.class_id === selectedClassId);
 
-    // Apply additional filters
     if (filters.teacher) {
       filtered = filtered.filter(e => 
         e.teacher.toLowerCase().includes(filters.teacher.toLowerCase())
@@ -372,31 +370,296 @@ export default function Timetablecreation() {
     window.URL.revokeObjectURL(url);
   };
 
+  const getEntriesForCurrentDay = () => {
+    const currentDay = days[currentDayIndex].key;
+    return entries.filter(entry => 
+      entry.day_of_week.toLowerCase() === currentDay &&
+      (selectedClassId === 'all' || entry.class_id === selectedClassId)
+    ).sort((a, b) => a.start_time.localeCompare(b.start_time));
+  };
+
+  const nextDay = () => {
+    setCurrentDayIndex((prev) => (prev + 1) % days.length);
+  };
+
+  const prevDay = () => {
+    setCurrentDayIndex((prev) => (prev - 1 + days.length) % days.length);
+  };
+
+  // Responsive card view for mobile devices
+  const CardView = () => {
+    const dayEntries = getEntriesForCurrentDay();
+    
+    return (
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        {/* Day Navigation Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={prevDay}
+              className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            
+            <div className="text-center">
+              <h2 className="text-lg font-semibold">{days[currentDayIndex].label}</h2>
+              <p className="text-blue-100 text-sm">
+                {dayEntries.length} {dayEntries.length === 1 ? 'class' : 'classes'}
+              </p>
+            </div>
+            
+            <button
+              onClick={nextDay}
+              className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Cards Container */}
+        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          {loading ? (
+            <div className="py-8 flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mr-3" />
+              <span className="text-gray-600">Loading timetable...</span>
+            </div>
+          ) : dayEntries.length === 0 ? (
+            <div className="py-8 flex flex-col items-center justify-center text-gray-500">
+              <Calendar className="w-12 h-12 text-gray-400 mb-3" />
+              <p className="font-medium text-gray-600">No classes scheduled</p>
+              <p className="text-sm text-gray-500 mt-1">Try adjusting your filters</p>
+            </div>
+          ) : (
+            dayEntries.map((entry, index) => {
+              const teacherInfo = teachers.find(t => t.email === entry.teacher);
+              const subjectName = entry.subject_name || String(entry.subject);
+              
+              return (
+                <div
+                  key={entry.id}
+                  className={`border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${getSubjectColor(subjectName, entry)}`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-800 text-lg mb-1">{subjectName}</h3>
+                      <div className="flex items-center text-sm text-gray-600 mb-1">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {entry.start_time.slice(0,5)} - {entry.end_time.slice(0,5)}
+                      </div>
+                      {teacherInfo && (
+                        <p className="text-sm text-gray-700">
+                          <Users className="w-4 h-4 inline mr-1" />
+                          {teacherInfo.fullname}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex gap-1 ml-2">
+                      <button
+                        onClick={() => handleEdit(entry)}
+                        className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(entry.id)}
+                        className="p-1 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {entry.room_number && (
+                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full flex items-center">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        Room {entry.room_number}
+                      </span>
+                    )}
+                    {teacherInfo?.department_name && (
+                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        {teacherInfo.department_name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Original table view for larger screens
+  const TableView = () => (
+    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+      {/* Days Header */}
+      <div className="grid grid-cols-8 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div className="p-4 text-center font-semibold border-r border-blue-500">
+          <div className="hidden sm:block">Time</div>
+          <div className="sm:hidden text-sm">Time</div>
+        </div>
+        {days.map((day) => (
+          <div
+            key={day.key}
+            className="p-4 text-center font-semibold border-r border-blue-500 last:border-r-0"
+          >
+            <div className="hidden sm:block">{day.label}</div>
+            <div className="sm:hidden text-sm">{day.shortLabel}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Time Slots */}
+      {loading && timeSlots.length === 0 ? (
+        <div className="py-16 flex items-center justify-center">
+          <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mr-3" />
+          <span className="text-gray-600">Loading timetable...</span>
+        </div>
+      ) : timeSlots.length === 0 ? (
+        <div className="py-16 flex flex-col items-center justify-center text-gray-500 gap-3">
+          <Calendar className="w-12 h-12 text-gray-400" />
+          <div className="text-center">
+            <p className="font-medium text-gray-600 mb-1">No timetable entries found</p>
+            <p className="text-sm">Try adjusting your filters or create a new entry</p>
+          </div>
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-200">
+          {timeSlots.map((slot, index) => (
+            <div
+              key={slot.id}
+              className={`grid grid-cols-8 ${
+                index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
+              } hover:bg-blue-50 transition-colors duration-200`}
+            >
+              {/* Time Column */}
+              <div className="p-4 border-r border-gray-200 flex items-center justify-center font-medium text-gray-700 bg-white">
+                <Clock className="w-4 h-4 mr-2 text-gray-500" />
+                {slot.time}
+              </div>
+
+              {/* Day Columns */}
+              {days.map((day) => {
+                const entryData = slot[`${day.key}Data` as keyof TimeSlot] as TimetableEntry;
+                const rawContent = slot[day.key as keyof TimeSlot];
+                const cellContent = typeof rawContent === 'string' ? rawContent : '';
+                const subjectForColor = cellContent ? cellContent.split(' - ')[0] : '';
+
+                return (
+                  <div
+                    key={day.key}
+                    className={`p-3 border-r border-gray-200 last:border-r-0 min-h-[80px] group relative ${getSubjectColor(
+                      subjectForColor,
+                      entryData
+                    )}`}
+                  >
+                    {cellContent ? (
+                      <div className="h-full flex flex-col">
+                        <span className="font-semibold text-gray-800 text-sm mb-1">
+                          {cellContent.split(' - ')[0]}
+                        </span>
+                        {cellContent.includes(' - ') && (
+                          <span className="text-xs text-gray-600 mt-1">
+                            {cellContent.split(' - ').slice(1).join(' - ')}
+                          </span>
+                        )}
+                        {entryData?.room_number && (
+                          <span className="text-xs text-gray-500 mt-2 flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            Room {entryData.room_number}
+                          </span>
+                        )}
+
+                        {/* Action Buttons */}
+                        {entryData && (
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(entryData)}
+                              className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(entryData.id)}
+                              className="p-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <span className="text-gray-400 text-sm">-</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-blue-600" />
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="p-1 sm:p-2 bg-blue-100 rounded-lg">
+              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
               Timetable Management
             </h1>
           </div>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-sm sm:text-base md:text-lg">
             Comprehensive schedule management with real-time updates and advanced filtering
           </p>
         </div>
 
         {/* Controls Section */}
-        <div className="mb-6 space-y-4">
+        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
           {/* Main Controls */}
-          <div className="flex flex-col lg:flex-row gap-4 justify-between">
-            <div className="flex flex-wrap gap-3">
-              <div className="bg-white rounded-xl shadow-sm p-3 border border-gray-200 flex items-center gap-2">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 justify-between">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              {/* View Mode Toggle */}
+              <div className="bg-white rounded-xl shadow-sm p-2 sm:p-3 border border-gray-200 flex items-center gap-2">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    viewMode === 'cards' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Cards
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    viewMode === 'table' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Table
+                </button>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm p-2 sm:p-3 border border-gray-200 flex items-center gap-1 sm:gap-2">
                 <Users className="w-4 h-4 text-gray-500" />
                 <select
                   value={selectedClassId === 'all' ? '' : selectedClassId}
@@ -404,7 +667,7 @@ export default function Timetablecreation() {
                     const value = e.target.value;
                     setSelectedClassId(value === '' ? 'all' : Number(value));
                   }}
-                  className="px-3 py-1.5 border-0 bg-transparent text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
+                  className="px-2 sm:px-3 py-1.5 border-0 bg-transparent text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
                 >
                   <option value="">All Classes</option>
                   {classes.map(cls => (
@@ -418,37 +681,38 @@ export default function Timetablecreation() {
               <button
                 onClick={() => fetchTimetable()}
                 disabled={loading}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2 transition-colors"
+                className="px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1 sm:gap-2 transition-colors"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
                 {loading ? 'Refreshing...' : 'Refresh'}
               </button>
 
               <button
                 onClick={exportTimetable}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium flex items-center gap-2 shadow-sm transition-colors"
+                className="px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-sm transition-colors"
               >
-                <Download className="w-4 h-4" />
-                Export CSV
+                <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">Export</span>
               </button>
             </div>
 
             <button
               onClick={() => setShowForm(prev => !prev)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium flex items-center gap-2 shadow-sm transition-colors"
+              className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-sm transition-colors mt-2 sm:mt-0"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
               {showForm ? 'Close Form' : 'Add New Entry'}
             </button>
           </div>
 
           {/* Advanced Filters */}
-          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+          <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-200">
             <div className="flex items-center gap-2 mb-3">
               <Filter className="w-4 h-4 text-gray-500" />
               <h3 className="text-sm font-semibold text-gray-700">Advanced Filters</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
               <input
                 type="text"
                 placeholder="Filter by teacher..."
@@ -476,19 +740,19 @@ export default function Timetablecreation() {
 
         {/* Create/Edit Form */}
         {showForm && (
-          <div className="mb-6 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50">
-              <h2 className="text-lg font-semibold text-gray-800">
+          <div className="mb-4 sm:mb-6 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-800">
                 {editingEntry ? 'Edit Timetable Entry' : 'Create New Timetable Entry'}
               </h2>
               <button
                 onClick={resetForm}
                 className="p-1 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
               </button>
             </div>
-            <form onSubmit={handleCreate} className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <form onSubmit={handleCreate} className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Users className="w-4 h-4 inline mr-1" />
@@ -609,13 +873,13 @@ export default function Timetablecreation() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Color Code
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   {predefinedColors.map(color => (
                     <button
                       key={color}
                       type="button"
                       onClick={() => setNewEntry({ ...newEntry, color_code: color })}
-                      className={`w-6 h-6 rounded-full border-2 ${
+                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 ${
                         newEntry.color_code === color ? 'border-gray-800' : 'border-gray-300'
                       }`}
                       style={{ backgroundColor: color }}
@@ -624,7 +888,7 @@ export default function Timetablecreation() {
                 </div>
               </div>
 
-              <div className="flex items-end gap-3">
+              <div className="flex items-end gap-2 sm:gap-3 md:col-span-2 lg:col-span-1">
                 <button
                   type="submit"
                   disabled={saving}
@@ -636,7 +900,7 @@ export default function Timetablecreation() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="px-3 sm:px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     Cancel
                   </button>
@@ -646,114 +910,9 @@ export default function Timetablecreation() {
           </div>
         )}
 
-        {/* Timetable Container */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-          {/* Days Header */}
-          <div className="grid grid-cols-8 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-            {days.map((day) => (
-              <div
-                key={day.key}
-                className="p-4 text-center font-semibold border-r border-blue-500 last:border-r-0"
-              >
-                <div className="hidden sm:block">{day.label}</div>
-                <div className="sm:hidden text-sm">{day.shortLabel}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Time Slots */}
-          {loading && timeSlots.length === 0 ? (
-            <div className="py-16 flex items-center justify-center">
-              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mr-3" />
-              <span className="text-gray-600">Loading timetable...</span>
-            </div>
-          ) : timeSlots.length === 0 ? (
-            <div className="py-16 flex flex-col items-center justify-center text-gray-500 gap-3">
-              <Calendar className="w-12 h-12 text-gray-400" />
-              <div className="text-center">
-                <p className="font-medium text-gray-600 mb-1">No timetable entries found</p>
-                <p className="text-sm">Try adjusting your filters or create a new entry</p>
-              </div>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {timeSlots.map((slot, index) => (
-                <div
-                  key={slot.id}
-                  className={`grid grid-cols-8 ${
-                    index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-                  } hover:bg-blue-50 transition-colors duration-200`}
-                >
-                  {/* Time Column */}
-                  <div className="p-4 border-r border-gray-200 flex items-center justify-center font-medium text-gray-700 bg-white">
-                    <Clock className="w-4 h-4 mr-2 text-gray-500" />
-                    {slot.time}
-                  </div>
-
-                  {/* Day Columns */}
-                  {days.slice(1).map((day) => {
-                    const entryData = slot[`${day.key}Data` as keyof TimeSlot] as TimetableEntry;
-                    const rawContent = slot[day.key as keyof TimeSlot];
-                    const cellContent = typeof rawContent === 'string' ? rawContent : '';
-                    const subjectForColor = cellContent ? cellContent.split(' - ')[0] : '';
-
-                    return (
-                      <div
-                        key={day.key}
-                        className={`p-3 border-r border-gray-200 last:border-r-0 min-h-[80px] group relative ${getSubjectColor(
-                          subjectForColor,
-                          entryData
-                        )}`}
-                      >
-                        {cellContent ? (
-                          <div className="h-full flex flex-col">
-                            <span className="font-semibold text-gray-800 text-sm mb-1">
-                              {cellContent.split(' - ')[0]}
-                            </span>
-                            {cellContent.includes(' - ') && (
-                              <span className="text-xs text-gray-600 mt-1">
-                                {cellContent.split(' - ').slice(1).join(' - ')}
-                              </span>
-                            )}
-                            {entryData?.room_number && (
-                              <span className="text-xs text-gray-500 mt-2 flex items-center">
-                                <MapPin className="w-3 h-3 mr-1" />
-                                Room {entryData.room_number}
-                              </span>
-                            )}
-
-                            {/* Action Buttons */}
-                            {entryData && (
-                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEdit(entryData)}
-                                  className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs"
-                                >
-                                  <Edit2 className="w-3 h-3" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDelete(entryData.id)}
-                                  className="p-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="h-full flex items-center justify-center">
-                            <span className="text-gray-400 text-sm">-</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Timetable Display */}
+        <div className="mb-6 sm:mb-8">
+          {viewMode === 'cards' ? <CardView /> : <TableView />}
         </div>
 
         {/* Error Display */}
@@ -767,40 +926,40 @@ export default function Timetablecreation() {
         )}
 
         {/* Stats and Legend */}
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="mt-6 sm:mt-8 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Statistics */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Timetable Overview</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{entries.length}</div>
-                <div className="text-sm text-gray-600">Total Entries</div>
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Timetable Overview</h3>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600">{entries.length}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Total Entries</div>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
+              <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">
                   {Array.from(new Set(entries.map(e => e.class_id))).length}
                 </div>
-                <div className="text-sm text-gray-600">Classes</div>
+                <div className="text-xs sm:text-sm text-gray-600">Classes</div>
               </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
+              <div className="text-center p-3 sm:p-4 bg-purple-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-purple-600">
                   {Array.from(new Set(entries.map(e => e.teacher))).length}
                 </div>
-                <div className="text-sm text-gray-600">Teachers</div>
+                <div className="text-xs sm:text-sm text-gray-600">Teachers</div>
               </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">
+              <div className="text-center p-3 sm:p-4 bg-orange-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-orange-600">
                   {Array.from(new Set(entries.map(e => e.subject))).length}
                 </div>
-                <div className="text-sm text-gray-600">Subjects</div>
+                <div className="text-xs sm:text-sm text-gray-600">Subjects</div>
               </div>
             </div>
           </div>
 
           {/* Legend */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Subject Legend</h3>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Subject Legend</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
               {[
                 { subject: 'Mathematics', color: 'bg-blue-100 border-l-4 border-blue-500' },
                 { subject: 'Physics', color: 'bg-green-100 border-l-4 border-green-500' },
@@ -811,9 +970,9 @@ export default function Timetablecreation() {
                 { subject: 'Sports', color: 'bg-orange-100 border-l-4 border-orange-500' },
                 { subject: 'Other', color: 'bg-white border-l-4 border-gray-300' },
               ].map((item) => (
-                <div key={item.subject} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
-                  <div className={`w-4 h-8 rounded ${item.color}`}></div>
-                  <span className="text-sm text-gray-700 font-medium">{item.subject}</span>
+                <div key={item.subject} className="flex items-center space-x-2 sm:space-x-3 p-2 rounded-lg hover:bg-gray-50">
+                  <div className={`w-3 h-6 sm:w-4 sm:h-8 rounded ${item.color}`}></div>
+                  <span className="text-xs sm:text-sm text-gray-700 font-medium">{item.subject}</span>
                 </div>
               ))}
             </div>

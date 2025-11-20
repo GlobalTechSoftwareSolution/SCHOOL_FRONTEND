@@ -233,6 +233,76 @@ const StudentFeesPage = () => {
 
   const handlePrintReceipt = () => window.print();
 
+  // Fee Card Component
+  const FeeCard = ({ fee }: { fee: FeeDetails }) => (
+    <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200/60 p-4 sm:p-6 hover:shadow-md transition-all duration-200">
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3 sm:mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
+              {fee.fee_type?.charAt(0) || 'F'}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 text-sm sm:text-base line-clamp-1">{fee.fee_type}</h3>
+              <p className="text-gray-500 text-xs">{fee.payment_date}</p>
+            </div>
+          </div>
+          <span
+            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+              fee.status === "Paid"
+                ? "bg-green-100 text-green-800 border border-green-200"
+                : "bg-amber-100 text-amber-800 border border-amber-200"
+            }`}
+          >
+            {fee.status === "Paid" ? "✅ Paid" : "⏳ Pending"}
+          </span>
+        </div>
+
+        {/* Amount Details */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-4">
+          <div className="text-center">
+            <p className="text-gray-500 text-xs sm:text-sm mb-1">Total</p>
+            <p className="font-semibold text-gray-900 text-sm sm:text-base">₹{fee.structure_amount || fee.total_amount}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-gray-500 text-xs sm:text-sm mb-1">Paid</p>
+            <p className="font-semibold text-green-600 text-sm sm:text-base">₹{fee.amount_paid}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-gray-500 text-xs sm:text-sm mb-1">Due</p>
+            <p className="font-semibold text-red-600 text-sm sm:text-base">₹{fee.calculated_remaining_amount}</p>
+          </div>
+        </div>
+
+        {/* Payment Info */}
+        <div className="space-y-2 mb-4 sm:mb-6">
+          <div className="flex justify-between text-xs sm:text-sm">
+            <span className="text-gray-500">Method:</span>
+            <span className="font-medium">{fee.payment_method}</span>
+          </div>
+          <div className="flex justify-between text-xs sm:text-sm">
+            <span className="text-gray-500">Transaction ID:</span>
+            <span className="font-mono text-xs truncate max-w-[100px] sm:max-w-[150px]" title={fee.transaction_id}>
+              {fee.transaction_id}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div className="mt-auto">
+          <button
+            onClick={() => handleViewReceipt(fee)}
+            className="w-full inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors duration-200 font-medium text-xs sm:text-sm"
+          >
+            <span>📄</span>
+            View Receipt
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading)
     return (
       <DashboardLayout role="students">
@@ -247,13 +317,13 @@ const StudentFeesPage = () => {
 
   return (
     <DashboardLayout role="students">
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-3 sm:p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
           {/* HEADER SECTION */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Fees Management</h1>
-              <p className="text-gray-600">Manage your fee payments and track payment history</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Fees Management</h1>
+              <p className="text-gray-600 text-sm sm:text-base">Manage your fee payments and track payment history</p>
             </div>
             <button
               onClick={() => {
@@ -264,7 +334,7 @@ const StudentFeesPage = () => {
                 }
                 setShowPaymentModal(true);
               }}
-              className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg ${
+              className={`w-full lg:w-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg justify-center ${
                 !student
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white hover:shadow-xl transform hover:-translate-y-0.5"
@@ -277,7 +347,7 @@ const StudentFeesPage = () => {
           </div>
 
           {/* SUMMARY CARDS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             <SummaryCard 
               title="Total Paid" 
               value={`₹${totalPaid.toFixed(2)}`} 
@@ -304,84 +374,28 @@ const StudentFeesPage = () => {
             />
           </div>
 
-          {/* FEE TABLE */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50/30">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                  📊 Fee History
-                </h2>
-                <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border">
-                  {fees.length} records
-                </span>
-              </div>
+          {/* FEE CARDS GRID */}
+          <div className="bg-transparent">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center gap-2">
+                📊 Fee History
+              </h2>
+              <span className="text-xs sm:text-sm text-gray-500 bg-white px-2 sm:px-3 py-1 rounded-full border">
+                {fees.length} records
+              </span>
             </div>
             
             {fees.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50/80 border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Fee Type</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Paid</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Remaining</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Payment Date</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200/60">
-                    {fees.map((fee) => (
-                      <tr key={fee.id} className="hover:bg-blue-50/30 transition-colors duration-150">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
-                              {fee.fee_type?.charAt(0) || 'F'}
-                            </div>
-                            <span className="font-medium text-gray-900">{fee.fee_type}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-semibold text-gray-900">₹{fee.structure_amount || fee.total_amount}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-semibold text-green-600">₹{fee.amount_paid}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-semibold text-red-600">₹{fee.calculated_remaining_amount}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                              fee.status === "Paid"
-                                ? "bg-green-100 text-green-800 border border-green-200"
-                                : "bg-amber-100 text-amber-800 border border-amber-200"
-                            }`}
-                          >
-                            {fee.status === "Paid" ? "✅ Paid" : "⏳ Pending"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">{fee.payment_date}</td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleViewReceipt(fee)}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors duration-200 font-medium text-sm"
-                          >
-                            <span>📄</span>
-                            View Receipt
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                {fees.map((fee) => (
+                  <FeeCard key={fee.id} fee={fee} />
+                ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📊</div>
-                <p className="text-gray-500 text-lg mb-2">No fee records found</p>
-                <p className="text-gray-400 text-sm">Your fee history will appear here once payments are made</p>
+              <div className="text-center py-8 sm:py-12 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200/60">
+                <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">📊</div>
+                <p className="text-gray-500 text-base sm:text-lg mb-1 sm:mb-2">No fee records found</p>
+                <p className="text-gray-400 text-xs sm:text-sm">Your fee history will appear here once payments are made</p>
               </div>
             )}
           </div>
@@ -431,51 +445,51 @@ const SummaryCard = ({ title, value, color, icon }: SummaryCardProps) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-200/60 shadow-sm hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 bg-gradient-to-br ${colorClasses[color]} rounded-xl flex items-center justify-center text-white text-lg`}>
+    <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-gray-200/60 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div className="flex items-center justify-between mb-2 sm:mb-4">
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br ${colorClasses[color]} rounded-lg sm:rounded-xl flex items-center justify-center text-white text-sm sm:text-lg`}>
           {icon}
         </div>
       </div>
-      <p className="text-gray-600 text-sm font-medium mb-1">{title}</p>
-      <h3 className={`text-2xl font-bold text-gray-900`}>{value}</h3>
+      <p className="text-gray-600 text-xs sm:text-sm font-medium mb-1">{title}</p>
+      <h3 className={`text-lg sm:text-xl lg:text-2xl font-bold text-gray-900`}>{value}</h3>
     </div>
   );
 };
 
 // ✅ Enhanced Receipt Modal
 const ReceiptModal = ({ fee, onClose, onPrint }: any) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
-        <h2 className="text-2xl font-bold">Payment Receipt</h2>
-        <p className="text-blue-100">Transaction Confirmation</p>
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-3 sm:p-4">
+    <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6 text-white">
+        <h2 className="text-xl sm:text-2xl font-bold">Payment Receipt</h2>
+        <p className="text-blue-100 text-xs sm:text-sm">Transaction Confirmation</p>
       </div>
       
-      <div className="p-6 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <p className="text-sm text-gray-500">Student Name</p>
-            <p className="font-semibold">{fee.student_name}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Student Name</p>
+            <p className="font-semibold text-sm sm:text-base">{fee.student_name}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Fee Type</p>
-            <p className="font-semibold">{fee.fee_type}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Fee Type</p>
+            <p className="font-semibold text-sm sm:text-base">{fee.fee_type}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total Amount</p>
-            <p className="font-semibold text-lg">₹{fee.structure_amount}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Total Amount</p>
+            <p className="font-semibold text-base sm:text-lg">₹{fee.structure_amount}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Paid Amount</p>
-            <p className="font-semibold text-lg text-green-600">₹{fee.amount_paid}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Paid Amount</p>
+            <p className="font-semibold text-base sm:text-lg text-green-600">₹{fee.amount_paid}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Remaining</p>
-            <p className="font-semibold text-red-600">₹{fee.calculated_remaining_amount}</p>
+            <p className="text-xs sm:text-sm text-gray-500">Remaining</p>
+            <p className="font-semibold text-sm sm:text-base text-red-600">₹{fee.calculated_remaining_amount}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Status</p>
+            <p className="text-xs sm:text-sm text-gray-500">Status</p>
             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
               fee.status === "Paid" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
             }`}>
@@ -484,21 +498,21 @@ const ReceiptModal = ({ fee, onClose, onPrint }: any) => (
           </div>
         </div>
         
-        <div className="border-t pt-4 space-y-2">
-          <div className="flex justify-between">
+        <div className="border-t pt-3 sm:pt-4 space-y-2">
+          <div className="flex justify-between text-xs sm:text-sm">
             <span className="text-gray-500">Payment Date:</span>
             <span className="font-medium">{fee.payment_date}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between text-xs sm:text-sm">
             <span className="text-gray-500">Payment Method:</span>
             <span className="font-medium">{fee.payment_method}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between text-xs sm:text-sm">
             <span className="text-gray-500">Transaction ID:</span>
-            <span className="font-mono text-sm">{fee.transaction_id}</span>
+            <span className="font-mono text-xs">{fee.transaction_id}</span>
           </div>
           {fee.remarks && (
-            <div className="flex justify-between">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-gray-500">Remarks:</span>
               <span className="font-medium text-right">{fee.remarks}</span>
             </div>
@@ -506,16 +520,16 @@ const ReceiptModal = ({ fee, onClose, onPrint }: any) => (
         </div>
       </div>
       
-      <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+      <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200">
         <button 
           onClick={onClose} 
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+          className="px-4 sm:px-6 py-2 border border-gray-300 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-colors duration-200 text-sm sm:text-base order-2 sm:order-1"
         >
           Close
         </button>
         <button 
           onClick={onPrint} 
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
+          className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2 text-sm sm:text-base justify-center order-1 sm:order-2 mb-2 sm:mb-0"
         >
           🖨️ Print
         </button>
@@ -526,21 +540,21 @@ const ReceiptModal = ({ fee, onClose, onPrint }: any) => (
 
 // ✅ Enhanced Payment Modal
 const PaymentModal = ({ paymentForm, setPaymentForm, feeStructures, submitting, onClose, onSubmit }: any) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-      <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
-        <h2 className="text-2xl font-bold">Pay Fees</h2>
-        <p className="text-green-100">Complete your payment securely</p>
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-3 sm:p-4">
+    <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4 sm:p-6 text-white">
+        <h2 className="text-xl sm:text-2xl font-bold">Pay Fees</h2>
+        <p className="text-green-100 text-xs sm:text-sm">Complete your payment securely</p>
       </div>
       
-      <form onSubmit={onSubmit} className="p-6 space-y-4">
+      <form onSubmit={onSubmit} className="p-4 sm:p-6 space-y-3 sm:space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Select Fee Structure</label>
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Select Fee Structure</label>
           <select
             value={paymentForm.fee_structure}
             onChange={(e) => setPaymentForm((p: any) => ({ ...p, fee_structure: parseInt(e.target.value) }))}
             required
-            className="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+            className="w-full border border-gray-300 rounded-lg sm:rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
           >
             <option value="">Choose a fee type...</option>
             {feeStructures.map((fs: FeeStructure) => (
@@ -552,37 +566,37 @@ const PaymentModal = ({ paymentForm, setPaymentForm, feeStructures, submitting, 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Amount Paid (₹)</label>
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Amount Paid (₹)</label>
           <input
             type="number"
             name="amount_paid"
             placeholder="Enter amount"
             value={paymentForm.amount_paid}
             onChange={(e) => setPaymentForm((p: any) => ({ ...p, amount_paid: e.target.value }))}
-            className="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+            className="w-full border border-gray-300 rounded-lg sm:rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Payment Date</label>
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Payment Date</label>
           <input
             type="date"
             name="payment_date"
             value={paymentForm.payment_date}
             onChange={(e) => setPaymentForm((p: any) => ({ ...p, payment_date: e.target.value }))}
-            className="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+            className="w-full border border-gray-300 rounded-lg sm:rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Payment Method</label>
           <select
             name="payment_method"
             value={paymentForm.payment_method}
             onChange={(e) => setPaymentForm((p: any) => ({ ...p, payment_method: e.target.value }))}
-            className="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+            className="w-full border border-gray-300 rounded-lg sm:rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
             required
           >
             <option value="">Select Payment Method</option>
@@ -595,33 +609,33 @@ const PaymentModal = ({ paymentForm, setPaymentForm, feeStructures, submitting, 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Remarks (Optional)</label>
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Remarks (Optional)</label>
           <textarea
             name="remarks"
             placeholder="Any additional notes..."
             value={paymentForm.remarks}
             onChange={(e) => setPaymentForm((p: any) => ({ ...p, remarks: e.target.value }))}
-            className="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+            className="w-full border border-gray-300 rounded-lg sm:rounded-xl p-2 sm:p-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
             rows={3}
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-3 sm:pt-4">
           <button 
             type="button" 
             onClick={onClose} 
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors duration-200 font-medium"
+            className="px-4 sm:px-6 py-2 sm:py-3 border border-gray-300 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-colors duration-200 font-medium text-sm sm:text-base order-2 sm:order-1"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg sm:rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base justify-center order-1 sm:order-2 mb-2 sm:mb-0"
           >
             {submitting ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white"></div>
                 Processing...
               </>
             ) : (
