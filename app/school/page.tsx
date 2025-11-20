@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import Navbar from "@/app/school/components/Navbar"; 
-import Hero from "@/app/school/components/Hero";
-import Erpmodules from "@/app/school/components/Erpmodules";
-import Faqs from '@/app/school/components/Faqs'
-import Personalizedportals from  '@/app/school/components/Personalizedportals'
-import Featuresshowcase from '@/app/school/featuresshowcase/page'
-import Whatsappbutton from '@/app/school/components/Whatsappbutton'
-import Footer from "@/app/school/components/Footer";
+import Navbar from "./components/Navbar"; 
+import Hero from "./components/Hero";
+import Erpmodules from "./components/Erpmodules";
+import Faqs from './components/Faqs'
+import Personalizedportals from  './components/Personalizedportals'
+import Featuresshowcase from './featuresshowcase/page'
+import Whatsappbutton from './components/Whatsappbutton'
+import Footer from "./components/Footer";
 
 export default function Page() {
   return (
