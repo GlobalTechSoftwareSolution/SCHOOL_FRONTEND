@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 import { CheckCircle, XCircle, Upload, Edit3, Save, X } from "lucide-react";
 
 const API_BASE_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/teachers/";

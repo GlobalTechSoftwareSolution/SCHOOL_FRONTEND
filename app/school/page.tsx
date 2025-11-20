@@ -3,14 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import Navbar from "@/app/components/Navbar"; 
-import Hero from "@/app/components/Hero";
-import Erpmodules from "@/app/components/Erpmodules";
-import Faqs from '@/app/components/Faqs'
-import Personalizedportals from  '@/app/components/Personalizedportals'
-import Featuresshowcase from '@/app/featuresshowcase/page'
-import Whatsappbutton from '@/app/components/Whatsappbutton'
-import Footer from "@/app/components/Footer";
+import Navbar from "@/app/school/components/Navbar"; 
+import Hero from "@/app/school/components/Hero";
+import Erpmodules from "@/app/school/components/Erpmodules";
+import Faqs from '@/app/school/components/Faqs'
+import Personalizedportals from  '@/app/school/components/Personalizedportals'
+import Featuresshowcase from '@/app/school/featuresshowcase/page'
+import Whatsappbutton from '@/app/school/components/Whatsappbutton'
+import Footer from "@/app/school/components/Footer";
 
 export default function Page() {
   const [stage, setStage] = useState<"splash" | "white" | "main">("splash");

@@ -2,8 +2,8 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { BookOpen, Layers, GraduationCap, Users, Search } from "lucide-react";
-import Navbar from "@/app/components/Navbar";
-import Footer from "@/app/components/Footer";
+import Navbar from "@/app/school/components/Navbar";
+import Footer from "@/app/school/components/Footer";
 
 const Cources = () => {
   return (

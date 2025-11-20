@@ -30,20 +30,20 @@ const Navbar = () => {
   }, []);
 
   const navItems = [
-    { name: "Home", href: "/" },
-    { name: "About", href: "/about" },
-    { name: "Activities", href: "/activities" },
-    { name: "Attendance", href: "/attendance" },
+    { name: "Home", href: "/school" },
+    { name: "About", href: "/school/about" },
+    { name: "Activities", href: "/school/activities" },
+    { name: "Attendance", href: "/school/attendance" },
     {
       name: "Features",
-      href: "/features",
+      href: "/school/features",
       dropdown: [
-        { name: "Academic Management", icon: BookOpen, href: "/nav_features/academics" },
-        { name: "Student Portal", icon: GraduationCap, href: "/nav_features/students" },
-        { name: "Faculty Hub", icon: Users, href: "/nav_features/faculty" },
+        { name: "Academic Management", icon: BookOpen, href: "/school/nav_features/academics" },
+        { name: "Student Portal", icon: GraduationCap, href: "/school/nav_features/students" },
+        { name: "Faculty Hub", icon: Users, href: "/school/nav_features/faculty" },
       ],
     },
-    { name: "Contact", href: "/contact" },
+    { name: "Contact", href: "/school/contact" },
   ];
 
   return (
@@ -154,7 +154,7 @@ const Navbar = () => {
             ))}
 
             {/* Login Button */}
-            <Link href="/login">
+            <Link href="/school/login">
               <motion.button
                 whileHover={{
                   scale: 1.05,
@@ -281,7 +281,7 @@ const Navbar = () => {
                   transition={{ delay: navItems.length * 0.1 }}
                   className="pt-4 border-t border-gray-200/50 mt-4"
                 >
-                  <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                  <Link href="/school/login" onClick={() => setIsMenuOpen(false)}>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 
 interface Task {
   id: string;

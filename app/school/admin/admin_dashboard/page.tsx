@@ -6,7 +6,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from "recharts";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 
 const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
@@ -375,25 +375,25 @@ export default function AdminDashboard() {
                   icon="📊"
                   title="View Attendance"
                   description="Check all attendance records"
-                  href="/admin/admin_attendence"
+                  href="/school/admin/admin_attendence"
                 />
                 <QuickActionButton 
                   icon="👨‍🎓"
                   title="Manage Students"
                   description="Add or edit students"
-                  href="/admin/admin_students"
+                  href="/school/admin/admin_students"
                 />
                 <QuickActionButton 
                   icon="👨‍🏫"
                   title="Manage Teachers"
                   description="Add or edit teachers"
-                  href="/admin/admin_teachers"
+                  href="/school/admin/admin_teachers"
                 />
                 <QuickActionButton 
                   icon="📋"
                   title="Generate Reports"
                   description="Create attendance reports"
-                  href="/admin/admin_reports"
+                  href="/school/admin/admin_reports"
                 />
               </div>
             </div>

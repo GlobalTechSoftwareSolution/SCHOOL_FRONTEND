@@ -116,7 +116,7 @@ const TermsPage = () => {
             </p>
             <p className="text-gray-700">
               By using this portal, you consent to our data collection and processing practices as described 
-              in our <Link href="/privacy-policy" className="text-blue-600 underline hover:text-purple-600 font-medium">Privacy Policy</Link>.
+              in our <Link href="/school/privacy" className="text-blue-600 underline hover:text-purple-600 font-medium">Privacy Policy</Link>.
             </p>
           </section>
 
@@ -238,7 +238,7 @@ const TermsPage = () => {
               <p className="mb-2">
                 🌐 Website:{" "}
                 <Link 
-                  href="/contact" 
+                  href="/school/contact" 
                   className="text-blue-600 underline hover:text-purple-600 font-medium"
                 >
                   Our Contact Page

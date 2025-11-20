@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 import { Users, UserCheck, UserX, Calendar, AlertCircle, RefreshCw, Download } from "lucide-react";
 import jsPDF from 'jspdf';
 

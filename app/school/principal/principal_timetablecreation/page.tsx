@@ -1,6 +1,6 @@
 import React from 'react'
-import Timetablecreation from '@/app/components/Timetablecreation'
-import DashboardLayout from '@/app/components/DashboardLayout'
+import Timetablecreation from '@/app/school/components/Timetablecreation'
+import DashboardLayout from '@/app/school/components/DashboardLayout'
 
 const page = () => {
   return (

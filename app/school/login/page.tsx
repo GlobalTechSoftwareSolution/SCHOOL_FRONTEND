@@ -78,15 +78,15 @@ function LoginPageContent() {
     const userRole = userInfo.role.toLowerCase();
 
     const redirectPaths = {
-      'admin': '/admin',
-      'teacher': '/teachers', 
-      'student': '/students',
-      'management': '/management',
-      'principal': '/principal',
-      'parent': '/parents'
+      'admin': '/school/admin',
+      'teacher': '/school/teachers', 
+      'student': '/school/students',
+      'management': '/school/management',
+      'principal': '/school/principal',
+      'parent': '/school/parents'
     };
 
-    const redirectPath = redirectPaths[userRole as keyof typeof redirectPaths] || '/students';    
+    const redirectPath = redirectPaths[userRole as keyof typeof redirectPaths] || '/school/students';    
     router.push(redirectPath);
   };
 
@@ -341,7 +341,7 @@ function LoginPageContent() {
 
                 <button
                   type="button"
-                  onClick={() => router.push('/signup')}
+                  onClick={() => router.push('/school/signup')}
                   className="flex-1 py-4 rounded-2xl text-purple-800 border-2 border-purple-800 font-semibold hover:bg-purple-100 transition-all duration-300 transform hover:scale-105"
                 >
                   Create Account
@@ -351,13 +351,13 @@ function LoginPageContent() {
 
             {/* Footer Links */}
             <div className="mt-8 text-center">
-              <a href="/forgot-password" className="text-sm text-purple-800 hover:text-purple-900 font-medium transition-colors duration-200">
+              <a href="/school/forgot-password" className="text-sm text-purple-800 hover:text-purple-900 font-medium transition-colors duration-200">
                 Forgot your password?
               </a>
 
               <p className="text-sm text-gray-800 mt-4">
                 New to EduPortal?{' '}
-                <a href="/signup" className="text-purple-800 hover:text-purple-900 font-medium transition-colors duration-200">
+                <a href="/school/signup" className="text-purple-800 hover:text-purple-900 font-medium transition-colors duration-200">
                   Start your journey here
                 </a>
               </p>

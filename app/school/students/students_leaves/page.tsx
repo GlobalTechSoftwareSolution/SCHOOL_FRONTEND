@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 import axios from "axios";
 
 interface Leave {

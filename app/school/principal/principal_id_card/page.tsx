@@ -1,5 +1,5 @@
-import All_Idcards from '@/app/components/All_Idcards'
-import DashboardLayout from '@/app/components/DashboardLayout';
+import All_Idcards from '@/app/school/components/All_Idcards'
+import DashboardLayout from '@/app/school/components/DashboardLayout';
 
 const Principal_Id_card = () => {
     return (

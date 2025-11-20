@@ -1,4 +1,4 @@
-import StudentDashboard from '@/app/students/students_dashboard/page';
+import StudentDashboard from '@/app/school/students/students_dashboard/page';
 
 export default function Students() {
     return (

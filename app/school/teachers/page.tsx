@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 import {
   BookOpen,
   Users,
@@ -221,10 +221,10 @@ const TeachersDashboard = () => {
   ];
 
   const quickActions = [
-    { label: "Manage Grades", href: "/teachers/teachers_marks", icon: BarChart3, color: "blue" },
-    { label: "View Students", href: "/teachers/teachers_monthly_report", icon: Users, color: "green" },
-    { label: "Mark Attendance", href: "/teachers/teachers_attendance", icon: UserCheck, color: "orange" },
-    { label: "Create Assignment", href: "/teachers/teachers_assignment", icon: FileText, color: "purple" }
+    { label: "Manage Grades", href: "/school/teachers/teachers_marks", icon: BarChart3, color: "blue" },
+    { label: "View Students", href: "/school/teachers/teachers_monthly_report", icon: Users, color: "green" },
+    { label: "Mark Attendance", href: "/school/teachers/teachers_attendance", icon: UserCheck, color: "orange" },
+    { label: "Create Assignment", href: "/school/teachers/teachers_assignment", icon: FileText, color: "purple" }
   ];
 
   if (loading) {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 
 const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 const FEES_API = `${API_BASE}/fee_payments/`;

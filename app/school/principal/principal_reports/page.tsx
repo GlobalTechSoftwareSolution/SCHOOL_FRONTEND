@@ -1,6 +1,6 @@
-import DashboardLayout from '@/app/components/DashboardLayout'
+import DashboardLayout from '@/app/school/components/DashboardLayout'
 import React from 'react'
-import All_reports from '@/app/components/all_reports'
+import All_reports from '@/app/school/components/all_reports'
 
 const page = () => {
   return (

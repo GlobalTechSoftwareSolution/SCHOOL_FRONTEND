@@ -1,5 +1,5 @@
 "use client";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 import React, { useState, useEffect } from "react";
 
 const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/notices/";

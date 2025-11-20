@@ -199,7 +199,7 @@ const ForgotPasswordPage = () => {
                   Resend Email
                 </button>
                 <button
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push('/school/login')}
                   className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all"
                 >
                   Back to Login
@@ -218,7 +218,7 @@ const ForgotPasswordPage = () => {
                 You will be redirected to the login page shortly.
               </p>
               <button
-                onClick={() => router.push('/login')}
+                onClick={() => router.push('/school/login')}
                 className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all"
               >
                 Go to Login Now
@@ -230,7 +230,7 @@ const ForgotPasswordPage = () => {
           {stage !== 'instructions' && (
             <div className="mt-8 text-center">
               <button
-                onClick={() => router.push('/login')}
+                onClick={() => router.push('/school/login')}
                 className="inline-flex items-center text-purple-600 hover:text-purple-800 font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />

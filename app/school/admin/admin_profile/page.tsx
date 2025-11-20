@@ -15,7 +15,7 @@ import {
   X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 
 export default function Admin_ProfilePage() {
   const [formData, setFormData] = useState({

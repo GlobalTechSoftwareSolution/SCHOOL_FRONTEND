@@ -2,8 +2,8 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import Navbar from "@/app/components/Navbar";
-import Footer from "@/app/components/Footer";
+import Navbar from "@/app/school/components/Navbar";
+import Footer from "@/app/school/components/Footer";
 import {
   CalendarDays,
   Users,

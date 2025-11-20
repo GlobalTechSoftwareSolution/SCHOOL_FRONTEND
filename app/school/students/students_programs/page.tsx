@@ -1,6 +1,6 @@
 "use client";
 
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Calendar, Users, DollarSign, Clock, AlertCircle, RefreshCw, Filter } from "lucide-react";

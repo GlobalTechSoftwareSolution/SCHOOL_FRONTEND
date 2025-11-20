@@ -1,5 +1,5 @@
 import React from 'react'
-import PrincipalDashboard from '@/app/principal/principal_dashboard/page'
+import PrincipalDashboard from '@/app/school/principal/principal_dashboard/page'
 
 const page = () => {
   return (

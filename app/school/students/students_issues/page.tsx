@@ -20,7 +20,7 @@ import {
   FiAlertCircle,
   FiTrendingUp
 } from "react-icons/fi";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 
 const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/issues/";
 

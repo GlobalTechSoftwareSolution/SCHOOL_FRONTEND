@@ -1,5 +1,5 @@
-import DashboardLayout from '@/app/components/DashboardLayout'
-import TeachersPage from '@/app/components/All_teachers'
+import DashboardLayout from '@/app/school/components/DashboardLayout'
+import TeachersPage from '@/app/school/components/All_teachers'
 import React from 'react'
 
 const page = () => {

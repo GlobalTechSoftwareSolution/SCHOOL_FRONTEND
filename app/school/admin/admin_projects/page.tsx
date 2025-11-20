@@ -1,5 +1,5 @@
-import ProjectsPage from '@/app/components/All_projects'
-import DashboardLayout from '@/app/components/DashboardLayout'
+import ProjectsPage from '@/app/school/components/All_projects'
+import DashboardLayout from '@/app/school/components/DashboardLayout'
 
 export default function AdminProjectsPage() {
   return(

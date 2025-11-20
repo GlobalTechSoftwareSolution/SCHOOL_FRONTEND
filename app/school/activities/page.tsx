@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
-import Navbar from '@/app/components/Navbar';
-import Footer from '@/app/components/Footer';
+import Navbar from '@/app/school/components/Navbar';
+import Footer from '@/app/school/components/Footer';
 import { Calendar, Clock, Users, Trophy, Target, BookOpen, Star, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 interface Activity {

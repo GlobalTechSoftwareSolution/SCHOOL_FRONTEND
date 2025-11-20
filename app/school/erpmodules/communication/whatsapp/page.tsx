@@ -14,8 +14,8 @@ import {
   Globe,
   Smartphone,
 } from "lucide-react";
-import Navbar from "@/app/components/Navbar";
-import Footer from "@/app/components/Footer";
+import Navbar from "@/app/school/components/Navbar";
+import Footer from "@/app/school/components/Footer";
 
 const Whatsapp = () => {
   const fadeIn = {

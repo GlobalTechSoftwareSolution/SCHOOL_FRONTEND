@@ -13,8 +13,8 @@ import {
   DocumentCheckIcon,
   ShieldCheckIcon
 } from "@heroicons/react/24/outline";
-import Navbar from "@/app/components/Navbar";
-import Footer from "@/app/components/Footer";
+import Navbar from "@/app/school/components/Navbar";
+import Footer from "@/app/school/components/Footer";
 
 export default function StudentInformationSection() {
   const router = useRouter();

@@ -12,8 +12,8 @@
     MonitorSmartphone,
     Layers,
   } from "lucide-react";
-  import Navbar from "@/app/components/Navbar";
-  import Footer from "@/app/components/Footer";
+  import Navbar from "@/app/school/components/Navbar";
+  import Footer from "@/app/school/components/Footer";
 
   const Inventory = () => {
     const fadeUp = {

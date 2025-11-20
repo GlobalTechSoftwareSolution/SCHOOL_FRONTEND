@@ -1,5 +1,5 @@
-import DashboardLayout from "@/app/components/DashboardLayout";
-import All_projects from "@/app/components/All_projects";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
+import All_projects from "@/app/school/components/All_projects";
 
 export default function TeachersProjects() {
     return (

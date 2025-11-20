@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 
 const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/grades/";
 const STUDENTS_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/students/";

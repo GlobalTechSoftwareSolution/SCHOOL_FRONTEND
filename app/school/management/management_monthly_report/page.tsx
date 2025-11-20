@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 import axios from "axios";
 
 const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";

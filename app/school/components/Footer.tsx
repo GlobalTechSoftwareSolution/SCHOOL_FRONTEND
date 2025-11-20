@@ -36,27 +36,27 @@ const Footer = () => {
     {
       title: "Academics",
       links: [
-        { name: "Course Catalog", href: "/footer_links/academics/courses" },
-        // { name: "Faculty Directory", href: "/footer_links/academics/faculty" },
-        // { name: "Academic Calendar", href: "/footer_links/academics/calendar" },
-        { name: "Library Resources", href: "/footer_links/academics/library" }, 
-        { name: "Research Programs", href: "/footer_links/academics/research" },
+        { name: "Course Catalog", href: "/school/footer_links/academics/courses" },
+        // { name: "Faculty Directory", href: "/school/footer_links/academics/faculty" },
+        // { name: "Academic Calendar", href: "/school/footer_links/academics/calendar" },
+        { name: "Library Resources", href: "/school/footer_links/academics/library" }, 
+        { name: "Research Programs", href: "/school/footer_links/academics/research" },
       ]
     },
     {
       title: "Student",
       links: [
-        { name: "Student Portal", href: "/footer_links/student_life/student" },
-        { name: "Clubs & Organizations", href: "/footer_links/student_life/clubs" },
-        { name: "Events & Activities", href: "/footer_links/student_life/events" },
+        { name: "Student Portal", href: "/school/footer_links/student_life/student" },
+        { name: "Clubs & Organizations", href: "/school/footer_links/student_life/clubs" },
+        { name: "Events & Activities", href: "/school/footer_links/student_life/events" },
       ]
     },
     {
       title: "Support",
       links: [
-        { name: "Help Center", href: "/footer_links/support/help" },
-        { name: "Privacy Policy", href: "/privacy" },
-        { name: "Terms of Service", href: "/terms" },
+        { name: "Help Center", href: "/school/footer_links/support/help" },
+        { name: "Privacy Policy", href: "/school/privacy" },
+        { name: "Terms of Service", href: "/school/terms" },
       ]
     }
   ];
@@ -200,10 +200,10 @@ const Footer = () => {
             <div className="flex items-center gap-6 text-sm text-blue-200">
               <span>© {new Date().getFullYear()} Smart School Excellence Portal. All rights reserved.</span>
               <div className="flex items-center gap-4">
-                <Link href="/privacy" className="hover:text-white transition">
+                <Link href="/school/privacy" className="hover:text-white transition">
                   Privacy Policy
                 </Link>
-                <Link href="/terms" className="hover:text-white transition">
+                <Link href="/school/terms" className="hover:text-white transition">
                   Terms of Service
                 </Link>
               </div>

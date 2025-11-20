@@ -1,6 +1,6 @@
 'use client';
 
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 import React, { useEffect, useState, useCallback } from "react";
 
 interface Student {

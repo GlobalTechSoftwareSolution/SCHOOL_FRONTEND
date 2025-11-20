@@ -1,7 +1,7 @@
 import React from 'react'
 
-import StudentsPage from '@/app/components/All_students'
-import DashboardLayout from '@/app/components/DashboardLayout'
+import StudentsPage from '@/app/school/components/All_students'
+import DashboardLayout from '@/app/school/components/DashboardLayout'
 
 const page = () => {
   return (

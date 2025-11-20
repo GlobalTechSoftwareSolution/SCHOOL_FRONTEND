@@ -47,14 +47,14 @@ const Hero = () => {
         {/* Buttons */}
         <div className="flex flex-wrap justify-center gap-6">
           <Link
-            href="/about"
+            href="/school/about"
             className="bg-blue-600 text-white px-10 py-4 rounded-2xl text-lg font-semibold hover:bg-blue-700 shadow-lg hover:shadow-2xl transition-all duration-300"
           >
             About Us
           </Link>
 
           <Link
-            href="/login"
+            href="/school/login"
             className="bg-purple-600 text-white px-10 py-4 rounded-2xl text-lg font-semibold hover:bg-purple-700 shadow-lg hover:shadow-2xl transition-all duration-300"
           >
             Explore More

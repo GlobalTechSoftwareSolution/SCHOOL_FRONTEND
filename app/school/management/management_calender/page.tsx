@@ -1,6 +1,6 @@
 import React from 'react'
-import Googlecalender from '@/app/components/Googlecalender'
-import DashboardLayout from '@/app/components/DashboardLayout'
+import Googlecalender from '@/app/school/components/Googlecalender'
+import DashboardLayout from '@/app/school/components/DashboardLayout'
 
 const Management_calender = () => {
   return (

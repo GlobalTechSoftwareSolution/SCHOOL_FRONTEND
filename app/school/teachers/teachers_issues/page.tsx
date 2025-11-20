@@ -1,6 +1,6 @@
-import DashboardLayout from '@/app/components/DashboardLayout'
+import DashboardLayout from '@/app/school/components/DashboardLayout'
 import React from 'react'
-import RaiseIssues from '@/app/components/raise_issues'
+import RaiseIssues from '@/app/school/components/raise_issues'
 
 const page = () => {
   return (

@@ -1,5 +1,5 @@
-import DashboardLayout from '@/app/components/DashboardLayout'
-import Activities from '@/app/components/All_activities'
+import DashboardLayout from '@/app/school/components/DashboardLayout'
+import Activities from '@/app/school/components/All_activities'
 import React from 'react'
 
 const page = () => {

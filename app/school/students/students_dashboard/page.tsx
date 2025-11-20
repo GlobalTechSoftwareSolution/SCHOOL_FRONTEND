@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import DashboardLayout from "@/app/components/DashboardLayout";
+import DashboardLayout from "@/app/school/components/DashboardLayout";
 
 // Interfaces
 interface Attendance {
@@ -325,23 +325,23 @@ const StudentDashboard = () => {
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Links</h2>
                 <div className="space-y-3">
-                  <a href="/students/students_tasks" className="flex items-center p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors group">
+                  <a href="/school/students/students_tasks" className="flex items-center p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors group">
                     <span className="text-2xl mr-3">🎯</span>
                     <span className="font-medium text-gray-900 group-hover:text-blue-600">Task Manager</span>
                   </a>
-                  <a href="/students/students_assignment" className="flex items-center p-3 bg-green-50 rounded-xl hover:bg-green-100 transition-colors group">
+                  <a href="/school/students/students_assignment" className="flex items-center p-3 bg-green-50 rounded-xl hover:bg-green-100 transition-colors group">
                     <span className="text-2xl mr-3">📝</span>
                     <span className="font-medium text-gray-900 group-hover:text-green-600">Assignments</span>
                   </a>
-                  <a href="/students/students_marks" className="flex items-center p-3 bg-purple-50 rounded-xl hover:bg-purple-100 transition-colors group">
+                  <a href="/school/students/students_marks" className="flex items-center p-3 bg-purple-50 rounded-xl hover:bg-purple-100 transition-colors group">
                     <span className="text-2xl mr-3">📊</span>
                     <span className="font-medium text-gray-900 group-hover:text-purple-600">Academic Performance</span>
                   </a>
-                  <a href="/students/students_leaves" className="flex items-center p-3 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors group">
+                  <a href="/school/students/students_leaves" className="flex items-center p-3 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors group">
                     <span className="text-2xl mr-3">📅</span>
                     <span className="font-medium text-gray-900 group-hover:text-orange-600">Leave Management</span>
                   </a>
-                  <a href="/students/students_docs" className="flex items-center p-3 bg-red-50 rounded-xl hover:bg-red-100 transition-colors group">
+                  <a href="/school/students/students_docs" className="flex items-center p-3 bg-red-50 rounded-xl hover:bg-red-100 transition-colors group">
                     <span className="text-2xl mr-3">📁</span>
                     <span className="font-medium text-gray-900 group-hover:text-red-600">My Documents</span>
                   </a>
@@ -356,7 +356,7 @@ const StudentDashboard = () => {
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/50">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-gray-900">Latest Notices</h2>
-                  <a href="/student/notices" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  <a href="/school/students/students_notice" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                     View All
                   </a>
                 </div>
