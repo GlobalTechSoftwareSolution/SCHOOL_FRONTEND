@@ -28,11 +28,9 @@ export default function ParentNoticesPage() {
       
       parentEmail = userData?.email || userInfo?.email || null;
     } catch (e) {
-      console.log("❌ LocalStorage error:", e);
+      console.error("❌ LocalStorage error:", e);
     }
   }
-
-  console.log("👨‍👩‍👧 Logged-in Parent Email:", parentEmail);
 
   // Helper to normalize email strings (remove extra labels, spaces, etc.)
   const normalizeEmail = (value: any) => {
@@ -51,16 +49,11 @@ export default function ParentNoticesPage() {
     setLoading(true);
     try {
       const stuRes = await axios.get(`${API}/students/`);
-      console.log("👦 Students API:", stuRes.data);
-
       const myKids = stuRes.data.filter((s: any) =>
         normalizeEmail(s.parent) === normalizeEmail(parentEmail)
       );
 
-      console.log("🧒 Children of parent:", myKids);
-
       if (myKids.length === 0) {
-        console.log("❌ No children found for this parent!");
         setLoading(false);
         return;
       }
@@ -78,13 +71,12 @@ export default function ParentNoticesPage() {
       const info = classRes.data.find((c: any) => c.id === class_id);
 
       setClassInfo(info);
-      console.log("🏫 Class Info:", info);
 
       // Load notices
       loadNotices(myKids);
 
     } catch (err) {
-      console.log("❌ Error loading children:", err);
+      console.error("❌ Error loading children:", err);
     }
     setLoading(false);
   };
@@ -95,17 +87,14 @@ export default function ParentNoticesPage() {
   const loadNotices = async (kids: any) => {
     try {
       const noticeRes = await axios.get(`${API}/notices/`);
-      console.log("📜 Notices API:", noticeRes.data);
       const allNotices = Array.isArray(noticeRes.data) ? noticeRes.data : [];
-
-      console.log("📩 Loaded Notices (unfiltered):", allNotices);
 
       // Keep all notices; per-student filtering happens in handleStudentSelect
       setNotices(allNotices);
       setFilteredNotices(allNotices);
 
     } catch (err) {
-      console.log("❌ Notice load error:", err);
+      console.error("❌ Notice load error:", err);
     }
   };
 
@@ -121,8 +110,6 @@ export default function ParentNoticesPage() {
         const targetEmail = normalizeEmail(n.email);
         return targetEmail && targetEmail === studentEmail;
       });
-
-      console.log("📩 Base notices for selected student:", base);
 
       setStudentBaseNotices(base);
       setFilteredNotices(base);
@@ -294,28 +281,34 @@ export default function ParentNoticesPage() {
                         </p>
                       </div>
 
-                      {/* FILTER TABS */}
-                      <div className="flex gap-2 mt-4 lg:mt-0 bg-gray-100 p-1 rounded-xl">
-                        {[
-                          { id: "all", label: "All Notices", icon: "📋" },
-                          { id: "important", label: "Important", icon: "⚠️" },
-                          { id: "academic", label: "Academic", icon: "📚" },
-                          { id: "general", label: "General", icon: "💬" }
-                        ].map((tab: any) => (
-                          <button
-                            key={tab.id}
-                            onClick={() => filterNoticesByType(tab.id)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                              activeTab === tab.id
-                                ? "bg-white text-blue-600 shadow-sm"
-                                : "text-gray-600 hover:text-gray-800"
-                            }`}
-                          >
-                            <span>{tab.icon}</span>
-                            {tab.label}
-                          </button>
-                        ))}
-                      </div>
+                     {/* FILTER TABS */}
+<div className="w-full mt-4 lg:mt-0">
+  <div className="flex flex-wrap gap-2 bg-gray-100 p-1 rounded-xl">
+    {[
+      { id: "all", label: "All Notices", icon: "📋" },
+      { id: "important", label: "Important", icon: "⚠️" },
+      { id: "academic", label: "Academic", icon: "📚" },
+      { id: "general", label: "General", icon: "💬" }
+    ].map((tab: any) => (
+      <button
+        key={tab.id}
+        onClick={() => filterNoticesByType(tab.id)}
+        className={`flex items-center justify-center gap-2 
+        px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
+        flex-1 sm:flex-none sm:px-4 whitespace-nowrap
+        ${
+          activeTab === tab.id
+            ? "bg-white text-blue-600 shadow-sm"
+            : "text-gray-600 hover:text-gray-800"
+        }`}
+      >
+        <span>{tab.icon}</span>
+        {tab.label}
+      </button>
+    ))}
+  </div>
+</div>
+
                     </div>
 
                     {/* NOTICES LIST */}

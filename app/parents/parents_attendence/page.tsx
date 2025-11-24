@@ -39,7 +39,6 @@ const ParentAttendance = () => {
       const parsedData = JSON.parse(storedUserData);
       const email = parsedData.email;
       setParentEmail(email);
-      console.log("📧 Parent email from localStorage:", email);
     }
   }, []);
 
@@ -56,22 +55,17 @@ const ParentAttendance = () => {
         
         const allStudents = studentRes.data;
         const allClasses = classesRes.data;
-        console.log("👥 Total students from API:", allStudents.length);
-        console.log("🏫 Total classes from API:", allClasses.length);
 
         // ✅ Filter students by parent email
         const parentStudents = allStudents.filter(
           (student: any) => student.parent === parentEmail
         );
-        console.log("🎓 Students matched to parent email (", parentEmail, "):", parentStudents.length);
-        console.log("📋 Filtered students emails:", parentStudents.map((s: any) => s.email));
 
         // ✅ Enrich students with class information
         const enrichedStudents = parentStudents.map((student: any) => {
           const classDetail = allClasses.find(
             (c: any) => c.id === student.class_id
           );
-          console.log(`📚 Class details for student ${student.fullname}:`, classDetail);
           
           return {
             ...student,
@@ -99,18 +93,12 @@ const ParentAttendance = () => {
       try {
         const attendanceRes = await axios.get(`${API_BASE}/student_attendance/`);
         const allAttendance = attendanceRes.data;
-        console.log("📋 Total student_attendance records from API:", allAttendance.length);
-        console.log("📝 Student emails we're looking for:", students.map((s: any) => s.email));
 
         // ✅ Keep only attendance matching these students by email (field `student`)
         const filteredAttendance = allAttendance.filter((record: any) => {
           const isMatch = students.some((stu: any) => stu.email === record.student);
           return isMatch;
         });
-        console.log("✅ Attendance records matched to students:", filteredAttendance.length);
-        if (filteredAttendance.length > 0) {
-          console.log("📌 Matched attendance records:", filteredAttendance);
-        }
 
         // ✅ Map to shape used by the UI
         const merged = filteredAttendance.map((att: any) => {
@@ -140,7 +128,6 @@ const ParentAttendance = () => {
           };
         });
 
-        console.log("👨‍👩‍👧 Final merged attendance data (student_attendance):", merged.length, "records ready for display");
         setAttendanceData(merged);
         setLoading(false);
       } catch (error) {

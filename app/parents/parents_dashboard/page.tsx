@@ -18,12 +18,19 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  User,
   Mail,
   Phone,
   MapPin,
   BarChart3,
   PieChart,
-  LineChart
+  LineChart,
+  Sparkles,
+  Target,
+  Crown,
+  Zap,
+  Gem,
+  Rocket
 } from "lucide-react";
 
 const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
@@ -245,37 +252,17 @@ const ParentDashboard = () => {
   const stats = getAttendanceStats();
   const overallStats = getOverallStats();
 
-  // Get grade distribution for charts
-  const getGradeDistribution = () => {
-    const distribution = {
-      'A+ (90-100)': 0,
-      'A (80-89)': 0,
-      'B (70-79)': 0,
-      'C (60-69)': 0,
-      'D (50-59)': 0,
-      'F (0-49)': 0
-    };
-
-    filteredGrades.forEach(grade => {
-      const percentage = grade.percentage || 0;
-      if (percentage >= 90) distribution['A+ (90-100)']++;
-      else if (percentage >= 80) distribution['A (80-89)']++;
-      else if (percentage >= 70) distribution['B (70-79)']++;
-      else if (percentage >= 60) distribution['C (60-69)']++;
-      else if (percentage >= 50) distribution['D (50-59)']++;
-      else distribution['F (0-49)']++;
-    });
-
-    return Object.entries(distribution).map(([name, value]) => ({ name, value }));
-  };
-
   if (loading) {
     return (
       <DashboardLayout role="parents">
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading your children's data...</p>
+            <div className="relative">
+              <div className="animate-spin rounded-full h-12 w-12 xs:h-16 xs:w-16 border-b-2 border-blue-600 mx-auto mb-3 xs:mb-4"></div>
+              <Users className="h-6 w-6 xs:h-8 xs:w-8 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+            </div>
+            <p className="text-gray-600 font-medium text-sm xs:text-base">Loading your children's data...</p>
+            <p className="text-gray-400 text-xs xs:text-sm mt-1">Getting everything ready for you</p>
           </div>
         </div>
       </DashboardLayout>
@@ -284,104 +271,142 @@ const ParentDashboard = () => {
 
   return (
     <DashboardLayout role="parents">
-      <div className="min-h-screen bg-gray-50/30 p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Parent Dashboard</h1>
-          <p className="text-gray-600 mt-2">Monitor your children's academic progress and school activities</p>
-        </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Children</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{overallStats.totalStudents}</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Attendance Rate</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{overallStats.attendancePercentage}%</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <div className="flex items-center gap-1 mt-3">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-green-600">{stats.present} present out of {stats.total}</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Average Grade</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{overallStats.avgGrade}%</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <Award className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Leave Applications</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{overallStats.totalLeaves}</p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-xl">
-                <FileText className="h-6 w-6 text-orange-600" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-4 xs:p-5 sm:p-6">
+        {/* Enhanced Header */}
+        <div className="mb-6 xs:mb-7 sm:mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 xs:gap-5 sm:gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 xs:gap-3 mb-2 xs:mb-3">
+                <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl xs:rounded-2xl shadow-lg">
+                  <Users className="h-5 xs:h-6 sm:h-7 w-5 xs:w-6 sm:w-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl xs:text-3xl sm:text-4xl font-bold bg-gradient-to-br from-gray-900 to-blue-900 bg-clip-text text-transparent">
+                    Parent Dashboard
+                  </h1>
+                  <p className="text-gray-600 text-sm xs:text-base sm:text-lg mt-1 xs:mt-2">
+                    Monitor your children's academic progress and school activities
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tabs Navigation */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
-            {["overview", "attendance", "grades", "leaves"].map((tab) => (
+        {/* Statistics Cards - Enhanced */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6 mb-6 xs:mb-7 sm:mb-8">
+          <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-blue-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs xs:text-sm font-medium text-gray-600">Total Children</p>
+                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{overallStats.totalStudents}</p>
+              </div>
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Users className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+            </div>
+            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+              <Sparkles className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
+              <span className="text-xs xs:text-sm text-blue-600 font-medium">Your students</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-white to-green-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-green-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-green-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs xs:text-sm font-medium text-gray-600">Attendance Rate</p>
+                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{overallStats.attendancePercentage}%</p>
+              </div>
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <CheckCircle className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+            </div>
+            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+              <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4 text-green-500" />
+              <span className="text-xs xs:text-sm text-green-600 font-medium">{stats.present} present</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-purple-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-purple-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs xs:text-sm font-medium text-gray-600">Average Grade</p>
+                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{overallStats.avgGrade}%</p>
+              </div>
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Award className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+            </div>
+            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+              <Target className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
+              <span className="text-xs xs:text-sm text-purple-600 font-medium">Performance</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-white to-orange-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-orange-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-orange-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs xs:text-sm font-medium text-gray-600">Leave Applications</p>
+                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{overallStats.totalLeaves}</p>
+              </div>
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <FileText className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+            </div>
+            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+              <Clock className="h-3 w-3 xs:h-4 xs:w-4 text-orange-500" />
+              <span className="text-xs xs:text-sm text-orange-600 font-medium">Applications</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs Navigation - Enhanced */}
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
+          <div className="flex gap-1 xs:gap-2 bg-gray-100/50 p-1 rounded-lg xs:rounded-xl mb-4 xs:mb-5 sm:mb-6 overflow-x-auto">
+            {[
+              { id: "overview", label: "📊 Overview", icon: BarChart3, shortLabel: "Overview" },
+              { id: "attendance", label: "📅 Attendance", icon: Calendar, shortLabel: "Attendance" },
+              { id: "grades", label: "🎓 Grades", icon: Award, shortLabel: "Grades" },
+              { id: "leaves", label: "📋 Leaves", icon: FileText, shortLabel: "Leaves" }
+            ].map((tab) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 min-w-[100px] py-2 xs:py-2.5 px-2 xs:px-3 rounded-md text-xs xs:text-sm font-medium transition-colors whitespace-nowrap flex items-center justify-center gap-1 xs:gap-2 ${
+                  activeTab === tab.id
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                <tab.icon className="h-3 w-3 xs:h-4 xs:w-4" />
+                <span className="hidden xs:inline">{tab.label}</span>
+                <span className="xs:hidden">{tab.shortLabel}</span>
               </button>
             ))}
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+          <div className="flex flex-col lg:flex-row gap-3 xs:gap-4 items-start lg:items-center justify-between">
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 xs:h-4 xs:w-4" />
               <input
                 type="text"
                 placeholder={`Search ${activeTab}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-8 xs:pl-10 pr-4 py-2 xs:py-3 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
               />
             </div>
 
-            <div className="flex flex-wrap gap-4 w-full lg:w-auto">
+            <div className="flex flex-wrap gap-2 xs:gap-3 w-full lg:w-auto">
               <select
                 value={selectedStudent}
                 onChange={(e) => setSelectedStudent(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 min-w-[140px] px-3 xs:px-4 py-2 xs:py-3 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
               >
                 <option value="all">All Children</option>
                 {students.map(student => (
@@ -396,7 +421,7 @@ const ParentDashboard = () => {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 min-w-[120px] px-3 xs:px-4 py-2 xs:py-3 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
                   >
                     <option value="all">All Status</option>
                     <option value="Present">Present</option>
@@ -406,7 +431,7 @@ const ParentDashboard = () => {
                     type="date"
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 min-w-[140px] px-3 xs:px-4 py-2 xs:py-3 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
                   />
                 </>
               )}
@@ -414,26 +439,28 @@ const ParentDashboard = () => {
           </div>
         </div>
 
-        {/* Overview Tab */}
+        {/* Overview Tab - CARDS FORMAT */}
         {activeTab === "overview" && (
-          <div className="space-y-8">
-            {/* Children Overview */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                  <Users className="h-6 w-6 text-blue-600" />
-                  Your Children
+          <div className="space-y-6 xs:space-y-8">
+            {/* Children Overview - CARDS */}
+            <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 xs:mb-5 sm:mb-6">
+                <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2 xs:gap-3">
+                  <div className="p-1.5 xs:p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl">
+                    <Users className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  Your Children ({students.length})
                 </h2>
                 {selectedStudent !== "all" && (
                   <button
                     onClick={() => setSelectedStudent("all")}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium rounded-lg transition-colors"
+                    className="px-3 xs:px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs xs:text-sm font-medium rounded-lg xs:rounded-xl transition-colors w-full sm:w-auto"
                   >
                     Clear Selection
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 xs:gap-5 sm:gap-6">
                 {students.map((student, index) => {
                   const studentStat = getStudentStats(student.email);
                   const isSelected = selectedStudent === student.email;
@@ -441,45 +468,48 @@ const ParentDashboard = () => {
                     <div 
                       key={index} 
                       onClick={() => setSelectedStudent(student.email)}
-                      className={`border rounded-xl p-6 transition-all cursor-pointer ${
+                      className={`border rounded-lg xs:rounded-xl p-4 xs:p-5 transition-all cursor-pointer group hover:shadow-lg ${
                         isSelected
-                          ? "border-blue-500 bg-blue-50 shadow-md"
-                          : "border-gray-200 hover:shadow-md"
+                          ? "border-blue-500 bg-blue-50/50 shadow-md"
+                          : "border-gray-200/60 hover:border-blue-300 bg-white"
                       }`}
                     >
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                          isSelected ? "bg-blue-200" : "bg-blue-100"
+                      <div className="flex items-center gap-3 xs:gap-4 mb-3 xs:mb-4">
+                        <div className={`w-10 h-10 xs:w-12 xs:h-12 rounded-full flex items-center justify-center overflow-hidden border-2 ${
+                          isSelected ? "border-blue-500" : "border-gray-200 group-hover:border-blue-300"
                         }`}>
                           {student.profile_picture ? (
                             <img
                               src={student.profile_picture}
                               alt={student.fullname}
-                              className="w-16 h-16 rounded-full object-cover"
+                              className="w-10 h-10 xs:w-12 xs:h-12 rounded-full object-cover"
                             />
                           ) : (
-                            <Users className="h-8 w-8 text-blue-600" />
+                            <div className={`w-full h-full rounded-full flex items-center justify-center ${
+                              isSelected ? "bg-blue-100" : "bg-gray-100 group-hover:bg-blue-50"
+                            }`}>
+                              <Users className="h-5 w-5 xs:h-6 xs:w-6 text-blue-600" />
+                            </div>
                           )}
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 text-lg">{student.fullname}</h3>
-                          <p className="text-sm text-gray-600">{student.class_name}</p>
-                          <p className="text-sm text-gray-600">{student.section}</p>
-                          <p className="text-xs text-gray-500 mt-1">Roll No: {student.student_id}</p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-900 text-sm xs:text-base truncate">{student.fullname}</h3>
+                          <p className="text-xs xs:text-sm text-gray-600 truncate">{student.class_name} • {student.section}</p>
+                          <p className="text-xs text-gray-500 mt-1">ID: {student.student_id}</p>
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                          <p className="text-2xl font-bold text-blue-600">{studentStat.percentage}%</p>
+                      <div className="grid grid-cols-3 gap-2 xs:gap-3 text-center">
+                        <div className="bg-blue-50/50 rounded-lg xs:rounded-xl p-2 group-hover:bg-blue-100/50 transition-colors">
+                          <p className="text-base xs:text-lg font-bold text-blue-600">{studentStat.percentage}%</p>
                           <p className="text-xs text-gray-600">Attendance</p>
                         </div>
-                        <div>
-                          <p className="text-2xl font-bold text-purple-600">{studentStat.avgGrade}%</p>
+                        <div className="bg-purple-50/50 rounded-lg xs:rounded-xl p-2 group-hover:bg-purple-100/50 transition-colors">
+                          <p className="text-base xs:text-lg font-bold text-purple-600">{studentStat.avgGrade}%</p>
                           <p className="text-xs text-gray-600">Avg Grade</p>
                         </div>
-                        <div>
-                          <p className="text-2xl font-bold text-orange-600">{studentStat.totalLeaves}</p>
+                        <div className="bg-orange-50/50 rounded-lg xs:rounded-xl p-2 group-hover:bg-orange-100/50 transition-colors">
+                          <p className="text-base xs:text-lg font-bold text-orange-600">{studentStat.totalLeaves}</p>
                           <p className="text-xs text-gray-600">Leaves</p>
                         </div>
                       </div>
@@ -489,42 +519,52 @@ const ParentDashboard = () => {
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Attendance Summary */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Attendance Summary</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Present Days</span>
-                    <span className="font-semibold text-green-600">{stats.present}</span>
+            {/* Quick Stats - CARDS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 xs:gap-5 sm:gap-6">
+              {/* Attendance Summary Card */}
+              <div className="bg-gradient-to-br from-white to-green-50/30 rounded-xl xs:rounded-2xl shadow-sm border border-green-200/30 p-4 xs:p-5 sm:p-6">
+                <h3 className="text-base xs:text-lg font-semibold text-gray-800 mb-3 xs:mb-4 flex items-center gap-2">
+                  <div className="p-1.5 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Absent Days</span>
-                    <span className="font-semibold text-red-600">{stats.absent}</span>
+                  Attendance Summary
+                </h3>
+                <div className="space-y-3 xs:space-y-4">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm xs:text-base text-gray-600">Present Days</span>
+                    <span className="font-semibold text-green-600 text-sm xs:text-base">{stats.present}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Overall Attendance</span>
-                    <span className="font-semibold text-blue-600">{stats.percentage}%</span>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm xs:text-base text-gray-600">Absent Days</span>
+                    <span className="font-semibold text-red-600 text-sm xs:text-base">{stats.absent}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm xs:text-base text-gray-600">Overall Attendance</span>
+                    <span className="font-semibold text-blue-600 text-sm xs:text-base">{stats.percentage}%</span>
                   </div>
                 </div>
               </div>
 
-              {/* Academic Summary */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Academic Summary</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Total Grades</span>
-                    <span className="font-semibold text-purple-600">{overallStats.totalGrades}</span>
+              {/* Academic Summary Card */}
+              <div className="bg-gradient-to-br from-white to-purple-50/30 rounded-xl xs:rounded-2xl shadow-sm border border-purple-200/30 p-4 xs:p-5 sm:p-6">
+                <h3 className="text-base xs:text-lg font-semibold text-gray-800 mb-3 xs:mb-4 flex items-center gap-2">
+                  <div className="p-1.5 bg-purple-100 rounded-lg">
+                    <Award className="h-4 w-4 text-purple-600" />
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Average Performance</span>
-                    <span className="font-semibold text-purple-600">{overallStats.avgGrade}%</span>
+                  Academic Summary
+                </h3>
+                <div className="space-y-3 xs:space-y-4">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm xs:text-base text-gray-600">Total Grades</span>
+                    <span className="font-semibold text-purple-600 text-sm xs:text-base">{overallStats.totalGrades}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Leave Applications</span>
-                    <span className="font-semibold text-orange-600">{overallStats.totalLeaves}</span>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm xs:text-base text-gray-600">Average Performance</span>
+                    <span className="font-semibold text-purple-600 text-sm xs:text-base">{overallStats.avgGrade}%</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm xs:text-base text-gray-600">Leave Applications</span>
+                    <span className="font-semibold text-orange-600 text-sm xs:text-base">{overallStats.totalLeaves}</span>
                   </div>
                 </div>
               </div>
@@ -532,21 +572,34 @@ const ParentDashboard = () => {
           </div>
         )}
 
-        {/* Attendance Tab */}
+        {/* Attendance Tab - CARDS FORMAT */}
         {activeTab === "attendance" && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                <Calendar className="h-6 w-6 text-blue-600" />
-                Attendance Records
-              </h2>
+          <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+            <div className="p-4 xs:p-5 sm:p-6 border-b border-gray-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4 bg-white/80 backdrop-blur-sm">
+              <div className="flex items-center gap-3 xs:gap-4">
+                <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl shadow-lg">
+                  <Calendar className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">Attendance Records</h2>
+                  <p className="text-gray-600 text-xs xs:text-sm">Track your children's attendance</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 xs:gap-3">
+                <span className="bg-blue-100 text-blue-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-2 rounded-full font-medium flex items-center gap-1 xs:gap-2">
+                  <Sparkles className="h-3 w-3 xs:h-4 xs:w-4" />
+                  {filteredAttendance.length} records
+                </span>
+              </div>
             </div>
 
             {filteredAttendance.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No attendance records found</h3>
-                <p className="text-gray-600">
+              <div className="text-center py-12 xs:py-16">
+                <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-3 xs:mb-4">
+                  <Calendar className="h-6 w-6 xs:h-8 xs:w-8 sm:h-10 sm:w-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg xs:text-xl font-semibold text-gray-900 mb-1 xs:mb-2">No attendance records found</h3>
+                <p className="text-gray-600 max-w-md mx-auto text-sm xs:text-base px-4">
                   {attendanceData.length === 0 
                     ? "No attendance records available for your children."
                     : "Try adjusting your filters to find what you're looking for."
@@ -554,87 +607,93 @@ const ParentDashboard = () => {
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6 p-4 xs:p-5 sm:p-6">
                 {filteredAttendance.map((record, index) => (
                   <div
                     key={index}
-                    className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-blue-300"
                     onClick={() => setExpandedRecord(expandedRecord === index ? null : index)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3 xs:mb-4">
+                      <div className="flex items-center gap-2 xs:gap-3">
+                        <div className="w-8 h-8 xs:w-10 xs:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
                           {record.profile_picture ? (
                             <img
                               src={record.profile_picture}
                               alt={record.fullname}
-                              className="w-12 h-12 rounded-full object-cover"
+                              className="w-8 h-8 xs:w-10 xs:h-10 rounded-full object-cover"
                             />
                           ) : (
-                            <Users className="h-6 w-6 text-blue-600" />
+                            <Users className="h-4 w-4 xs:h-5 xs:w-5 text-blue-600" />
                           )}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-gray-900 text-lg">{record.fullname}</h3>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-900 text-sm xs:text-base group-hover:text-blue-900 transition-colors line-clamp-1">
+                            {record.fullname}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${
                               record.status === "Present"
                                 ? "bg-green-50 text-green-700 border-green-200"
-                                : record.status === "Absent"
-                                  ? "bg-red-50 text-red-700 border-red-200"
-                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-red-50 text-red-700 border-red-200"
                             }`}>
                               {record.status}
                             </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <BookOpen className="h-4 w-4" />
-                              <span>{record.class_name} - {record.section}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              <span>{new Date(record.date).toLocaleDateString('en-US', { 
-                                weekday: 'long', 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                              })}</span>
-                            </div>
-                            {record.remarks && (
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4" />
-                                <span className="truncate">{record.remarks}</span>
-                              </div>
-                            )}
+                            <span className="text-xs text-gray-500">
+                              {record.class_name} • {record.section}
+                            </span>
                           </div>
                         </div>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedRecord(expandedRecord === index ? null : index);
+                        }}
+                        className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300 flex-shrink-0"
+                      >
+                        {expandedRecord === index ? 
+                          <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> : 
+                          <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-blue-600" />
+                        }
+                      </button>
+                    </div>
 
-                      <div className="flex items-center gap-2 ml-4">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedRecord(expandedRecord === index ? null : index);
-                          }}
-                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                        >
-                          {expandedRecord === index ? 
-                            <ChevronUp className="h-4 w-4 text-gray-600" /> : 
-                            <ChevronDown className="h-4 w-4 text-gray-600" />
-                          }
-                        </button>
+                    {/* Record Details */}
+                    <div className="space-y-2 xs:space-y-3">
+                      <div className="flex items-center justify-between text-xs xs:text-sm">
+                        <span className="text-gray-600 flex items-center gap-1 xs:gap-2">
+                          <Calendar className="h-3 w-3 xs:h-4 xs:w-4" />
+                          Date:
+                        </span>
+                        <span className="font-semibold text-gray-900">
+                          {new Date(record.date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
                       </div>
+                      
+                      {record.remarks && (
+                        <div className="text-xs xs:text-sm">
+                          <span className="text-gray-600 font-medium">Remarks:</span>
+                          <p className="text-gray-700 mt-1 line-clamp-2">{record.remarks}</p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Expanded Details */}
                     {expandedRecord === index && (
-                      <div className="mt-4 pl-16 border-t pt-4">
-                        <div className="grid md:grid-cols-2 gap-6">
+                      <div className="mt-4 xs:mt-5 border-t border-gray-200/60 pt-4 xs:pt-5 bg-gray-50/50 rounded-lg xs:rounded-xl p-3 xs:p-4">
+                        <div className="space-y-3 xs:space-y-4">
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-3">Record Details</h4>
-                            <div className="space-y-2 text-sm">
+                            <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                              <Zap className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
+                              Record Details
+                            </h4>
+                            <div className="space-y-2 text-xs">
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Marked By:</span>
                                 <span className="text-gray-900 font-medium">{record.marked_by || "Teacher"}</span>
@@ -647,17 +706,22 @@ const ParentDashboard = () => {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Student Email:</span>
-                                <span className="text-gray-900 font-medium">{record.email}</span>
+                                <span className="text-gray-900 font-medium truncate ml-2">{record.email}</span>
                               </div>
                             </div>
                           </div>
                           
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-3">Remarks</h4>
-                            <p className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm">
-                              {record.remarks || "No additional remarks provided."}
-                            </p>
-                          </div>
+                          {record.remarks && (
+                            <div>
+                              <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                                <FileText className="h-3 w-3 xs:h-4 xs:w-4 text-gray-500" />
+                                Remarks
+                              </h4>
+                              <p className="text-gray-700 bg-white p-2 xs:p-3 rounded-lg xs:rounded-xl border border-gray-200/60 text-xs leading-relaxed">
+                                {record.remarks}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -668,72 +732,78 @@ const ParentDashboard = () => {
           </div>
         )}
 
-        {/* Grades Tab */}
+        {/* Grades Tab - CARDS FORMAT */}
         {activeTab === "grades" && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                <Award className="h-6 w-6 text-purple-600" />
-                Academic Grades
-              </h2>
+          <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+            <div className="p-4 xs:p-5 sm:p-6 border-b border-gray-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4 bg-white/80 backdrop-blur-sm">
+              <div className="flex items-center gap-3 xs:gap-4">
+                <div className="p-2 xs:p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg xs:rounded-xl shadow-lg">
+                  <Award className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">Academic Grades</h2>
+                  <p className="text-gray-600 text-xs xs:text-sm">Track academic performance</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 xs:gap-3">
+                <span className="bg-purple-100 text-purple-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-2 rounded-full font-medium flex items-center gap-1 xs:gap-2">
+                  <Gem className="h-3 w-3 xs:h-4 xs:w-4" />
+                  {filteredGrades.length} records
+                </span>
+              </div>
             </div>
 
             {filteredGrades.length === 0 ? (
-              <div className="text-center py-12">
-                <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No grade records found</h3>
-                <p className="text-gray-600">No grade records available for your children.</p>
+              <div className="text-center py-12 xs:py-16">
+                <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-3 xs:mb-4">
+                  <Award className="h-6 w-6 xs:h-8 xs:w-8 sm:h-10 sm:w-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg xs:text-xl font-semibold text-gray-900 mb-1 xs:mb-2">No grade records found</h3>
+                <p className="text-gray-600 max-w-md mx-auto text-sm xs:text-base px-4">
+                  No grade records available for your children.
+                </p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6 p-4 xs:p-5 sm:p-6">
                 {filteredGrades.map((grade, index) => (
-                  <div key={index} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                          <BookOpen className="h-6 w-6 text-purple-600" />
+                  <div key={index} className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 hover:shadow-lg transition-all duration-300 group hover:border-purple-300">
+                    <div className="flex items-start justify-between mb-3 xs:mb-4">
+                      <div className="flex items-center gap-2 xs:gap-3">
+                        <div className="w-8 h-8 xs:w-10 xs:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 transition-colors">
+                          <BookOpen className="h-4 w-4 xs:h-5 xs:w-5 text-purple-600" />
                         </div>
-                        <div className="flex-1">
-                          {/* Student Name and Subject Row */}
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-900 text-lg">{grade.subject_name}</h3>
-                              <p className="text-sm text-gray-600">{grade.fullname}</p>
-                            </div>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium border whitespace-nowrap ${
-                              grade.percentage >= 80 ? "bg-green-50 text-green-700 border-green-200" :
-                              grade.percentage >= 60 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                              "bg-red-50 text-red-700 border-red-200"
-                            }`}>
-                              {grade.percentage}%
-                            </span>
-                          </div>
-                          
-                          {/* Email and Class/Section Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-2">
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4" />
-                              <span className="truncate" title={grade.email}>{grade.email}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <BookOpen className="h-4 w-4" />
-                              <span>{grade.class_name} - {grade.section}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              <span>{grade.exam_type}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              <span>{new Date(grade.exam_date).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-
-                          {/* Marks Row */}
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-900">Marks:</span> {grade.marks_obtained}/{grade.total_marks}
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-900 text-sm xs:text-base group-hover:text-purple-900 transition-colors line-clamp-1">
+                            {grade.subject_name}
+                          </h3>
+                          <p className="text-xs xs:text-sm text-gray-600 truncate">{grade.fullname}</p>
                         </div>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
+                        grade.percentage >= 80 ? "bg-green-50 text-green-700 border-green-200" :
+                        grade.percentage >= 60 ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        "bg-red-50 text-red-700 border-red-200"
+                      }`}>
+                        {grade.percentage}%
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2 xs:space-y-3 text-xs xs:text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Exam Type:</span>
+                        <span className="font-semibold text-gray-900">{grade.exam_type}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Marks:</span>
+                        <span className="font-bold text-gray-900">{grade.marks_obtained}/{grade.total_marks}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Date:</span>
+                        <span className="text-gray-900">{new Date(grade.exam_date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Class:</span>
+                        <span className="text-gray-900">{grade.class_name} • {grade.section}</span>
                       </div>
                     </div>
                   </div>
@@ -743,32 +813,49 @@ const ParentDashboard = () => {
           </div>
         )}
 
-        {/* Leaves Tab */}
+        {/* Leaves Tab - CARDS FORMAT */}
         {activeTab === "leaves" && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                <FileText className="h-6 w-6 text-orange-600" />
-                Leave Applications
-              </h2>
+          <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+            <div className="p-4 xs:p-5 sm:p-6 border-b border-gray-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4 bg-white/80 backdrop-blur-sm">
+              <div className="flex items-center gap-3 xs:gap-4">
+                <div className="p-2 xs:p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg xs:rounded-xl shadow-lg">
+                  <FileText className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">Leave Applications</h2>
+                  <p className="text-gray-600 text-xs xs:text-sm">Track leave applications</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 xs:gap-3">
+                <span className="bg-orange-100 text-orange-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-2 rounded-full font-medium flex items-center gap-1 xs:gap-2">
+                  <Clock className="h-3 w-3 xs:h-4 xs:w-4" />
+                  {filteredLeaves.length} records
+                </span>
+              </div>
             </div>
 
             {filteredLeaves.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No leave records found</h3>
-                <p className="text-gray-600">No leave applications found for your children.</p>
+              <div className="text-center py-12 xs:py-16">
+                <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-3 xs:mb-4">
+                  <FileText className="h-6 w-6 xs:h-8 xs:w-8 sm:h-10 sm:w-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg xs:text-xl font-semibold text-gray-900 mb-1 xs:mb-2">No leave records found</h3>
+                <p className="text-gray-600 max-w-md mx-auto text-sm xs:text-base px-4">
+                  No leave applications found for your children.
+                </p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6 p-4 xs:p-5 sm:p-6">
                 {filteredLeaves.map((leave, index) => (
-                  <div key={index} className="p-6 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setExpandedRecord(expandedRecord === index ? null : index)}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        {/* Header with Student Name and Status */}
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="font-semibold text-gray-900 text-lg">{leave.fullname}</h3>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
+                  <div key={index} className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-orange-300"
+                    onClick={() => setExpandedRecord(expandedRecord === index ? null : index)}>
+                    <div className="flex items-start justify-between mb-3 xs:mb-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 xs:gap-3 mb-2">
+                          <h3 className="font-bold text-gray-900 text-sm xs:text-base group-hover:text-orange-900 transition-colors line-clamp-1">
+                            {leave.fullname}
+                          </h3>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
                             leave.status === "Approved" ? "bg-green-50 text-green-700 border-green-200" :
                             leave.status === "Pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
                             "bg-red-50 text-red-700 border-red-200"
@@ -777,143 +864,86 @@ const ParentDashboard = () => {
                           </span>
                         </div>
                         
-                        {/* Main Info Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600 mb-2">
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4" />
-                            <span><span className="font-medium text-gray-900">{leave.class_name}</span> - {leave.section}</span>
+                        <div className="space-y-2 text-xs xs:text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Leave Type:</span>
+                            <span className="font-semibold text-gray-900">{leave.leave_type}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            <span className="truncate" title={leave.email}>{leave.email}</span>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Duration:</span>
+                            <span className="text-gray-900">{leave.start_date} to {leave.end_date}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            <span>{leave.start_date} to {leave.end_date}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            <span>{leave.leave_type} Leave</span>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Class:</span>
+                            <span className="text-gray-900">{leave.class_name} • {leave.section}</span>
                           </div>
                         </div>
 
-                        {/* Reason */}
-                        <div className="text-sm grid grid-cols-2">
-                          <span className="text-gray-600 font-medium">Reason:   {leave.reason}</span>
-                          {/* <p className="text-gray-700 mr-5"></p> */}
+                        <div className="mt-3">
+                          <span className="text-gray-600 font-medium text-xs">Reason:</span>
+                          <p className="text-gray-700 mt-1 line-clamp-2 text-xs">{leave.reason}</p>
                         </div>
                       </div>
 
-                      {/* Expand Button */}
-                      <div className="flex items-center gap-2 ml-4">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedRecord(expandedRecord === index ? null : index);
-                          }}
-                          className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                        >
-                          {expandedRecord === index ? 
-                            <ChevronUp className="h-4 w-4 text-gray-600" /> : 
-                            <ChevronDown className="h-4 w-4 text-gray-600" />
-                          }
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedRecord(expandedRecord === index ? null : index);
+                        }}
+                        className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300 flex-shrink-0 ml-2"
+                      >
+                        {expandedRecord === index ? 
+                          <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> : 
+                          <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-orange-600" />
+                        }
+                      </button>
                     </div>
 
                     {/* Expanded Details */}
                     {expandedRecord === index && (
-                      <div className="mt-6 border-t pt-6">
-                        <div className="grid md:grid-cols-4 gap-6">
-                          {/* Student Information Section */}
+                      <div className="mt-4 xs:mt-5 border-t border-gray-200/60 pt-4 xs:pt-5 bg-gray-50/50 rounded-lg xs:rounded-xl p-3 xs:p-4">
+                        <div className="space-y-3 xs:space-y-4">
                           <div>
-                            <h4 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Student Information</h4>
-                            <div className="space-y-3 text-sm">
-                              <div>
-                                <span className="text-gray-600 font-medium block">Name</span>
-                                <span className="text-gray-900">{leave.fullname}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 font-medium block">Email</span>
-                                <span className="text-gray-900 break-all">{leave.email}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 font-medium block">Class</span>
-                                <span className="text-gray-900">{leave.class_name}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 font-medium block">Section</span>
-                                <span className="text-gray-900">{leave.section}</span>
+                            <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                              <User className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
+                              Student Information
+                            </h4>
+                            <div className="space-y-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Email:</span>
+                                <span className="text-gray-900 font-medium truncate ml-2">{leave.email}</span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Leave Details Section */}
                           <div>
-                            <h4 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Leave Details</h4>
-                            <div className="space-y-3 text-sm">
-                              <div>
-                                <span className="text-gray-600 font-medium block">Leave Type</span>
-                                <span className="text-gray-900">{leave.leave_type}</span>
+                            <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                              <Target className="h-3 w-3 xs:h-4 xs:w-4 text-orange-500" />
+                              Approval Details
+                            </h4>
+                            <div className="space-y-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Approved By:</span>
+                                <span className="text-gray-900 font-medium">{leave.approved_by || "Pending Approval"}</span>
                               </div>
-                              <div>
-                                <span className="text-gray-600 font-medium block">Start Date</span>
-                                <span className="text-gray-900">{leave.start_date}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 font-medium block">End Date</span>
-                                <span className="text-gray-900">{leave.end_date}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Approval Details Section */}
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Approval Details</h4>
-                            <div className="space-y-3 text-sm">
-                              <div>
-                                <span className="text-gray-600 font-medium block">Status</span>
-                                <span className={`font-semibold inline-block px-2 py-1 rounded ${
-                                  leave.status === "Approved" ? "text-green-600 bg-green-50" :
-                                  leave.status === "Pending" ? "text-yellow-600 bg-yellow-50" :
-                                  "text-red-600 bg-red-50"
-                                }`}>
-                                  {leave.status}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 font-medium block">Approved By</span>
-                                <span className="text-gray-900">{leave.approved_by || "Pending Approval"}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 font-medium block">Applied On</span>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Applied On:</span>
                                 <span className="text-gray-900">{new Date(leave.created_at).toLocaleDateString()}</span>
                               </div>
-                              {leave.approved_at && (
-                                <div>
-                                  <span className="text-gray-600 font-medium block">Approved On</span>
-                                  <span className="text-gray-900">{new Date(leave.approved_at).toLocaleDateString()}</span>
-                                </div>
-                              )}
                             </div>
                           </div>
 
-                          {/* Reason Section */}
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Additional Information</h4>
-                            <div className="space-y-3 text-sm">
-                              <div>
-                                <span className="text-gray-600 font-medium block">Reason</span>
-                                <p className="text-gray-700 bg-gray-50 p-2 rounded mt-1">{leave.reason}</p>
-                              </div>
-                              {leave.remarks && (
-                                <div>
-                                  <span className="text-gray-600 font-medium block">Remarks</span>
-                                  <p className="text-gray-700 bg-gray-50 p-2 rounded mt-1">{leave.remarks}</p>
-                                </div>
-                              )}
+                          {leave.remarks && (
+                            <div>
+                              <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                                <FileText className="h-3 w-3 xs:h-4 xs:w-4 text-gray-500" />
+                                Additional Remarks
+                              </h4>
+                              <p className="text-gray-700 bg-white p-2 xs:p-3 rounded-lg xs:rounded-xl border border-gray-200/60 text-xs leading-relaxed">
+                                {leave.remarks}
+                              </p>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     )}

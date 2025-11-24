@@ -69,8 +69,6 @@ const TransportPage = () => {
       is_active: true,
     };
 
-    console.log("🚀 Sending payload:", payload);
-
     try {
       await axios.post(`${API_BASE}/transport_details/`, payload, {
         headers: { "Content-Type": "application/json" },

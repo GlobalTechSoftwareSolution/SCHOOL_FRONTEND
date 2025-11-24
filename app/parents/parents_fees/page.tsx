@@ -358,37 +358,37 @@ const ParentFeePayments = () => {
 
   return (
     <DashboardLayout role="parents">
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-4 xs:p-5 sm:p-6">
         {/* Enhanced Header */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div className="mb-6 xs:mb-7 sm:mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 xs:gap-5 sm:gap-6">
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl shadow-lg">
-                  <Wallet className="h-7 w-7 text-white" />
+              <div className="flex items-center gap-2 xs:gap-3 mb-2 xs:mb-3">
+                <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl xs:rounded-2xl shadow-lg">
+                  <Wallet className="h-5 xs:h-6 sm:h-7 w-5 xs:w-6 sm:w-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold bg-gradient-to-br from-gray-900 to-blue-900 bg-clip-text text-transparent">
+                  <h1 className="text-2xl xs:text-3xl sm:text-4xl font-bold bg-gradient-to-br from-gray-900 to-blue-900 bg-clip-text text-transparent">
                     Fee Payments
                   </h1>
-                  <p className="text-gray-600 text-lg mt-2">Track and manage your children's fee payments with ease</p>
+                  <p className="text-gray-600 text-sm xs:text-base sm:text-lg mt-1 xs:mt-2">Track and manage your children's fee payments with ease</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 xs:gap-3">
               <button
                 onClick={() => setActiveView(activeView === "overview" ? "analytics" : "overview")}
-                className="flex items-center gap-2 bg-white text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 transition-all duration-300 font-medium shadow-sm hover:shadow-md border border-gray-200/60"
+                className="flex items-center gap-1 xs:gap-2 bg-white text-gray-700 px-4 xs:px-5 sm:px-6 py-2 xs:py-2.5 sm:py-3 rounded-lg xs:rounded-xl hover:bg-gray-50 transition-all duration-300 font-medium shadow-sm hover:shadow-md border border-gray-200/60 text-xs xs:text-sm"
               >
-                <BarChart3 className="h-5 w-5" />
+                <BarChart3 className="h-4 w-4 xs:h-5 xs:w-5" />
                 {activeView === "overview" ? "View Analytics" : "View Overview"}
               </button>
               <button
                 onClick={() => setShowPaymentModal(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="flex items-center gap-1 xs:gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 xs:px-5 sm:px-6 py-2 xs:py-2.5 sm:py-3 rounded-lg xs:rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-xs xs:text-sm"
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 w-4 xs:h-5 xs:w-5" />
                 Add Payment
               </button>
             </div>
@@ -396,128 +396,129 @@ const ParentFeePayments = () => {
         </div>
 
         {/* View Toggle */}
-        <div className="flex gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-sm border border-gray-200/60 mb-8 w-fit">
+        <div className="flex gap-1 xs:gap-2 bg-white/80 backdrop-blur-sm rounded-xl xs:rounded-2xl p-1 xs:p-2 shadow-sm border border-gray-200/60 mb-6 xs:mb-7 sm:mb-8 w-full overflow-x-auto">
           {[
-            { id: "overview", label: "📊 Overview", icon: PieChart },
-            { id: "analytics", label: "📈 Analytics", icon: BarChart3 },
-            { id: "children", label: "👨‍👩‍👧‍👦 Children", icon: User }
+            { id: "overview", label: "📊 Overview", icon: PieChart, shortLabel: "Overview" },
+            { id: "analytics", label: "📈 Analytics", icon: BarChart3, shortLabel: "Analytics" },
+            { id: "children", label: "👨‍👩‍👧‍👦 Children", icon: User, shortLabel: "Children" }
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveView(tab.id)}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 ${
+              className={`px-3 xs:px-4 sm:px-6 py-2 xs:py-2.5 sm:py-3 font-medium transition-all duration-300 flex items-center gap-1 xs:gap-2 rounded-lg xs:rounded-xl flex-shrink-0 ${
                 activeView === tab.id
                   ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 shadow-inner border border-blue-200/50"
                   : "text-gray-600 hover:text-gray-800 hover:bg-gray-100/50"
               }`}
             >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
+              <tab.icon className="h-3 w-3 xs:h-4 xs:w-4" />
+              <span className="hidden xs:inline">{tab.label}</span>
+              <span className="xs:hidden text-xs">{tab.shortLabel}</span>
             </button>
           ))}
         </div>
 
         {/* Statistics Cards - Enhanced */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-2xl shadow-sm border border-blue-200/30 p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6 mb-6 xs:mb-7 sm:mb-8">
+          <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-blue-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Payments</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalPayments}</p>
+                <p className="text-xs xs:text-sm font-medium text-gray-600">Total Payments</p>
+                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{stats.totalPayments}</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <CreditCard className="h-6 w-6 text-white" />
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <CreditCard className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-4">
-              <TrendingUp className="h-4 w-4 text-blue-500" />
-              <span className="text-sm text-blue-600 font-medium">All transactions</span>
+            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+              <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
+              <span className="text-xs xs:text-sm text-blue-600 font-medium">All transactions</span>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl shadow-sm border border-emerald-200/30 p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="bg-gradient-to-br from-white to-emerald-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-emerald-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-emerald-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Paid Amount</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.amount_paid}</p>
+                <p className="text-xs xs:text-sm font-medium text-gray-600">Paid Amount</p>
+                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.amount_paid}</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <CheckCircle className="h-6 w-6 text-white" />
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <CheckCircle className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-4">
-              <Target className="h-4 w-4 text-emerald-500" />
-              <span className="text-sm text-emerald-600 font-medium">{stats.paidPercentage}% completed</span>
+            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+              <Target className="h-3 w-3 xs:h-4 xs:w-4 text-emerald-500" />
+              <span className="text-xs xs:text-sm text-emerald-600 font-medium">{stats.paidPercentage}% completed</span>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-white to-amber-50/50 rounded-2xl shadow-sm border border-amber-200/30 p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="bg-gradient-to-br from-white to-amber-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-amber-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-amber-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Remaining</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.totalRemaining}</p>
+                <p className="text-xs xs:text-sm font-medium text-gray-600">Remaining</p>
+                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.totalRemaining}</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <Clock className="h-6 w-6 text-white" />
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Clock className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-4">
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-              <span className="text-sm text-amber-600 font-medium">Pending balance</span>
+            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+              <AlertCircle className="h-3 w-3 xs:h-4 xs:w-4 text-amber-500" />
+              <span className="text-xs xs:text-sm text-amber-600 font-medium">Pending balance</span>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-2xl shadow-sm border border-purple-200/30 p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/5 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-purple-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-purple-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Fee</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">₹{stats.totalAmount}</p>
+                <p className="text-xs xs:text-sm font-medium text-gray-600">Total Fee</p>
+                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.totalAmount}</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <IndianRupee className="h-6 w-6 text-white" />
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <IndianRupee className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-4">
-              <Gem className="h-4 w-4 text-purple-500" />
-              <span className="text-sm text-purple-600 font-medium">Total due</span>
+            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+              <Gem className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
+              <span className="text-xs xs:text-sm text-purple-600 font-medium">Total due</span>
             </div>
           </div>
         </div>
 
         {/* Enhanced Progress Bar */}
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-2xl shadow-sm border border-slate-200/60 p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Rocket className="h-5 w-5 text-blue-600" />
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
+          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4 mb-3 xs:mb-4">
+            <div className="flex items-center gap-2 xs:gap-3">
+              <div className="p-1.5 xs:p-2 bg-blue-100 rounded-lg">
+                <Rocket className="h-4 w-4 xs:h-5 xs:w-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Payment Progress</h3>
-                <p className="text-sm text-gray-600">Overall completion status</p>
+                <h3 className="font-semibold text-gray-900 text-sm xs:text-base">Payment Progress</h3>
+                <p className="text-xs xs:text-sm text-gray-600">Overall completion status</p>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-2xl font-bold text-gray-900">{stats.paidPercentage}%</span>
-              <p className="text-sm text-gray-600">Complete</p>
+              <span className="text-xl xs:text-2xl font-bold text-gray-900">{stats.paidPercentage}%</span>
+              <p className="text-xs xs:text-sm text-gray-600">Complete</p>
             </div>
           </div>
-          <div className="w-full bg-gray-200/50 rounded-full h-4 shadow-inner">
+          <div className="w-full bg-gray-200/50 rounded-full h-3 xs:h-4 shadow-inner">
             <div 
-              className={`h-4 rounded-full shadow-lg transition-all duration-1000 ease-out ${getProgressColor(stats.paidPercentage)}`}
+              className={`h-3 xs:h-4 rounded-full shadow-lg transition-all duration-1000 ease-out ${getProgressColor(stats.paidPercentage)}`}
               style={{ width: `${stats.paidPercentage}%` }}
             ></div>
           </div>
-          <div className="flex justify-between text-sm text-gray-600 mt-3">
+          <div className="flex justify-between text-xs xs:text-sm text-gray-600 mt-2 xs:mt-3">
             <span className="flex items-center gap-1">
-              <Wallet className="h-4 w-4" />
+              <Wallet className="h-3 w-3 xs:h-4 xs:w-4" />
               ₹0
             </span>
             <span className="flex items-center gap-1">
-              <Crown className="h-4 w-4" />
+              <Crown className="h-3 w-3 xs:h-4 xs:w-4" />
               ₹{stats.totalAmount}
             </span>
           </div>
@@ -525,19 +526,19 @@ const ParentFeePayments = () => {
 
         {/* Children Overview - Enhanced */}
         {children.length > 0 && (
-          <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl shadow-sm border border-blue-200/30 p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-                  <User className="h-6 w-6 text-white" />
+          <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4 mb-4 xs:mb-5 sm:mb-6">
+              <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2 xs:gap-3">
+                <div className="p-1.5 xs:p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl">
+                  <User className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 Your Children ({children.length})
               </h2>
-              <span className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full font-medium">
+              <span className="bg-blue-100 text-blue-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-1.5 rounded-full font-medium self-start xs:self-auto">
                 👨‍👩‍👧‍👦 Family
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 xs:gap-4 sm:gap-5">
               {children.map((child, index) => {
                 const childPayments = feePayments.filter(p => p.student === child.email);
                 const childTotal = childPayments.reduce((sum, p) => sum + (Number(p.total_amount) || 0), 0);
@@ -546,40 +547,37 @@ const ParentFeePayments = () => {
                 const paidPayments = childPayments.filter(p => p.status === "Paid").length;
                 
                 return (
-                  <div key={index} className="bg-white rounded-xl border border-gray-200/60 p-5 hover:shadow-lg transition-all duration-300 group hover:border-blue-300">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
+                  <div key={index} className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-3 xs:p-4 sm:p-5 hover:shadow-lg transition-all duration-300 group hover:border-blue-300">
+                    <div className="flex items-start justify-between mb-3 xs:mb-4">
+                      <div className="flex items-center gap-2 xs:gap-3">
                         <div className="relative">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-semibold text-lg group-hover:scale-110 transition-transform duration-300 overflow-hidden">
+                          <div className="w-10 h-10 xs:w-12 xs:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl flex items-center justify-center text-white font-semibold text-sm xs:text-base group-hover:scale-110 transition-transform duration-300 overflow-hidden">
                             {child.profile_picture ? (
                               <img
                                 src={child.profile_picture}
                                 alt={child.fullname}
-                                className="w-12 h-12 object-cover"
+                                className="w-10 h-10 xs:w-12 xs:h-12 object-cover"
                               />
                             ) : (
                               child.fullname?.charAt(0) || 'C'
                             )}
                           </div>
                           {childPercentage === 100 && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                              <CheckCircle className="h-3 w-3 text-white" />
+                            <div className="absolute -top-1 -right-1 w-4 h-4 xs:w-5 xs:h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                              <CheckCircle className="h-2 w-2 xs:h-3 xs:w-3 text-white" />
                             </div>
                           )}
                         </div>
-                        <div>
-                          <h3 className="font-bold text-gray-900">{child.fullname}</h3>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-900 text-sm xs:text-base truncate">{child.fullname}</h3>
+                          <div className="flex items-center gap-1 xs:gap-2 text-xs text-gray-600 flex-wrap">
                             <span>Class {child.class_name}</span>
                             <span>•</span>
                             <span>Sec {child.section}</span>
                           </div>
-                          {child.profile_picture && (
-                            <p className="text-xs text-gray-400 mt-1 truncate max-w-xs">profile_picture: {child.profile_picture}</p>
-                          )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                           childPercentage === 100 ? 'bg-emerald-100 text-emerald-700' :
                           childPercentage >= 50 ? 'bg-amber-100 text-amber-700' :
@@ -590,23 +588,23 @@ const ParentFeePayments = () => {
                       </div>
                     </div>
                     
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center text-sm">
+                    <div className="space-y-2 xs:space-y-3">
+                      <div className="flex justify-between items-center text-xs xs:text-sm">
                         <span className="text-gray-600">Paid:</span>
                         <span className="font-semibold text-emerald-600">₹{Math.round(childPaid)}</span>
                       </div>
-                      <div className="flex justify-between items-center text-sm">
+                      <div className="flex justify-between items-center text-xs xs:text-sm">
                         <span className="text-gray-600">Total:</span>
                         <span className="font-semibold">₹{Math.round(childTotal)}</span>
                       </div>
-                      <div className="w-full bg-gray-200/50 rounded-full h-2 shadow-inner">
+                      <div className="w-full bg-gray-200/50 rounded-full h-1.5 xs:h-2 shadow-inner">
                         <div 
-                          className={`h-2 rounded-full shadow-sm transition-all duration-500 ${getProgressColor(childPercentage)}`}
+                          className={`h-1.5 xs:h-2 rounded-full shadow-sm transition-all duration-500 ${getProgressColor(childPercentage)}`}
                           style={{ width: `${childPercentage}%` }}
                         ></div>
                       </div>
                       <div className="flex justify-between items-center text-xs text-gray-500">
-                        <span>{paidPayments} paid payments</span>
+                        <span>{paidPayments} paid</span>
                         <span>{childPayments.length - paidPayments} pending</span>
                       </div>
                     </div>
@@ -618,28 +616,28 @@ const ParentFeePayments = () => {
         )}
 
         {/* Enhanced Filters and Search */}
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-2xl shadow-sm border border-slate-200/60 p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
+          <div className="flex flex-col lg:flex-row gap-4 xs:gap-5 items-start lg:items-center justify-between">
             <div className="relative flex-1 w-full">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+                <Search className="h-4 w-4 xs:h-5 xs:w-5 text-gray-400" />
               </div>
               <input
                 type="text"
                 placeholder="Search by student name, fee type, or transaction ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300"
+                className="w-full pl-9 xs:pl-10 pr-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
               />
             </div>
 
-            <div className="flex flex-wrap gap-3 w-full lg:w-auto">
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="flex flex-wrap gap-2 xs:gap-3 w-full lg:w-auto">
+              <div className="relative flex-1 xs:flex-none min-w-[140px]">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="pl-10 pr-8 py-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm appearance-none transition-all duration-300"
+                  className="w-full pl-8 xs:pl-10 pr-6 xs:pr-8 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm appearance-none transition-all duration-300 text-sm xs:text-base"
                 >
                   <option value="all">All Status</option>
                   <option value="Paid">Paid</option>
@@ -651,7 +649,7 @@ const ParentFeePayments = () => {
               <select
                 value={feeTypeFilter}
                 onChange={(e) => setFeeTypeFilter(e.target.value)}
-                className="px-4 py-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300"
+                className="flex-1 xs:flex-none px-3 xs:px-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base min-w-[140px]"
               >
                 <option value="all">All Fee Types</option>
                 {uniqueFeeTypes.map(type => (
@@ -659,48 +657,48 @@ const ParentFeePayments = () => {
                 ))}
               </select>
 
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <div className="relative flex-1 xs:flex-none min-w-[140px]">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
                 <input
                   type="date"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  className="pl-10 pr-4 py-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300"
+                  className="w-full pl-8 xs:pl-10 pr-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Enhanced Payments List */}
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
-          <div className="p-6 border-b border-gray-200/60 flex items-center justify-between bg-white/80 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
-                <Receipt className="h-6 w-6 text-white" />
+        {/* Enhanced Payments List - CARDS FORMAT */}
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+          <div className="p-4 xs:p-5 sm:p-6 border-b border-gray-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4 bg-white/80 backdrop-blur-sm">
+            <div className="flex items-center gap-3 xs:gap-4">
+              <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl shadow-lg">
+                <Receipt className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Payment Records</h2>
-                <p className="text-gray-600">Detailed transaction history</p>
+                <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">Payment Records</h2>
+                <p className="text-gray-600 text-xs xs:text-sm">Detailed transaction history</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="bg-blue-100 text-blue-800 text-sm px-3 py-2 rounded-full font-medium flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
+            <div className="flex items-center gap-2 xs:gap-3">
+              <span className="bg-blue-100 text-blue-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-2 rounded-full font-medium flex items-center gap-1 xs:gap-2">
+                <Sparkles className="h-3 w-3 xs:h-4 xs:w-4" />
                 {filteredPayments.length} records
               </span>
             </div>
           </div>
 
           {filteredPayments.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CreditCard className="h-10 w-10 text-gray-400" />
+            <div className="text-center py-12 xs:py-16">
+              <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-3 xs:mb-4">
+                <CreditCard className="h-6 w-6 xs:h-8 xs:w-8 sm:h-10 sm:w-10 text-gray-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg xs:text-xl font-semibold text-gray-900 mb-1 xs:mb-2">
                 {feePayments.length === 0 ? "No Fee Payments Found" : "No Matching Payments"}
               </h3>
-              <p className="text-gray-600 max-w-md mx-auto">
+              <p className="text-gray-600 max-w-md mx-auto text-sm xs:text-base px-4">
                 {feePayments.length === 0 
                   ? "Start by adding your first payment to track your children's fee payments."
                   : "Try adjusting your search criteria or filters to find what you're looking for."
@@ -709,145 +707,140 @@ const ParentFeePayments = () => {
               {feePayments.length === 0 && (
                 <button
                   onClick={() => setShowPaymentModal(true)}
-                  className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium"
+                  className="mt-4 xs:mt-6 bg-blue-600 text-white px-4 xs:px-6 py-2 xs:py-3 rounded-lg xs:rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm xs:text-base"
                 >
                   Add First Payment
                 </button>
               )}
             </div>
           ) : (
-            <div className="divide-y divide-gray-200/60">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6 p-4 xs:p-5 sm:p-6">
               {filteredPayments.map((payment, index) => (
                 <div
                   key={payment.id || index}
-                  className="p-6 hover:bg-blue-50/30 transition-all duration-300 cursor-pointer group"
+                  className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-blue-300"
                   onClick={() => setExpandedPayment(expandedPayment === index ? null : index)}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="mt-1 transform group-hover:scale-110 transition-transform duration-300">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-3 xs:mb-4">
+                    <div className="flex items-center gap-2 xs:gap-3">
+                      <div className="transform group-hover:scale-110 transition-transform duration-300">
                         {getStatusIcon(payment.status)}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-900 transition-colors">
-                            {payment.student_name}
-                          </h3>
-                          <span className={`px-3 py-1.5 rounded-full text-sm font-semibold border-2 ${getStatusColor(payment.status)} group-hover:shadow-sm transition-all duration-300`}>
-                            {payment.status}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-4">
-                          <div className="flex items-center gap-2 bg-white/50 p-2 rounded-lg">
-                            <FileText className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium">{payment.fee_type}</span>
-                          </div>
-                          <div className="flex items-center gap-2 bg-white/50 p-2 rounded-lg">
-                            <IndianRupee className="h-4 w-4 text-emerald-500" />
-                            <span className="font-bold text-emerald-600">₹{payment.amount_paid}</span>
-                          </div>
-                          <div className="flex items-center gap-2 bg-white/50 p-2 rounded-lg">
-                            <Calendar className="h-4 w-4 text-amber-500" />
-                            <span>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : "N/A"}</span>
-                          </div>
-                          <div className="flex items-center gap-2 bg-white/50 p-2 rounded-lg">
-                            <CreditCard className="h-4 w-4 text-purple-500" />
-                            <span>{payment.payment_method || "N/A"}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-6 text-sm text-gray-500">
-                          <span className="bg-slate-100 px-2 py-1 rounded">Total: ₹{payment.total_amount}</span>
-                          <span className="bg-amber-100 px-2 py-1 rounded">Remaining: ₹{payment.remaining_amount}</span>
-                          {payment.transaction_id && (
-                            <span className="bg-blue-100 px-2 py-1 rounded">TXN: {payment.transaction_id}</span>
-                          )}
-                        </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-sm xs:text-base group-hover:text-blue-900 transition-colors line-clamp-1">
+                          {payment.student_name}
+                        </h3>
+                        <span className={`px-2 xs:px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)} group-hover:shadow-sm transition-all duration-300`}>
+                          {payment.status}
+                        </span>
                       </div>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedPayment(expandedPayment === index ? null : index);
+                      }}
+                      className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300"
+                    >
+                      {expandedPayment === index ? 
+                        <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> : 
+                        <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-blue-600" />
+                      }
+                    </button>
+                  </div>
 
-                    <div className="flex items-center gap-2 ml-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedPayment(expandedPayment === index ? null : index);
-                        }}
-                        className="p-2 hover:bg-white rounded-xl transition-colors duration-300 group-hover:bg-white/80"
-                      >
-                        {expandedPayment === index ? 
-                          <ChevronUp className="h-5 w-5 text-gray-600" /> : 
-                          <ChevronDown className="h-5 w-5 text-gray-600 group-hover:text-blue-600" />
-                        }
-                      </button>
+                  {/* Payment Details */}
+                  <div className="space-y-2 xs:space-y-3">
+                    <div className="flex items-center justify-between text-xs xs:text-sm">
+                      <span className="text-gray-600">Fee Type:</span>
+                      <span className="font-semibold text-blue-600">{payment.fee_type}</span>
                     </div>
+                    
+                    <div className="flex items-center justify-between text-xs xs:text-sm">
+                      <span className="text-gray-600">Amount Paid:</span>
+                      <span className="font-bold text-emerald-600">₹{payment.amount_paid}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs xs:text-sm">
+                      <span className="text-gray-600">Total Amount:</span>
+                      <span className="font-semibold">₹{payment.total_amount}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs xs:text-sm">
+                      <span className="text-gray-600">Remaining:</span>
+                      <span className="font-semibold text-amber-600">₹{payment.remaining_amount}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs xs:text-sm">
+                      <span className="text-gray-600">Date:</span>
+                      <span>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : "N/A"}</span>
+                    </div>
+
+                    {payment.payment_method && (
+                      <div className="flex items-center justify-between text-xs xs:text-sm">
+                        <span className="text-gray-600">Method:</span>
+                        <span className="font-medium">{payment.payment_method}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Enhanced Expanded Details */}
                   {expandedPayment === index && (
-                    <div className="mt-6 pl-12 border-t border-gray-200/60 pt-6 bg-white/50 rounded-xl p-4">
-                      <div className="grid md:grid-cols-2 gap-8">
+                    <div className="mt-4 xs:mt-5 border-t border-gray-200/60 pt-4 xs:pt-5 bg-gray-50/50 rounded-lg xs:rounded-xl p-3 xs:p-4">
+                      <div className="space-y-3 xs:space-y-4">
                         <div>
-                          <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-blue-500" />
+                          <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                            <Shield className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
                             Payment Details
                           </h4>
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
-                              <span className="text-gray-600 font-medium">Student Email:</span>
-                              <span className="text-gray-900 font-semibold">{payment.student}</span>
+                          <div className="space-y-2 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Student Email:</span>
+                              <span className="text-gray-900 font-medium truncate ml-2 max-w-[120px] xs:max-w-[150px]">{payment.student}</span>
                             </div>
-                            <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
-                              <span className="text-gray-600 font-medium">Payment Method:</span>
-                              <span className="text-gray-900 font-semibold">{payment.payment_method || "N/A"}</span>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Payment Method:</span>
+                              <span className="text-gray-900 font-medium">{payment.payment_method || "N/A"}</span>
                             </div>
-                            <div className="flex justify-between items-center py-2 border-b border-gray-200/60">
-                              <span className="text-gray-600 font-medium">Transaction ID:</span>
-                              <span className="text-gray-900 font-mono text-sm">{payment.transaction_id || "N/A"}</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2">
-                              <span className="text-gray-600 font-medium">Payment Date:</span>
-                              <span className="text-gray-900 font-semibold">
-                                {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-US', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                }) : "N/A"}
-                              </span>
-                            </div>
+                            {payment.transaction_id && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Transaction ID:</span>
+                                <span className="text-gray-900 font-mono truncate ml-2 max-w-[100px] xs:max-w-[120px]">{payment.transaction_id}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                         
                         <div>
-                          <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-amber-500" />
+                          <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                            <Zap className="h-3 w-3 xs:h-4 xs:w-4 text-amber-500" />
                             Amount Breakdown
                           </h4>
-                          <div className="space-y-4 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-xl p-4">
-                            <div className="flex justify-between items-center py-2">
-                              <span className="text-gray-600 font-medium">Total Amount:</span>
-                              <span className="font-bold text-lg">₹{payment.total_amount}</span>
+                          <div className="space-y-2 bg-white rounded-lg xs:rounded-xl p-2 xs:p-3 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Total Amount:</span>
+                              <span className="font-bold">₹{payment.total_amount}</span>
                             </div>
-                            <div className="flex justify-between items-center py-2">
-                              <span className="text-gray-600 font-medium">Amount Paid:</span>
-                              <span className="font-bold text-lg text-emerald-600">₹{payment.amount_paid}</span>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Amount Paid:</span>
+                              <span className="font-bold text-emerald-600">₹{payment.amount_paid}</span>
                             </div>
-                            <div className="flex justify-between items-center py-2">
-                              <span className="text-gray-600 font-medium">Remaining:</span>
-                              <span className="font-bold text-lg text-amber-600">₹{payment.remaining_amount}</span>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Remaining:</span>
+                              <span className="font-bold text-amber-600">₹{payment.remaining_amount}</span>
                             </div>
                           </div>
                         </div>
                       </div>
                       
                       {payment.remarks && (
-                        <div className="mt-6">
-                          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                            <Star className="h-5 w-5 text-purple-500" />
+                        <div className="mt-3 xs:mt-4">
+                          <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                            <Star className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
                             Remarks
                           </h4>
-                          <p className="text-gray-700 bg-white/80 p-4 rounded-xl border border-gray-200/60 text-sm leading-relaxed">
+                          <p className="text-gray-700 bg-white p-2 xs:p-3 rounded-lg xs:rounded-xl border border-gray-200/60 text-xs leading-relaxed">
                             {payment.remarks}
                           </p>
                         </div>
@@ -862,30 +855,30 @@ const ParentFeePayments = () => {
 
         {/* Enhanced Summary Footer */}
         {filteredPayments.length > 0 && (
-          <div className="mt-8 bg-gradient-to-br from-white to-emerald-50/30 rounded-2xl shadow-sm border border-emerald-200/30 p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3 mb-4 sm:mb-0">
-                <Award className="h-6 w-6 text-emerald-600" />
+          <div className="mt-6 xs:mt-8 bg-gradient-to-br from-white to-emerald-50/30 rounded-xl xs:rounded-2xl shadow-sm border border-emerald-200/30 p-4 xs:p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 xs:gap-4">
+              <div className="flex items-center gap-2 xs:gap-3">
+                <Award className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-emerald-600" />
                 <div>
-                  <p className="text-sm text-gray-600 font-medium">
+                  <p className="text-xs xs:text-sm text-gray-600 font-medium">
                     Showing <span className="font-bold text-gray-900">{filteredPayments.length}</span> of{" "}
                     <span className="font-bold text-gray-900">{feePayments.length}</span> payments
                   </p>
                   <p className="text-xs text-gray-500">Last updated just now</p>
                 </div>
               </div>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-sm"></div>
-                  <span className="text-sm text-gray-600">Paid: <span className="font-semibold">{stats.totalPaid}</span></span>
+              <div className="flex items-center gap-4 xs:gap-6">
+                <div className="flex items-center gap-1 xs:gap-2">
+                  <div className="w-2 h-2 xs:w-3 xs:h-3 bg-emerald-500 rounded-full shadow-sm"></div>
+                  <span className="text-xs xs:text-sm text-gray-600">Paid: <span className="font-semibold">{stats.totalPaid}</span></span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-amber-500 rounded-full shadow-sm"></div>
-                  <span className="text-sm text-gray-600">Pending: <span className="font-semibold">{stats.totalPending}</span></span>
+                <div className="flex items-center gap-1 xs:gap-2">
+                  <div className="w-2 h-2 xs:w-3 xs:h-3 bg-amber-500 rounded-full shadow-sm"></div>
+                  <span className="text-xs xs:text-sm text-gray-600">Pending: <span className="font-semibold">{stats.totalPending}</span></span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-rose-500 rounded-full shadow-sm"></div>
-                  <span className="text-sm text-gray-600">Failed: <span className="font-semibold">{stats.totalFailed}</span></span>
+                <div className="flex items-center gap-1 xs:gap-2">
+                  <div className="w-2 h-2 xs:w-3 xs:h-3 bg-rose-500 rounded-full shadow-sm"></div>
+                  <span className="text-xs xs:text-sm text-gray-600">Failed: <span className="font-semibold">{stats.totalFailed}</span></span>
                 </div>
               </div>
             </div>
@@ -894,39 +887,39 @@ const ParentFeePayments = () => {
 
         {/* Enhanced Payment Modal */}
         {showPaymentModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200/60">
-              <div className="p-6 border-b border-gray-200/60 bg-gradient-to-r from-blue-50 to-purple-50/30">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 xs:p-4">
+            <div className="bg-white rounded-xl xs:rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200/60">
+              <div className="p-4 xs:p-5 sm:p-6 border-b border-gray-200/60 bg-gradient-to-r from-blue-50 to-purple-50/30">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl">
-                      <Plus className="h-6 w-6 text-white" />
+                  <div className="flex items-center gap-2 xs:gap-3">
+                    <div className="p-1.5 xs:p-2 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg xs:rounded-xl">
+                      <Plus className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Add New Payment</h2>
-                      <p className="text-gray-600">Record a new fee payment for your child</p>
+                      <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">Add New Payment</h2>
+                      <p className="text-gray-600 text-xs xs:text-sm">Record a new fee payment for your child</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowPaymentModal(false)}
-                    className="p-2 hover:bg-white rounded-xl transition-colors duration-300"
+                    className="p-1 xs:p-2 hover:bg-white rounded-lg xs:rounded-xl transition-colors duration-300"
                   >
-                    <XCircle className="h-6 w-6 text-gray-500 hover:text-gray-700" />
+                    <XCircle className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-gray-500 hover:text-gray-700" />
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handlePaymentSubmit} className="p-6 space-y-6">
+              <form onSubmit={handlePaymentSubmit} className="p-4 xs:p-5 sm:p-6 space-y-4 xs:space-y-5 sm:space-y-6">
                 {/* Student Selection */}
                 <div>
-                  <label className="flex text-sm font-semibold text-gray-700 mb-3 items-center gap-2">
-                    <User className="h-4 w-4 text-blue-500" />
+                  <label className="flex text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3 items-center gap-1 xs:gap-2">
+                    <User className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
                     Select Student *
                   </label>
                   <select
                     value={newPayment.student}
                     onChange={(e) => handleStudentSelect(e.target.value)}
-                    className="w-full p-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300"
+                    className="w-full p-3 xs:p-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300 text-sm xs:text-base"
                     required
                   >
                     <option value="">Choose a student</option>
@@ -939,16 +932,16 @@ const ParentFeePayments = () => {
                 </div>
 
                 {/* Fee Type and Amount */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-6">
                   <div>
-                    <label className="flex text-sm font-semibold text-gray-700 mb-3 items-center gap-2">
-                      <FileText className="h-4 w-4 text-purple-500" />
+                    <label className="flex text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3 items-center gap-1 xs:gap-2">
+                      <FileText className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
                       Fee Type *
                     </label>
                     <select
                       value={newPayment.fee_structure}
                       onChange={(e) => handleFeeStructureSelect(e.target.value)}
-                      className="w-full p-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300"
+                      className="w-full p-3 xs:p-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300 text-sm xs:text-base"
                       required
                     >
                       <option value="">Select fee type</option>
@@ -961,46 +954,46 @@ const ParentFeePayments = () => {
                   </div>
 
                   <div>
-                    <label className="flex text-sm font-semibold text-gray-700 mb-3 items-center gap-2">
-                      <IndianRupee className="h-4 w-4 text-emerald-500" />
+                    <label className="flex text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3 items-center gap-1 xs:gap-2">
+                      <IndianRupee className="h-3 w-3 xs:h-4 xs:w-4 text-emerald-500" />
                       Total Amount *
                     </label>
                     <input
                       type="number"
                       value={newPayment.total_amount}
                       readOnly
-                      className="w-full p-4 border border-gray-300/60 rounded-xl bg-gray-50/50 text-gray-600 font-semibold transition-all duration-300"
+                      className="w-full p-3 xs:p-4 border border-gray-300/60 rounded-lg xs:rounded-xl bg-gray-50/50 text-gray-600 font-semibold transition-all duration-300 text-sm xs:text-base"
                       placeholder="Auto-filled from fee structure"
                     />
                   </div>
                 </div>
 
                 {/* Amount Paid and Payment Method */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-6">
                   <div>
-                    <label className="flex text-sm font-semibold text-gray-700 mb-3 items-center gap-2">
-                      <Wallet className="h-4 w-4 text-green-500" />
+                    <label className="flex text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3 items-center gap-1 xs:gap-2">
+                      <Wallet className="h-3 w-3 xs:h-4 xs:w-4 text-green-500" />
                       Amount Paid *
                     </label>
                     <input
                       type="number"
                       value={newPayment.amount_paid}
                       onChange={(e) => setNewPayment(prev => ({ ...prev, amount_paid: e.target.value }))}
-                      className="w-full p-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300"
+                      className="w-full p-3 xs:p-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300 text-sm xs:text-base"
                       placeholder="0.00"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="flex text-sm font-semibold text-gray-700 mb-3 items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-amber-500" />
+                    <label className="flex text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3 items-center gap-1 xs:gap-2">
+                      <CreditCard className="h-3 w-3 xs:h-4 xs:w-4 text-amber-500" />
                       Payment Method *
                     </label>
                     <select
                       value={newPayment.payment_method}
                       onChange={(e) => setNewPayment(prev => ({ ...prev, payment_method: e.target.value }))}
-                      className="w-full p-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300"
+                      className="w-full p-3 xs:p-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300 text-sm xs:text-base"
                       required
                     >
                       <option value="Cash">💵 Cash</option>
@@ -1013,31 +1006,31 @@ const ParentFeePayments = () => {
                 </div>
 
                 {/* Transaction ID and Payment Date */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-6">
                   <div>
-                    <label className="flex text-sm font-semibold text-gray-700 mb-3 items-center gap-2">
-                      <Receipt className="h-4 w-4 text-blue-500" />
+                    <label className="flex text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3 items-center gap-1 xs:gap-2">
+                      <Receipt className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
                       Transaction ID
                     </label>
                     <input
                       type="text"
                       value={newPayment.transaction_id}
                       onChange={(e) => setNewPayment(prev => ({ ...prev, transaction_id: e.target.value }))}
-                      className="w-full p-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300"
+                      className="w-full p-3 xs:p-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300 text-sm xs:text-base"
                       placeholder="Enter transaction ID"
                     />
                   </div>
 
                   <div>
-                    <label className="flex text-sm font-semibold text-gray-700 mb-3 items-center gap-2">
-                      <Calendar className="h-4 w-4 text-purple-500" />
+                    <label className="flex text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3 items-center gap-1 xs:gap-2">
+                      <Calendar className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
                       Payment Date *
                     </label>
                     <input
                       type="date"
                       value={newPayment.payment_date}
                       onChange={(e) => setNewPayment(prev => ({ ...prev, payment_date: e.target.value }))}
-                      className="w-full p-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300"
+                      className="w-full p-3 xs:p-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300 text-sm xs:text-base"
                       required
                     />
                   </div>
@@ -1045,41 +1038,41 @@ const ParentFeePayments = () => {
 
                 {/* Remarks */}
                 <div>
-                  <label className="flex text-sm font-semibold text-gray-700 mb-3 items-center gap-2">
-                    <Star className="h-4 w-4 text-amber-500" />
+                  <label className="flex text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3 items-center gap-1 xs:gap-2">
+                    <Star className="h-3 w-3 xs:h-4 xs:w-4 text-amber-500" />
                     Remarks
                   </label>
                   <textarea
                     value={newPayment.remarks}
                     onChange={(e) => setNewPayment(prev => ({ ...prev, remarks: e.target.value }))}
-                    className="w-full p-4 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300"
+                    className="w-full p-3 xs:p-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 transition-all duration-300 text-sm xs:text-base"
                     rows={3}
                     placeholder="Add any additional notes or remarks about this payment..."
                   ></textarea>
                 </div>
 
                 {/* Enhanced Action Buttons */}
-                <div className="flex gap-4 pt-6 border-t border-gray-200/60">
+                <div className="flex flex-col sm:flex-row gap-3 xs:gap-4 pt-4 xs:pt-5 sm:pt-6 border-t border-gray-200/60">
                   <button
                     type="button"
                     onClick={() => setShowPaymentModal(false)}
-                    className="flex-1 px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 font-semibold"
+                    className="flex-1 px-4 xs:px-6 sm:px-8 py-3 xs:py-4 border-2 border-gray-300 text-gray-700 rounded-lg xs:rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 font-semibold text-sm xs:text-base"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={paymentLoading}
-                    className="flex-1 bg-linear-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 bg-linear-to-r from-blue-600 to-purple-600 text-white px-4 xs:px-6 sm:px-8 py-3 xs:py-4 rounded-lg xs:rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 xs:gap-2 text-sm xs:text-base"
                   >
                     {paymentLoading ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 xs:h-5 xs:w-5 border-b-2 border-white"></div>
                         Processing...
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="h-5 w-5" />
+                        <CheckCircle className="h-4 w-4 xs:h-5 xs:w-5" />
                         Add Payment
                       </>
                     )}

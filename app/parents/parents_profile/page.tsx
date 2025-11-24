@@ -22,6 +22,7 @@ const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
 
 const ParentProfilePage = () => {
   const [parentEmail, setParentEmail] = useState("");
+  
   const [parentData, setParentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
