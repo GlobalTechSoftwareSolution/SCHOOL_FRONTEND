@@ -66,7 +66,7 @@ export default function SignupPage() {
         role: form.role,
       };
 
-      const res = await fetch('http://school.globaltechsoftwaresolutions.cloud/signup/', {
+      const res = await fetch('/api/signup/', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -303,8 +303,8 @@ export default function SignupPage() {
                         <option value="Student" className="text-gray-800">🎓 Student</option>
                         <option value="Teacher" className="text-gray-800">👨‍🏫 Teacher</option>
                         <option value="Admin" className="text-gray-800">⚡ Admin</option>
-                        <option value="management" className="text-gray-800">🏢 Management</option>
-                        <option value="principal" className="text-gray-800">👨‍💼 Principal</option>
+                        <option value="Management" className="text-gray-800">🏢 Management</option>
+                        <option value="Principal" className="text-gray-800">👨‍💼 Principal</option>
                         <option value="Parent" className="text-gray-800">👨‍👩‍👧‍👦 Parent</option>
                       </select>
                     </div>

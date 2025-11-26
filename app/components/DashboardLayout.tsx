@@ -183,7 +183,7 @@ export default function DashboardLayout({ children, role }: Props) {
                 // If effectiveRole not in roleLinksMap keys, fallback to role prop
                 const roleForApi = Object.keys(roleLinksMap).includes(effectiveRole) ? effectiveRole : role.toLowerCase();
                 // For admin, use singular endpoint; for others, use singular (no plural 's')
-                const endpoint = `http://school.globaltechsoftwaresolutions.cloud/${roleForApi}/${email}/`
+                const endpoint = `https://school.globaltechsoftwaresolutions.cloud/${roleForApi}/${email}/`
                 console.log("Fetching user from:", endpoint);
                 try {
                   const response = await fetch(endpoint);
