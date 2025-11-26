@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 interface FeePayment {
   id: number;

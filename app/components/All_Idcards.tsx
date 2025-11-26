@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { Download, IdCardIcon, ShieldCheck, Users } from 'lucide-react';
 
-const API_BASE = 'https://globaltechsoftwaresolutions.cloud/school-api/api';
+const API_BASE = 'http://school.globaltechsoftwaresolutions.cloud';
 
 interface IdCardRecord {
   id: number;

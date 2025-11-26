@@ -30,7 +30,7 @@ interface ValidationErrors {
 }
 
 const StudentProfile = () => {
-    const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api/students/";
+    const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api/students/";
 
     const [student, setStudent] = useState<Student | null>(null);
     const [originalStudent, setOriginalStudent] = useState<Student | null>(null);

@@ -2,7 +2,7 @@
 import DashboardLayout from "@/app/components/DashboardLayout";
 import React, { useState, useEffect } from "react";
 
-const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/notices/";
+const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/notices/";
 
 interface Notice {
   id: number;

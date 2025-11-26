@@ -37,6 +37,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Program", path: "/management/management_programs" },
     { name: "Notice", path: "/management/management_notice" },
     { name: "Transport", path: "/management/management_transport" },
+    { name: "Create Fee Structure", path: "/management/management_create_fee" },
     { name: "Calender", path: "/management/management_calender" },
     { name: "Raise Issues", path: "/management/management_issue" },
     { name: "ID card", path: "/management/management_id_card" },
@@ -182,7 +183,7 @@ export default function DashboardLayout({ children, role }: Props) {
                 // If effectiveRole not in roleLinksMap keys, fallback to role prop
                 const roleForApi = Object.keys(roleLinksMap).includes(effectiveRole) ? effectiveRole : role.toLowerCase();
                 // For admin, use singular endpoint; for others, use singular (no plural 's')
-                const endpoint = `https://globaltechsoftwaresolutions.cloud/school-api/api/${roleForApi}/${email}/`
+                const endpoint = `http://school.globaltechsoftwaresolutions.cloud/${roleForApi}/${email}/`
                 console.log("Fetching user from:", endpoint);
                 try {
                   const response = await fetch(endpoint);

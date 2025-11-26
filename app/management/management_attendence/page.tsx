@@ -28,7 +28,7 @@ import {
   FileText
 } from "lucide-react";
 
-const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 export default function AttendanceByRole() {
   const [attendance, setAttendance] = useState<any[]>([]);

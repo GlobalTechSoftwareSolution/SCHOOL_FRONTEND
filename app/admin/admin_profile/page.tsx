@@ -56,7 +56,7 @@ export default function Admin_ProfilePage() {
           setIsLoading(false);
           return;
         }
-        const response = await fetch(`https://globaltechsoftwaresolutions.cloud/school-api/api/admins/${email}/`);
+        const response = await fetch(`https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
         if (!response.ok) throw new Error("Failed to fetch admin data");
         const data = await response.json();
         // Format joinDate as YYYY-MM-DD if possible
@@ -111,7 +111,7 @@ export default function Admin_ProfilePage() {
       const formDataPatch = new FormData();
       formDataPatch.append("profile_picture", file);
       // Optionally, send other fields if backend requires (here, only picture for this change)
-      const response = await fetch(`https://globaltechsoftwaresolutions.cloud/school-api/api/admins/${formData.email}/`, {
+      const response = await fetch(`https://school.globaltechsoftwaresolutions.cloud/api/admins/${formData.email}/`, {
         method: "PATCH",
         body: formDataPatch,
       });
@@ -156,7 +156,7 @@ export default function Admin_ProfilePage() {
         formDataToSend.append("profile_picture", fileInput.files[0]);
       }
 
-      const response = await fetch(`https://globaltechsoftwaresolutions.cloud/school-api/api/admins/${formData.email}/`, {
+      const response = await fetch(`https://school.globaltechsoftwaresolutions.cloud/api/admins/${formData.email}/`, {
         method: "PATCH",
         body: formDataToSend,
       });

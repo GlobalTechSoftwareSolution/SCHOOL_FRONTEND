@@ -55,7 +55,7 @@ const StudentDashboard = () => {
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api/";
+  const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api/";
 
   // ✅ STEP 1: Fetch the student info from API by matching email
   const fetchStudentInfo = async () => {

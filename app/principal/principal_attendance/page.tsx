@@ -32,7 +32,7 @@ interface ClassData {
   section: string;
 }
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 const PrincipalAttendanceReport = () => {
   const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);

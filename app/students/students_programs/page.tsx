@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Calendar, Users, DollarSign, Clock, AlertCircle, RefreshCw, Filter } from "lucide-react";
 
-const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/";
+const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/";
 
 interface Program {
   id: number;

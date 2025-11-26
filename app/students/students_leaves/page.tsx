@@ -17,7 +17,7 @@ interface Leave {
   updated_at: string;
 }
 
-const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/leaves/";
+const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/leaves/";
 
 const StudentLeaves = () => {
   const [activeTab, setActiveTab] = useState("all");

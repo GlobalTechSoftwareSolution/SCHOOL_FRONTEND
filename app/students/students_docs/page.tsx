@@ -28,7 +28,7 @@ const StudentDocsPage = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
 
-  const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+  const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
   // 🧠 Get logged-in student email from localStorage
   const getStoredEmail = (): string | null => {

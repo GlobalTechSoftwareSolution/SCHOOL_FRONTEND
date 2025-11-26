@@ -16,7 +16,7 @@ import {
 } from "react-icons/fi";
 import axios from "axios";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 const PrincipalDashboard = () => {
   const [stats, setStats] = useState({

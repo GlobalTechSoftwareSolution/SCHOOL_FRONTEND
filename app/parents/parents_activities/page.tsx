@@ -28,7 +28,7 @@ import {
   Activity
 } from "lucide-react";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 const ActivitiesPage = () => {
   const [activities, setActivities] = useState<any[]>([]);

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 const PrincipalMonthlyReport = () => {
   const [view, setView] = useState<"teachers" | "students" | null>(null);

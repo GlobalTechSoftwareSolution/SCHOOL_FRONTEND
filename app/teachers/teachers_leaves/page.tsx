@@ -37,7 +37,7 @@ interface Leave {
 }
 
 const API_BASE_URL =
-  "https://globaltechsoftwaresolutions.cloud/school-api/api/leaves/";
+  "https://school.globaltechsoftwaresolutions.cloud/api/leaves/";
 
 const TeacherLeavesPage = () => {
   const [leaves, setLeaves] = useState<Leave[]>([]);

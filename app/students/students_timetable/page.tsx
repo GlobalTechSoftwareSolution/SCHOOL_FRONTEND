@@ -53,9 +53,9 @@ const Student_Timetable = () => {
   const [currentWeek, setCurrentWeek] = useState<Date[]>([]);
   const [hoveredClass, setHoveredClass] = useState<string | null>(null);
 
-  const STUDENT_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/students/";
-  const CLASS_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/classes/";
-  const TIMETABLE_API = "https://globaltechsoftwaresolutions.cloud/school-api/api/timetable/";
+  const STUDENT_API = "https://school.globaltechsoftwaresolutions.cloud/api/students/";
+  const CLASS_API = "https://school.globaltechsoftwaresolutions.cloud/api/classes/";
+  const TIMETABLE_API = "https://school.globaltechsoftwaresolutions.cloud/api/timetable/";
 
   // Color palette for subjects
   const subjectColors = [

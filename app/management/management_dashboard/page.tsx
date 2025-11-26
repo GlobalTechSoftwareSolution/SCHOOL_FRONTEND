@@ -11,7 +11,7 @@ import {
   BarChart3
 } from "lucide-react";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 const ManagementDashboard = () => {
   const [dashboardData, setDashboardData] = useState<{

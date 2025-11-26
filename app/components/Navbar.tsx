@@ -36,7 +36,7 @@ const Navbar = () => {
     { name: "Attendance", href: "/attendance" },
     {
       name: "Features",
-      href: "/features",
+      href: "/",
       dropdown: [
         { name: "Academic Management", icon: BookOpen, href: "/nav_features/academics" },
         { name: "Student Portal", icon: GraduationCap, href: "/nav_features/students" },

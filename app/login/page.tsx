@@ -54,18 +54,14 @@ function LoginPageContent() {
     }
 
     // Store user info
-    const userInfo = {
-      email: userData.email || email,
-      name: userData.name || userData.username || email.split('@')[0],
-      role: userData.role,
-      id: userData.id,
-      is_active: userData.is_active,
-      is_approved: userData.is_approved,
-      is_staff: userData.is_staff,
-      created_at: userData.created_at,
-      updated_at: userData.updated_at,
-      ...userData
-    };
+ const userInfo = {
+  email: userData.email,
+  role: userData.role,
+  is_active: userData.is_active,
+  is_approved: userData.is_approved,
+  name: email.split('@')[0]   // fallback username
+};
+
 
     localStorage.setItem('userData', JSON.stringify(userData));
     localStorage.setItem('userInfo', JSON.stringify(userInfo));
@@ -102,7 +98,7 @@ function LoginPageContent() {
       // STEP 1: Get JWT token and user data from token endpoint
       const formattedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 
-      const tokenRes = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/token/', {
+      const tokenRes = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/token/', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -134,15 +130,13 @@ function LoginPageContent() {
       localStorage.setItem('authToken', tokenData.access);
 
       // ✅ Directly handle login with token data (no extra /login call)
-      const userData = {
-        email: tokenData.email,
-        role: tokenData.role,
-        is_active: tokenData.is_active,
-        is_approved: tokenData.is_approved,
-        is_staff: tokenData.is_staff || false,
-        created_at: tokenData.created_at,
-        updated_at: tokenData.updated_at
-      };
+   const userData = {
+  email: tokenData.email,
+  role: tokenData.role,
+  is_active: tokenData.is_active,
+  is_approved: tokenData.is_approved
+};
+
 
       await handleSuccessfulLogin(userData, tokenData);
     } catch (error) {
@@ -174,12 +168,6 @@ function LoginPageContent() {
     showDialog("Storage Cleared", "Storage cleared for testing.");
   };
 
-  // Test with sample credentials
-  const testLogin = (testRole: string) => {
-    setEmail('student1@school.com');
-    setPassword('student1@school.com');
-    setRole(testRole);
-  };
 
   if (!isMounted) {
     return (

@@ -24,46 +24,23 @@ const ForgotPasswordPage = () => {
     try {
       console.log('Sending password reset request for email:', email);
       
-      // Try different possible endpoints
-      const endpoints = [
-        'https://globaltechsoftwaresolutions.cloud/school-api/api/password_reset/',
-        'https://globaltechsoftwaresolutions.cloud/school-api/api/auth/password_reset/'
-      ];
+      // Use the local proxy endpoint to avoid CORS issues
+      const endpoint = '/api/password_reset';
       
       let res;
-      let lastError;
       
-      for (const endpoint of endpoints) {
-        try {
-          console.log('Trying endpoint:', endpoint);
-          res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email }),
-          });
-          
-          // Check if this endpoint works (not 404)
-          if (res.status !== 404) {
-            console.log('Found working endpoint:', endpoint);
-            break;
-          }
-        } catch (err) {
-          lastError = err;
-          console.log('Endpoint failed:', endpoint, err);
-        }
-      }
-      
-      // If all endpoints failed with 404, use the first one for the error message
-      if (!res || res.status === 404) {
-        res = await fetch(endpoints[0], {
+      try {
+        console.log('📡 [API] Sending password reset request to:', endpoint);
+        res = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ email }),
         });
+      } catch (networkError: any) {
+        console.error('❌ [API] Network error:', networkError);
+        throw new Error(`Password reset service is temporarily unavailable. Please try again in a few minutes. If the problem persists, contact support.`);
       }
 
       console.log('Password reset response status:', res.status);
@@ -90,10 +67,21 @@ const ForgotPasswordPage = () => {
       setSuccess('Password reset instructions sent successfully. Please check your email for the reset link.');
       setStage('instructions');
     } catch (err: any) {
-      console.error('Password reset request error:', err);
-      setError(err.message);
+      console.error('❌ [API] Password reset request error:', err);
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        errorMessage = 'Network connection failed. Please check your internet connection and try again.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
+      console.log('🏁 [API] Password reset request completed');
     }
   };
 

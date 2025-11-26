@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 export default function ParentNoticesPage() {
   const [loading, setLoading] = useState<boolean>(false);

@@ -17,7 +17,7 @@ import {
   FiX
 } from "react-icons/fi";
 
-const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/activities/";
+const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/activities/";
 
 const Activities = () => {
   const [activities, setActivities] = useState<any[]>([]);

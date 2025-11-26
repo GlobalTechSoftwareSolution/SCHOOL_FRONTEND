@@ -21,7 +21,7 @@ const Approvalpage: React.FC = () => {
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ||
-    "https://globaltechsoftwaresolutions.cloud/school-api/";
+    "https://school.globaltechsoftwaresolutions.cloud/";
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);

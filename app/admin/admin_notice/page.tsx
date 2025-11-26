@@ -44,7 +44,7 @@ const Notice_Page = () => {
     const fetchNotices = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("https://globaltechsoftwaresolutions.cloud/school-api/api/notices/");
+        const response = await axios.get("https://school.globaltechsoftwaresolutions.cloud/api/notices/");
         setNotices(response.data || []);
         
         // Calculate stats
@@ -108,7 +108,7 @@ const Notice_Page = () => {
       };
 
       const response = await axios.post(
-        "https://globaltechsoftwaresolutions.cloud/school-api/api/notices/",
+        "https://school.globaltechsoftwaresolutions.cloud/api/notices/",
         payload,
         { headers: { "Content-Type": "application/json" } }
       );
@@ -144,7 +144,7 @@ const Notice_Page = () => {
   const deleteNotice = async (id: number) => {
     if (confirm("Are you sure you want to delete this notice?")) {
       try {
-        await axios.delete(`https://globaltechsoftwaresolutions.cloud/school-api/api/notices/${id}/`);
+        await axios.delete(`https://school.globaltechsoftwaresolutions.cloud/api/notices/${id}/`);
         setNotices(notices.filter(notice => notice.id !== id));
         alert("✅ Notice deleted successfully!");
       } catch (error) {

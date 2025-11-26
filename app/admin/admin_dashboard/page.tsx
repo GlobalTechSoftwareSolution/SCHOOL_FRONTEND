@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 // Type definitions
 interface AttendanceData {

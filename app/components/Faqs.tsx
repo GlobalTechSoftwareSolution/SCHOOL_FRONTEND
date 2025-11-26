@@ -38,7 +38,7 @@ const faqs = [
   {
     question: "How does the attendance management system work?",
     answer:
-      "Our attendance system supports multiple methods: biometric integration (fingerprint/face recognition), RFID card scanning, mobile app-based check-in, manual marking with geo-location verification, and automated SMS alerts to parents for absent students. Teachers can mark attendance in under 30 seconds for entire classes, generate monthly/annual attendance reports, identify patterns of absenteeism, and integrate with leave management systems.",
+      "Our attendance system supports multiple methods: biometric integration (face recognition and barcode), RFID card scanning, mobile app-based check-in, manual marking with geo-location verification, and automated SMS alerts to parents for absent students. Teachers can mark attendance in under 30 seconds for entire classes, generate monthly/annual attendance reports, identify patterns of absenteeism, and integrate with leave management systems.",
   },
   {
     question: "What financial management features are included?",

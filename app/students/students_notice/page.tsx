@@ -19,7 +19,7 @@ const AllNotice = () => {
 
         console.log("🛰 Fetching notices...");
         const res = await fetch(
-          "https://globaltechsoftwaresolutions.cloud/school-api/api/notices/"
+          "https://school.globaltechsoftwaresolutions.cloud/api/notices/"
         );
         if (!res.ok) throw new Error("Failed to fetch notices");
 

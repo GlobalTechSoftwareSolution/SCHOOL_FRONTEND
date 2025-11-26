@@ -37,7 +37,7 @@ type TimetableEntry = {
   teacher?: string;
 };
 
-const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 export default function Attendance() {
   const [section, setSection] = useState<"teacher" | "student">("teacher");

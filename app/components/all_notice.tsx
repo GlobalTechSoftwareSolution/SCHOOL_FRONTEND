@@ -9,7 +9,7 @@ const AllNotice = () => {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/notices/')
+    fetch('https://school.globaltechsoftwaresolutions.cloud/api/notices/')
       .then(async (res) => {
         if (!res.ok) throw new Error('Failed to fetch notices');
         const data = await res.json();

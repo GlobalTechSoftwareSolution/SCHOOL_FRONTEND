@@ -21,7 +21,7 @@ import {
   Camera
 } from "lucide-react";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 const ManagementProfilePage = () => {
   const [management, setManagement] = useState<any>(null);

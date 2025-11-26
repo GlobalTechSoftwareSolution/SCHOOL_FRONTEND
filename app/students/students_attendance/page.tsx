@@ -41,7 +41,7 @@ const AttendancePage = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [studentInfo, setStudentInfo] = useState<StudentData | null>(null);
 
-  const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+  const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
   // Get user data from localStorage
   const getUserData = () => {

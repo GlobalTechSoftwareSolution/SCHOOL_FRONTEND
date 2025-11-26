@@ -35,7 +35,7 @@ import {
   Legend,
 } from "recharts";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api/";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api/";
 
 interface ClassInfo {
   id: number;

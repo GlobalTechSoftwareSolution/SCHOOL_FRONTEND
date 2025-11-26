@@ -27,7 +27,7 @@ import {
   Eye
 } from "lucide-react";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "http://school.globaltechsoftwaresolutions.cloud";
 
 const TeachersPage = () => {
   const [teachers, setTeachers] = useState<any[]>([]);

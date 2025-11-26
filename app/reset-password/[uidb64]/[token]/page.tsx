@@ -42,7 +42,7 @@ export default function ResetPasswordPage({ params }: ResetPasswordPageProps) {
       return;
     }
 
-    const endpoint = `https://globaltechsoftwaresolutions.cloud/school-api/api/password_reset_confirm/${uidb64}/${token}/`;
+    const endpoint = `https://school.globaltechsoftwaresolutions.cloud/api/password_reset_confirm/${uidb64}/${token}`;
 
     console.log("📡 API Endpoint:", endpoint);
 
@@ -74,9 +74,13 @@ export default function ResetPasswordPage({ params }: ResetPasswordPageProps) {
         router.push("/login");
       }, 2000);
 
-    } catch (err) {
+    } catch (err: any) {
       console.log("🔥 Network / Fetch Error:", err);
-      setError("Network error — please try again.");
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError("Password reset service is temporarily unavailable. Please try again in a few minutes.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
     }
   };
 

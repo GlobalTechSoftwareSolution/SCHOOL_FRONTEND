@@ -26,7 +26,7 @@ type ClassInfo = {
   section: string;
 };
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api/";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api/";
 
 const TeachersDashboard = () => {
   const [teacherEmail, setTeacherEmail] = useState<string | null>(null);

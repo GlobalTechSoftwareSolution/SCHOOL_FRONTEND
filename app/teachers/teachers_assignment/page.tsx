@@ -53,7 +53,7 @@ const TeachersAssignmentsPage = () => {
     description: "",
   });
 
-  const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/assignments/";
+  const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/assignments/";
 
   // Show popup function
   const showPopup = (type: 'success' | 'error', message: string) => {
@@ -235,7 +235,7 @@ const TeachersAssignmentsPage = () => {
         setClassesData(classesResponse.data);
       }
       
-      const response = await axios.get(`https://globaltechsoftwaresolutions.cloud/school-api/api/submitted_assignments/`);
+      const response = await axios.get(`https://school.globaltechsoftwaresolutions.cloud/api/submitted_assignments/`);
       
       // Filter by assignment ID
       const assignmentSubmissions = response.data.filter(

@@ -106,7 +106,7 @@ export default function StudentTasksPage() {
         return;
       }
 
-      const apiUrl = "https://globaltechsoftwaresolutions.cloud/school-api/api/tasks/";
+      const apiUrl = "https://school.globaltechsoftwaresolutions.cloud/api/tasks/";
 
       const res = await fetch(apiUrl, {
         method: "GET",

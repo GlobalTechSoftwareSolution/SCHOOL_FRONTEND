@@ -463,7 +463,7 @@ const AttendanceSystem = () => {
 
       console.log('[Attendance] Sending face attendance request to backend');
       // Use the correct endpoint for marking attendance - the attendance/mark endpoint
-      const response = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/mark/', {
+      const response = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/attendance/mark/', {
         method: 'POST',
         body: formData
       });
@@ -547,7 +547,7 @@ const AttendanceSystem = () => {
 
       console.log('[Attendance] Sending barcode attendance request to backend');
       // Use the correct endpoint for marking attendance - the attendance/mark endpoint
-      const response = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/attendance/mark/', {
+      const response = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/attendance/mark/', {
         method: 'POST',
         body: formData
       });

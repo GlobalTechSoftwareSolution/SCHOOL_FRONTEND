@@ -22,7 +22,7 @@ import {
 } from "react-icons/fi";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/issues/";
+const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/issues/";
 
 interface Issue {
   id: number;

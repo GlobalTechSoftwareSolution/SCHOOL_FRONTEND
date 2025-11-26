@@ -4,7 +4,7 @@ import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { CheckCircle, XCircle, Upload, Edit3, Save, X } from "lucide-react";
 
-const API_BASE_URL = "https://globaltechsoftwaresolutions.cloud/school-api/api/teachers/";
+const API_BASE_URL = "https://school.globaltechsoftwaresolutions.cloud/api/teachers/";
 
 interface Subject {
   id: number;

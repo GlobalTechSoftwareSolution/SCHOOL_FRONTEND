@@ -33,7 +33,7 @@ import {
   Rocket
 } from "lucide-react";
 
-const API_BASE = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 const ParentDashboard = () => {
   const [attendanceData, setAttendanceData] = useState<any[]>([]);

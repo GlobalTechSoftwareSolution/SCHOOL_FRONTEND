@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API = "https://globaltechsoftwaresolutions.cloud/school-api/api";
+const API = "https://school.globaltechsoftwaresolutions.cloud/api";
 
 interface Student {
   id: number;

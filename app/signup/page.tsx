@@ -66,7 +66,7 @@ export default function SignupPage() {
         role: form.role,
       };
 
-      const res = await fetch('https://globaltechsoftwaresolutions.cloud/school-api/api/signup/', {
+      const res = await fetch('http://school.globaltechsoftwaresolutions.cloud/signup/', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
