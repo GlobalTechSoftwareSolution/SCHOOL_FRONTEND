@@ -339,7 +339,7 @@ function LoginPageContent() {
 
             {/* Footer Links */}
             <div className="mt-8 text-center">
-              <a href="/forgot-password" className="text-sm text-purple-800 hover:text-purple-900 font-medium transition-colors duration-200">
+              <a href="/forgot_password" className="text-sm text-purple-800 hover:text-purple-900 font-medium transition-colors duration-200">
                 Forgot your password?
               </a>
 
