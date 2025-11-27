@@ -37,7 +37,7 @@ type TimetableEntry = {
   teacher?: string;
 };
 
-const API = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 export default function Attendance() {
   const [section, setSection] = useState<"teacher" | "student">("teacher");

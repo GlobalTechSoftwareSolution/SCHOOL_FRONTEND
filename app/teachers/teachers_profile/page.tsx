@@ -4,7 +4,7 @@ import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { CheckCircle, XCircle, Upload, Edit3, Save, X } from "lucide-react";
 
-const API_BASE_URL = "https://school.globaltechsoftwaresolutions.cloud/api/teachers/";
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/teachers/`;
 
 interface Subject {
   id: number;
@@ -97,61 +97,100 @@ const TeacherProfilePage = () => {
   };
 
   // ✅ Save updates (PATCH)
-  const handleSave = async () => {
-    try {
-      const email = formData.email;
+const handleSave = async () => {
+  try {
+    const email = formData.email;
 
-      if (profileFile) {
-        // If profile picture changed, prepare FormData for upload
-        const uploadData = new FormData();
-        uploadData.append("profile_picture", profileFile);
-        
-        // Add only changed fields, skip undefined values
-        const fieldsToUpdate: (keyof Teacher)[] = [
-          "fullname",
-          "department_name",
-          "qualification",
-          "experience_years",
-          "phone",
-          "date_of_birth",
-          "gender",
-          "nationality",
-          "blood_group",
-          "date_joined",
-          "residential_address",
-          "emergency_contact_name",
-          "emergency_contact_relationship",
-          "emergency_contact_no"
-        ];
+    if (profileFile) {
+      // If profile picture changed, prepare FormData for upload
+      const uploadData = new FormData();
+      uploadData.append("profile_picture", profileFile);
 
-        fieldsToUpdate.forEach((key) => {
-          const value = formData[key];
-          if (value !== undefined && value !== null && value !== "") {
+      // Add only changed fields, skip undefined values
+      const fieldsToUpdate: (keyof Teacher)[] = [
+        "fullname",
+        "department_name",
+        "qualification",
+        "experience_years",
+        "phone",
+        "date_of_birth",
+        "gender",
+        "nationality",
+        "blood_group",
+        "date_joined",
+        "residential_address",
+        "emergency_contact_name",
+        "emergency_contact_relationship",
+        "emergency_contact_no"
+      ];
+
+      fieldsToUpdate.forEach((key) => {
+        const value = formData[key];
+        if (value !== undefined && value !== null && value !== "") {
+          if (typeof value === 'number') {
+            uploadData.append(key, value.toString());
+          } else {
             uploadData.append(key, String(value));
           }
-        });
+        }
+      });
 
-        const res = await axios.patch(`${API_BASE_URL}${email}/`, uploadData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        setTeacher(res.data);
-        setFormData(res.data);
-      } else {
-        // Just text updates, no file upload
-        const res = await axios.patch(`${API_BASE_URL}${email}/`, formData);
-        setTeacher(res.data);
-        setFormData(res.data);
-      }
+      // ✅ CRITICAL FIX: DO NOT SET Content-Type manually
+      const res = await axios.patch(
+        `${API_BASE_URL}${email}/`,
+        uploadData
+      );
 
-      setIsEditing(false);
-      setProfileFile(null);
-      showPopup('success', "Profile updated successfully!");
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to update profile";
-      showPopup('error', errorMessage);
+      setTeacher(res.data);
+      setFormData(res.data);
+
+    } else {
+      // Just text updates, no file upload - send only changed fields
+      const fieldsToUpdate: (keyof Teacher)[] = [
+        "fullname",
+        "department_name",
+        "qualification",
+        "experience_years",
+        "phone",
+        "date_of_birth",
+        "gender",
+        "nationality",
+        "blood_group",
+        "date_joined",
+        "residential_address",
+        "emergency_contact_name",
+        "emergency_contact_relationship",
+        "emergency_contact_no"
+      ];
+
+      // Create a clean object with only the fields to update
+      const updateData: Partial<Teacher> = {};
+      fieldsToUpdate.forEach((key) => {
+        const value = formData[key];
+        if (value !== undefined && value !== null && value !== "") {
+          (updateData as any)[key] = value;
+        }
+      });
+
+      const res = await axios.patch(`${API_BASE_URL}${email}/`, updateData);
+      setTeacher(res.data);
+      setFormData(res.data);
     }
-  };
+
+    setIsEditing(false);
+    setProfileFile(null);
+    showPopup('success', "Profile updated successfully!");
+
+  } catch (error: any) {
+    console.error("Error updating profile:", error);
+    const errorMessage =
+      error.response?.data?.detail ||
+      error.response?.data?.message ||
+      "Failed to update profile";
+    showPopup('error', errorMessage);
+  }
+};
+
 
   if (loading) {
     return (

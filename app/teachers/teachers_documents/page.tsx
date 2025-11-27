@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
 interface Document {
   id: number;

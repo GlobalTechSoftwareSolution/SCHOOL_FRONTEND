@@ -1,235 +1,121 @@
-'use client';
+// src/app/forgot-password/page.tsx
+"use client";
+import { useState } from "react";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, ArrowLeft, CheckCircle } from 'lucide-react';
+export default function ForgotPassword() {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-const ForgotPasswordPage = () => {
-  const router = useRouter();
-  
-  // States for different stages of the process
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [stage, setStage] = useState<'request' | 'instructions' | 'success'>('request'); // request -> instructions -> success
-
-  // Handle password reset request (send email)
-  const handleResetRequest = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
+    setIsLoading(true);
+    
     try {
-      console.log('Sending password reset request for email:', email);
-      
-      // Use the local proxy endpoint to avoid CORS issues
-      const endpoint = '/api/password_reset';
-      
-      let res;
-      
-      try {
-        console.log('📡 [API] Sending password reset request to:', endpoint);
-        res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email }),
-        });
-      } catch (networkError: any) {
-        console.error('❌ [API] Network error:', networkError);
-        throw new Error(`Password reset service is temporarily unavailable. Please try again in a few minutes. If the problem persists, contact support.`);
-      }
-
-      console.log('Password reset response status:', res.status);
-      console.log('Password reset response headers:', [...res.headers.entries()]);
-      
-      // Check if response is HTML (error page)
-      const contentType = res.headers.get('content-type');
-      console.log('Response content type:', contentType);
-      
-      if (contentType && contentType.includes('text/html')) {
-        const text = await res.text();
-        console.error('Received HTML response instead of JSON:', text.substring(0, 500));
-        throw new Error('Server returned an HTML page instead of JSON. Check if the endpoint is correct.');
-      }
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.error('Password reset error response:', errorData);
-        throw new Error(errorData.detail || 'Failed to send reset email');
-      }
-
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/password_reset/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
       const data = await res.json();
-      console.log('Password reset success response:', data);
-      setSuccess('Password reset instructions sent successfully. Please check your email for the reset link.');
-      setStage('instructions');
-    } catch (err: any) {
-      console.error('❌ [API] Password reset request error:', err);
-      
-      // Provide user-friendly error messages
-      let errorMessage = 'An unexpected error occurred. Please try again.';
-      
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        errorMessage = 'Network connection failed. Please check your internet connection and try again.';
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
+      setMessage(data.message || data.error);
+    } catch {
+      setMessage("An error occurred. Please try again.");
     } finally {
-      setLoading(false);
-      console.log('🏁 [API] Password reset request completed');
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen text-black flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="mx-auto bg-gradient-to-r from-purple-600 to-blue-500 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-              {stage === 'request' && <Mail className="text-white w-8 h-8" />}
-              {stage === 'instructions' && <Mail className="text-white w-8 h-8" />}
-              {stage === 'success' && <CheckCircle className="text-white w-8 h-8" />}
+    <div 
+      className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat px-4"
+      style={{
+        backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')",
+      }}
+    >
+      <div className="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/20">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Reset Password</h2>
+          <p className="text-gray-600">Enter your email to receive a reset link</p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address
+            </label>
+            <div className="relative">
+              <input
+                id="email"
+                type="email"
+                placeholder="example@gmail.com"
+                className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+           
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {stage === 'request' && 'Forgot Password?'}
-              {stage === 'instructions' && 'Check Your Email'}
-              {stage === 'success' && 'Success!'}
-            </h1>
-            <p className="text-gray-600">
-              {stage === 'request' && 'Enter your email to receive reset instructions'}
-              {stage === 'instructions' && 'Follow the instructions in your email to reset your password'}
-              {stage === 'success' && 'Your password has been reset successfully'}
-            </p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Success Message */}
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
-              {success}
-            </div>
-          )}
-
-          {/* Request Reset Form */}
-          {stage === 'request' && (
-            <form onSubmit={handleResetRequest} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Sending...
               </div>
+            ) : (
+              "Send Reset Link"
+            )}
+          </button>
+        </form>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full py-3 px-4 rounded-xl text-white font-semibold transition-all ${
-                  loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600 shadow-lg hover:shadow-xl'
-                }`}
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Sending...
-                  </div>
-                ) : (
-                  'Send Reset Instructions'
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Instructions State */}
-          {stage === 'instructions' && (
-            <div className="text-center py-8">
-              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Mail className="text-blue-600 w-8 h-8" />
-              </div>
-              <p className="text-gray-600 mb-6">
-                We've sent password reset instructions to <strong>{email}</strong>. 
-                Please check your email and click the reset link to set a new password.
-              </p>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800 mb-6">
-                <p className="font-medium mb-1">Didn't receive the email?</p>
-                <p>Check your spam folder or try again in a few minutes.</p>
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setStage('request')}
-                  className="flex-1 py-3 px-4 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-all"
-                >
-                  Resend Email
-                </button>
-                <button
-                  onClick={() => router.push('/login')}
-                  className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all"
-                >
-                  Back to Login
-                </button>
-              </div>
+        {/* Message */}
+        {message && (
+          <div className={`mt-6 p-4 rounded-lg text-center text-black ${
+            message.includes("error") || message.includes("Error") 
+              ? "bg-red-50 text-red-700 border border-red-200" 
+              : "bg-green-50 text-green-700 border border-green-200"
+          }`}>
+            <div className="flex items-center justify-center space-x-2">
+              {message.includes("error") || message.includes("Error") ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <span>{message}</span>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Success State */}
-          {stage === 'success' && (
-            <div className="text-center py-8">
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle className="text-green-600 w-8 h-8" />
-              </div>
-              <p className="text-gray-600 mb-6">
-                You will be redirected to the login page shortly.
-              </p>
-              <button
-                onClick={() => router.push('/login')}
-                className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all"
-              >
-                Go to Login Now
-              </button>
-            </div>
-          )}
-
-          {/* Back to Login */}
-          {stage !== 'instructions' && (
-            <div className="mt-8 text-center">
-              <button
-                onClick={() => router.push('/login')}
-                className="inline-flex items-center text-purple-600 hover:text-purple-800 font-medium transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Login
-              </button>
-            </div>
-          )}
+        {/* Back to Login */}
+        <div className="text-center mt-6 pt-6 border-t border-gray-200">
+          <a 
+            href="/login" 
+            className="text-blue-600 hover:text-blue-700 font-medium text-sm hover:underline transition-colors duration-200"
+          >
+            ← Back to login
+          </a>
         </div>
       </div>
     </div>
   );
-};
-
-export default ForgotPasswordPage;
+}

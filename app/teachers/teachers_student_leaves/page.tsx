@@ -73,7 +73,7 @@ const TeachersStudentLeavePage = () => {
 
         // Fetch teacher's timetable to get their classes
         const timetableResponse = await axios.get(
-          "https://school.globaltechsoftwaresolutions.cloud/api/timetable/"
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/timetable/`
         );
         
         const teacherTimetable: TimetableEntry[] = timetableResponse.data.filter(
@@ -87,7 +87,7 @@ const TeachersStudentLeavePage = () => {
 
         // Fetch classes from classes API and keep only those for this teacher
         const classesRes = await axios.get(
-          "https://school.globaltechsoftwaresolutions.cloud/api/classes/"
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/classes/`
         );
         const allClasses = classesRes.data || [];
 
@@ -102,7 +102,7 @@ const TeachersStudentLeavePage = () => {
 
         // Fetch student_attendance records (we will derive "leave" entries from these)
         const attendanceResponse = await axios.get(
-          "https://school.globaltechsoftwaresolutions.cloud/api/student_attendance/"
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/student_attendance/`
         );
 
         // Create teacher classes set for filtering
@@ -112,7 +112,7 @@ const TeachersStudentLeavePage = () => {
 
         // Fetch all students first to avoid 404 errors
         const studentsResponse = await axios.get(
-          "https://school.globaltechsoftwaresolutions.cloud/api/students/"
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`
         );
         
         // Create a map of students by email for quick lookup
@@ -235,7 +235,7 @@ const TeachersStudentLeavePage = () => {
       };
 
       await axios.patch(
-        `https://school.globaltechsoftwaresolutions.cloud/api/leaves/${selectedLeave.id}/`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/leaves/${selectedLeave.id}/`,
         updateData,
         {
           headers: {

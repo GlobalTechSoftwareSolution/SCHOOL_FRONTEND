@@ -36,8 +36,7 @@ interface Leave {
   approved_by?: string;
 }
 
-const API_BASE_URL =
-  "https://school.globaltechsoftwaresolutions.cloud/api/leaves/";
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/leaves/`;
 
 const TeacherLeavesPage = () => {
   const [leaves, setLeaves] = useState<Leave[]>([]);

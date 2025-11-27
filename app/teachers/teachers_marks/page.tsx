@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api/";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
 interface ClassInfo {
   id: number;

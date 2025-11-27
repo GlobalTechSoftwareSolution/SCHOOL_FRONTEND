@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { 
   User, 
   Mail, 
@@ -26,7 +27,6 @@ export default function Admin_ProfilePage() {
     department: "",
     joinDate: "",
     address: "",
-    subjects: [] as string[],
     profile_picture: ""
   });
 
@@ -80,7 +80,6 @@ export default function Admin_ProfilePage() {
           department: data.department || "School Administration",
           joinDate: joinDate,
           address: data.office_address || "",
-          subjects: Array.isArray(data.subjects) ? data.subjects : [],
           profile_picture: data.profile_picture || "/default-avatar.png"
         });
       } catch (err) {
@@ -102,21 +101,54 @@ export default function Admin_ProfilePage() {
   const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file (JPG, PNG, etc.)');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+    
     // Show instant local preview
     const previewUrl = URL.createObjectURL(file);
     setFormData((prev) => ({ ...prev, profile_picture: previewUrl }));
 
     try {
       setIsLoading(true);
+      
+      // Get email from localStorage like in useEffect
+      let email = "";
+      try {
+        const userInfoRaw = localStorage.getItem("userInfo");
+        if (userInfoRaw) {
+          const userInfo = JSON.parse(userInfoRaw);
+          if (userInfo?.email) email = userInfo.email;
+        }
+      } catch (err) {
+        // Ignore parse error
+      }
+      
+      if (!email) {
+        throw new Error("No admin email found. Please refresh the page.");
+      }
+      
       const formDataPatch = new FormData();
       formDataPatch.append("profile_picture", file);
-      // Optionally, send other fields if backend requires (here, only picture for this change)
-      const response = await fetch(`https://school.globaltechsoftwaresolutions.cloud/api/admins/${formData.email}/`, {
-        method: "PATCH",
-        body: formDataPatch,
-      });
-      if (!response.ok) throw new Error("Failed to upload profile picture");
-      const updatedData = await response.json();
+      
+      console.log("Sending PATCH request with FormData to:", `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
+      
+      // ✅ CRITICAL FIX: Use axios and DO NOT SET Content-Type manually
+      const res = await axios.patch(
+        `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`,
+        formDataPatch
+      );
+      
+      const updatedData = res.data;
       setFormData((prev) => ({
         ...prev,
         profile_picture: updatedData.profile_picture || prev.profile_picture,
@@ -133,8 +165,20 @@ export default function Admin_ProfilePage() {
         }
       });
       window.dispatchEvent(event);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading profile picture:", error);
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+        alert(`Failed to upload profile picture. Server error: ${error.response.status}. Please try again.`);
+      } else if (error.request) {
+        console.error("Request data:", error.request);
+        alert(`Failed to upload profile picture. Network error. Please check your connection and try again.`);
+      } else {
+        console.error("Error message:", error.message);
+        alert(`Failed to upload profile picture. Please try again. (${error.message || error})`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -144,6 +188,22 @@ export default function Admin_ProfilePage() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
+      // Get email from localStorage like in useEffect
+      let email = "";
+      try {
+        const userInfoRaw = localStorage.getItem("userInfo");
+        if (userInfoRaw) {
+          const userInfo = JSON.parse(userInfoRaw);
+          if (userInfo?.email) email = userInfo.email;
+        }
+      } catch (err) {
+        // Ignore parse error
+      }
+      
+      if (!email) {
+        throw new Error("No admin email found. Please refresh the page.");
+      }
+      
       const formDataToSend = new FormData();
       formDataToSend.append("fullname", formData.name);
       formDataToSend.append("phone", formData.phone);
@@ -153,15 +213,29 @@ export default function Admin_ProfilePage() {
       // Only append profile_picture if it's a file (not just a URL string)
       const fileInput = document.querySelector('input[type="file"][accept^="image"]') as HTMLInputElement | null;
       if (fileInput && fileInput.files && fileInput.files.length > 0) {
-        formDataToSend.append("profile_picture", fileInput.files[0]);
+        // Validate file type
+        const file = fileInput.files[0];
+        if (!file.type.startsWith('image/')) {
+          throw new Error('Please select a valid image file (JPG, PNG, etc.)');
+        }
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error('Image size should be less than 5MB');
+        }
+        
+        formDataToSend.append("profile_picture", file);
       }
 
-      const response = await fetch(`https://school.globaltechsoftwaresolutions.cloud/api/admins/${formData.email}/`, {
-        method: "PATCH",
-        body: formDataToSend,
-      });
-      if (!response.ok) throw new Error("Failed to update profile");
-      const updatedData = await response.json();
+      console.log("Sending PATCH request with FormData to:", `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
+      
+      // ✅ CRITICAL FIX: Use axios and DO NOT SET Content-Type manually
+      const res = await axios.patch(
+        `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`,
+        formDataToSend
+      );
+      
+      const updatedData = res.data;
       setFormData((prev) => ({
         ...prev,
         name: updatedData.fullname || prev.name,
@@ -175,9 +249,20 @@ export default function Admin_ProfilePage() {
       
       // Auto-close popup after 3 seconds
       setTimeout(() => setShowSuccessPopup(false), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving profile:", error);
-      alert("Failed to update profile. Please try again.");
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+        alert(`Failed to update profile. Server error: ${error.response.status}. Please try again.`);
+      } else if (error.request) {
+        console.error("Request data:", error.request);
+        alert(`Failed to update profile. Network error. Please check your connection and try again.`);
+      } else {
+        console.error("Error message:", error.message);
+        alert(`Failed to update profile. Please try again. (${error.message || error})`);
+      }
     } finally {
       setIsLoading(false);
     }
