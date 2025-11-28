@@ -22,7 +22,6 @@ import {
   GraduationCap
 } from "lucide-react";
 
-const API_BASE = "http://school.globaltechsoftwaresolutions.cloud";
 
 const StudentsPage = () => {
   const [students, setStudents] = useState<any[]>([]);
@@ -44,8 +43,8 @@ const StudentsPage = () => {
       setLoading(true);
       try {
         const [studentsRes, classesRes] = await Promise.all([
-          axios.get(`${API_BASE}/students/`),
-          axios.get(`${API_BASE}/classes/`)
+          axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`),
+          axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/classes/`)
         ]);
 
         setStudents(studentsRes.data || []);
@@ -65,13 +64,13 @@ const StudentsPage = () => {
     setLoading(true);
     try {
       const [attendanceRes, leavesRes, gradesRes] = await Promise.all([
-        axios.get(`${API_BASE}/student_attendance/`).catch(err => { 
+        axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/student_attendance/`).catch(err => { 
           return { data: [] }; 
         }),
-        axios.get(`${API_BASE}/leaves/`).catch(err => { 
+        axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/leaves/`).catch(err => { 
           return { data: [] }; 
         }),
-        axios.get(`${API_BASE}/grades/?student=${student.email}`).catch(err => { 
+        axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}}/grades/?student=${student.email}`).catch(err => { 
           return { data: [] }; 
         }),
       ]);
