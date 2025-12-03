@@ -466,6 +466,25 @@ export default function ClassWiseAttendance() {
             min-width: 640px;
           }
         }
+
+        /* Enhanced mobile styles for card layout */
+        @media (max-width: 639px) {
+          .admin-attendance-page .content-area {
+            border-radius: 0.75rem;
+          }
+          
+          .admin-attendance-page .content-area > div {
+            padding: 1rem;
+          }
+          
+          .admin-attendance-page h2 {
+            font-size: 1.25rem;
+          }
+          
+          .admin-attendance-page p {
+            font-size: 0.875rem;
+          }
+        }
       `}</style>
     </DashboardLayout>
   );
@@ -496,6 +515,24 @@ function AttendanceTable({ data, includeClass }: AttendanceTableProps) {
     );
   };
 
+  const getStatusBadgeMobile = (status: string) => {
+    const statusConfig: Record<string, { color: string; icon: string }> = {
+      Present: { color: "bg-green-100 text-green-800", icon: "✅" },
+      Absent: { color: "bg-red-100 text-red-800", icon: "❌" },
+      Late: { color: "bg-yellow-100 text-yellow-800", icon: "⏰" },
+      Halfday: { color: "bg-orange-100 text-orange-800", icon: "🕑" },
+    };
+
+    const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", icon: "❓" };
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+        <span>{config.icon}</span>
+        {status}
+      </span>
+    );
+  };
+
   const getInitials = (name: string) => {
     return (name || "?")
       .split(" ")
@@ -505,44 +542,101 @@ function AttendanceTable({ data, includeClass }: AttendanceTableProps) {
   };
 
   return (
-    <div className="attendance-table overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-xs sm:text-sm">
-        <thead className="bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Photo
-            </th>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Name
-            </th>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Email
-            </th>
-            {includeClass && (
+    <>
+      {/* Table view for larger screens */}
+      <div className="hidden sm:block attendance-table overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full text-xs sm:text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
               <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Class
+                Photo
               </th>
-            )}
-            {includeClass && (
               <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Section
+                Name
               </th>
-            )}
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Status
-            </th>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Check In
-            </th>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Check Out
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {data.map((item) => (
-            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Email
+              </th>
+              {includeClass && (
+                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Class
+                </th>
+              )}
+              {includeClass && (
+                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Section
+                </th>
+              )}
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Check In
+              </th>
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Check Out
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {data.map((item) => (
+              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  {item.profile_picture ? (
+                    <img
+                      src={item.profile_picture}
+                      alt={item.user_name || item.fullname}
+                      className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                      onError={(e) => {
+                        (e.currentTarget).style.display = "none";
+                      }}
+                    />
+                  ) : null}
+                  {!item.profile_picture && (
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                      {getInitials(item.user_name || item.fullname || "?")}
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <div className="font-medium text-gray-900">{item.user_name || item.fullname}</div>
+                </td>
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600 max-w-[220px] sm:max-w-none break-words">
+                  {item.user_email || item.email}
+                </td>
+                {includeClass && (
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600">
+                    {item.class_name}
+                  </td>
+                )}
+                {includeClass && (
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600">
+                    {item.section}
+                  </td>
+                )}
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">{getStatusBadge(item.status)}</td>
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <span className={`font-medium ${item.check_in ? "text-green-600" : "text-gray-400"}`}>
+                    {item.check_in || "Not checked in"}
+                  </span>
+                </td>
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <span className={`font-medium ${item.check_out ? "text-blue-600" : "text-gray-400"}`}>
+                    {item.check_out || "Not checked out"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Card view for small screens */}
+      <div className="sm:hidden grid grid-cols-1 gap-4">
+        {data.map((item) => (
+          <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
                 {item.profile_picture ? (
                   <img
                     src={item.profile_picture}
@@ -552,44 +646,52 @@ function AttendanceTable({ data, includeClass }: AttendanceTableProps) {
                       (e.currentTarget).style.display = "none";
                     }}
                   />
-                ) : null}
-                {!item.profile_picture && (
-                  <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                     {getInitials(item.user_name || item.fullname || "?")}
                   </div>
                 )}
-              </td>
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                <div className="font-medium text-gray-900">{item.user_name || item.fullname}</div>
-              </td>
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600 max-w-[220px] sm:max-w-none break-words">
-                {item.user_email || item.email}
-              </td>
+                <div>
+                  <h3 className="font-medium text-gray-900 text-sm">{item.user_name || item.fullname}</h3>
+                  <p className="text-gray-600 text-xs truncate max-w-[160px]">
+                    {item.user_email || item.email}
+                  </p>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                {getStatusBadgeMobile(item.status)}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
               {includeClass && (
-                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600">
-                  {item.class_name}
-                </td>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500">Class:</span>
+                  <span className="font-medium text-gray-900">{item.class_name || "N/A"}</span>
+                </div>
               )}
               {includeClass && (
-                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600">
-                  {item.section}
-                </td>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500">Section:</span>
+                  <span className="font-medium text-gray-900">{item.section || "N/A"}</span>
+                </div>
               )}
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">{getStatusBadge(item.status)}</td>
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">Check In:</span>
                 <span className={`font-medium ${item.check_in ? "text-green-600" : "text-gray-400"}`}>
                   {item.check_in || "Not checked in"}
                 </span>
-              </td>
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">Check Out:</span>
                 <span className={`font-medium ${item.check_out ? "text-blue-600" : "text-gray-400"}`}>
                   {item.check_out || "Not checked out"}
                 </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

@@ -4,7 +4,7 @@ import axios from "axios";
 import { Plus, X, Edit, Trash2, Search, Filter, Calendar, Users, Clock, AlertCircle, CheckCircle, PlayCircle, MoreVertical } from "lucide-react";
 import { createDecipheriv } from "crypto";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
 interface Project {
   id: number;

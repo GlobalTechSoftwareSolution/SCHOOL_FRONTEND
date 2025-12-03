@@ -17,47 +17,49 @@ const AllNotice = () => {
         setLoading(true);
         setError(null);
 
-        console.log("🛰 Fetching notices...");
-        const res = await fetch(
-          "https://school.globaltechsoftwaresolutions.cloud/api/notices/"
-        );
-        if (!res.ok) throw new Error("Failed to fetch notices");
-
-        const data = await res.json();
-        console.log("✅ Fetched notices:", data.length);
-
-        // 🔹 Get logged-in student's email
+        // Get logged-in student's email from localStorage
         let userEmail = "";
         if (typeof window !== "undefined") {
-          const userInfo =
-            localStorage.getItem("userInfo") ||
-            localStorage.getItem("userData");
-          if (userInfo) {
+          const userData = localStorage.getItem("userData");
+          const userInfo = localStorage.getItem("userInfo");
+          
+          if (userData) {
+            try {
+              const parsed = JSON.parse(userData);
+              userEmail = (parsed.email || "").trim().toLowerCase();
+            } catch (e) {
+              userEmail = "";
+            }
+          } else if (userInfo) {
             try {
               const parsed = JSON.parse(userInfo);
               userEmail = (parsed.email || "").trim().toLowerCase();
-            } catch {
+            } catch (e) {
               userEmail = "";
             }
           }
         }
 
-        console.log("📧 Logged-in user email:", userEmail);
+        if (!userEmail) {
+          throw new Error("User email not found in localStorage");
+        }
 
-      // 🔍 Filter notices ONLY for the logged-in user (strict match)
-const filteredData = (Array.isArray(data) ? data : []).filter((notice: any) => {
-  const toField = (notice.notice_to || "").trim().toLowerCase();
-  const toEmailField = (notice.notice_to_email || "").trim().toLowerCase();
+        const res = await fetch(
+         `${process.env.NEXT_PUBLIC_API_BASE_URL}/notices/`
+        );
+        
+        if (!res.ok) {
+          throw new Error(`Failed to fetch notices: ${res.status} ${res.statusText}`);
+        }
 
-  // ✅ Match only if the user's email is present in either field
-  const isUserNotice =
-    toField === userEmail || toEmailField === userEmail;
+        const data = await res.json();
 
-  return isUserNotice;
-});
-
-console.log("📋 Filtered notices for user:", filteredData.length);
-
+        // Filter notices that are specifically addressed to this user
+        const filteredData = (Array.isArray(data) ? data : []).filter((notice: any) => {
+          // Check if notice is addressed to this user specifically
+          const noticeTo = (notice.notice_to || "").trim().toLowerCase();
+          return noticeTo === userEmail;
+        });
 
         const mapped = filteredData.map((n: any) => ({
           id: n.id,
@@ -73,9 +75,8 @@ console.log("📋 Filtered notices for user:", filteredData.length);
         }));
 
         setNotices(mapped);
-      } catch (err) {
-        console.error("❌ Error fetching notices:", err);
-        setError("Could not load notices.");
+      } catch (err: any) {
+        setError("Could not load notices: " + (err.message || "Unknown error"));
       } finally {
         setLoading(false);
       }

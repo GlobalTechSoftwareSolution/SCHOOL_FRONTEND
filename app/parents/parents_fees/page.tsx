@@ -36,7 +36,7 @@ import {
   Gem
 } from "lucide-react";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface FeeStructure {
   id: number;

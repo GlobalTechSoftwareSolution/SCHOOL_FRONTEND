@@ -55,14 +55,13 @@ const StudentDashboard = () => {
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api/";
+  const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
   // ✅ STEP 1: Fetch the student info from API by matching email
   const fetchStudentInfo = async () => {
     try {
       const storedUser = localStorage.getItem("userInfo");
       if (!storedUser) {
-        console.error("No user info found in localStorage");
         setLoading(false);
         return;
       }
@@ -81,11 +80,9 @@ const StudentDashboard = () => {
 
       if (matchedStudent) {
         setStudentInfo(matchedStudent);
-      } else {
-        console.warn("No matching student found for:", email);
       }
     } catch (error) {
-      console.error("Error fetching student info:", error);
+      // Silent error handling
     }
   };
 
@@ -101,7 +98,6 @@ const StudentDashboard = () => {
 
         // Attendance (student specific)
         const attendanceRes = await axios.get(`${API_BASE}student_attendance/`, { headers }).catch(err => {
-          console.warn("student_attendance API failed:", err.message);
           return { data: [] };
         });
         const attendanceData = Array.isArray(attendanceRes.data)
@@ -115,7 +111,6 @@ const StudentDashboard = () => {
         setAttendance(studentAttendance);
         // Marks
         const marksRes = await axios.get(`${API_BASE}grades/`, { headers }).catch(err => {
-          console.warn("Grades API failed:", err.message);
           return { data: [] };
         });
         const marksData = Array.isArray(marksRes.data)
@@ -130,41 +125,38 @@ const StudentDashboard = () => {
 
         // Notices
         const noticesRes = await axios.get(`${API_BASE}notices/`, { headers }).catch(err => {
-          console.warn("Notices API failed:", err.message);
-          return { data: [] };
-        });
-        setNotices(noticesRes.data || []);
-
-        // Leaves
-        const leavesRes = await axios.get(`${API_BASE}leaves/`, { headers }).catch(err => {
-          console.warn("Leaves API failed:", err.message);
           return { data: [] };
         });
         
-        console.log("🔍 Raw leaves API response:", leavesRes.data);
-        console.log("🔍 Student email for filtering:", studentInfo.email);
+        // Filter notices for the specific student only
+        const allNotices = Array.isArray(noticesRes.data) ? noticesRes.data : [noticesRes.data];
+        const studentNotices = allNotices.filter((notice: any) => {
+          const noticeTo = (notice.notice_to || "").trim().toLowerCase();
+          const studentEmail = studentInfo.email?.toLowerCase();
+          return noticeTo === studentEmail;
+        });
+        
+        setNotices(studentNotices);
+
+        // Leaves
+        const leavesRes = await axios.get(`${API_BASE}leaves/`, { headers }).catch(err => {
+          return { data: [] };
+        });
         
         const leavesData = Array.isArray(leavesRes.data)
           ? leavesRes.data
           : [leavesRes.data];
         
-        // Show first leave record structure for debugging
-        if (leavesData.length > 0) {
-          console.log("🔍 First leave record structure:", leavesData[0]);
-        }
-        
         // Filter leaves by student email using applicant_email field
         const studentLeaves = leavesData.filter(
           (leave: any) => {
-            console.log("🔍 Checking leave:", leave);
             return leave.applicant_email?.toLowerCase?.() === studentInfo.email?.toLowerCase();
           }
         );
         
-        console.log("📅 Filtered student leaves:", studentLeaves);
         setLeaves(studentLeaves);
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        // Silent error handling
       } finally {
         setLoading(false);
       }
@@ -256,10 +248,6 @@ const StudentDashboard = () => {
               Welcome back, {studentInfo?.fullname || "Student"}!  </h1>
             <p className="text-gray-600 text-lg">
               Here's your academic overview
-            </p>
-            {/* Debug student info - remove this later */}
-            <p className="text-sm text-gray-500 mt-2">
-              Logged in as: {studentInfo?.email}
             </p>
           </div>
 

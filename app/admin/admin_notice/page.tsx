@@ -44,7 +44,7 @@ const Notice_Page = () => {
     const fetchNotices = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("https://school.globaltechsoftwaresolutions.cloud/api/notices/");
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/notices/`);
         setNotices(response.data || []);
         
         // Calculate stats
@@ -74,7 +74,7 @@ const Notice_Page = () => {
 
   // Get user info from localStorage
   const userInfo = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userInfo") || "{}") : {};
-  const userEmail = userInfo?.email || "admin@school.com";
+  const userEmail = userInfo?.email || "";
   const userRole = userInfo?.role || "Admin";
   
   const [newNotice, setNewNotice] = useState({

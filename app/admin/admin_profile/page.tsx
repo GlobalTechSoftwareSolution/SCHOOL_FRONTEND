@@ -56,7 +56,7 @@ export default function Admin_ProfilePage() {
           setIsLoading(false);
           return;
         }
-        const response = await fetch(`https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`);
         if (!response.ok) throw new Error("Failed to fetch admin data");
         const data = await response.json();
         // Format joinDate as YYYY-MM-DD if possible
@@ -140,11 +140,11 @@ export default function Admin_ProfilePage() {
       const formDataPatch = new FormData();
       formDataPatch.append("profile_picture", file);
       
-      console.log("Sending PATCH request with FormData to:", `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
+      console.log("Sending PATCH request with FormData to:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`);
       
       // ✅ CRITICAL FIX: Use axios and DO NOT SET Content-Type manually
       const res = await axios.patch(
-        `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`,
         formDataPatch
       );
       
@@ -227,11 +227,11 @@ export default function Admin_ProfilePage() {
         formDataToSend.append("profile_picture", file);
       }
 
-      console.log("Sending PATCH request with FormData to:", `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
+      console.log("Sending PATCH request with FormData to:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`);
       
       // ✅ CRITICAL FIX: Use axios and DO NOT SET Content-Type manually
       const res = await axios.patch(
-        `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`,
         formDataToSend
       );
       

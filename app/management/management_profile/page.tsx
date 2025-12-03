@@ -21,7 +21,7 @@ import {
   Camera
 } from "lucide-react";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`
 
 const ManagementProfilePage = () => {
   const [management, setManagement] = useState<any>(null);
@@ -76,7 +76,10 @@ const ManagementProfilePage = () => {
           phone: profile.phone || "",
           department: profile.department || "",
           address: profile.address || "",
+          office_address: profile.office_address || "",
           qualification: profile.qualification || "",
+          date_of_birth: profile.date_of_birth || "",
+          date_joined: profile.date_joined || "",
           ...profile
         });
       } else {
@@ -191,7 +194,10 @@ const ManagementProfilePage = () => {
         phone: formData.phone,
         department: formData.department,
         address: formData.address,
-        qualification: formData.qualification
+        office_address: formData.office_address,
+        qualification: formData.qualification,
+        date_of_birth: formData.date_of_birth,
+        date_joined: formData.date_joined
       };
 
       // Remove empty fields
@@ -224,7 +230,10 @@ const ManagementProfilePage = () => {
             phone: formData.phone,
             department: formData.department,
             address: formData.address,
+            office_address: formData.office_address,
             qualification: formData.qualification,
+            date_of_birth: formData.date_of_birth,
+            date_joined: formData.date_joined,
             email: email
           };
           
@@ -255,7 +264,10 @@ const ManagementProfilePage = () => {
       phone: management?.phone || "",
       department: management?.department || "",
       address: management?.address || "",
+      office_address: management?.office_address || "",
       qualification: management?.qualification || "",
+      date_of_birth: management?.date_of_birth || "",
+      date_joined: management?.date_joined || "",
       ...management
     });
     setEditing(false);
@@ -495,7 +507,7 @@ const ManagementProfilePage = () => {
                           </div>
                         </div>
 
-                        <div>
+                        {/* <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Address
                           </label>
@@ -512,6 +524,48 @@ const ManagementProfilePage = () => {
                                   : "border-gray-300 bg-gray-50"
                               }`}
                               placeholder="Enter your address"
+                            />
+                          </div>
+                        </div> */}
+
+                        {/* Date of Birth Field */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Date of Birth
+                          </label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <input
+                              type="date"
+                              value={formData.date_of_birth || ""}
+                              onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                              disabled={!editing}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
+                                editing 
+                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                  : "border-gray-300 bg-gray-50"
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Date Joined Field */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Date Joined
+                          </label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <input
+                              type="date"
+                              value={formData.date_joined || ""}
+                              onChange={(e) => setFormData({ ...formData, date_joined: e.target.value })}
+                              disabled={!editing}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
+                                editing 
+                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                  : "border-gray-300 bg-gray-50"
+                              }`}
                             />
                           </div>
                         </div>
@@ -548,7 +602,7 @@ const ManagementProfilePage = () => {
                           </div>
                         </div>
 
-                        <div>
+                        {/* <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Department
                           </label>
@@ -567,7 +621,7 @@ const ManagementProfilePage = () => {
                               placeholder="Enter your department"
                             />
                           </div>
-                        </div>
+                        </div> */}
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -586,6 +640,28 @@ const ManagementProfilePage = () => {
                                   : "border-gray-300 bg-gray-50"
                               }`}
                               placeholder="Enter your qualification"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Office Address Field */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Office Address
+                          </label>
+                          <div className="relative">
+                            <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <textarea
+                              value={formData.office_address || ""}
+                              onChange={(e) => setFormData({ ...formData, office_address: e.target.value })}
+                              disabled={!editing}
+                              rows={3}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all resize-none ${
+                                editing 
+                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                  : "border-gray-300 bg-gray-50"
+                              }`}
+                              placeholder="Enter your office address"
                             />
                           </div>
                         </div>

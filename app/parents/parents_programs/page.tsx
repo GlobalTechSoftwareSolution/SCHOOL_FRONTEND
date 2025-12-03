@@ -21,7 +21,7 @@ import {
   Eye
 } from "lucide-react";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
 const ParentProgramsPage = () => {
   const [programs, setPrograms] = useState<any[]>([]);

@@ -19,7 +19,7 @@ interface Absentee {
   section?: string;
 }
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 const AbsentStudentsReport = () => {
   const [attendance, setAttendance] = useState<any[]>([]);
@@ -52,28 +52,19 @@ const AbsentStudentsReport = () => {
     return { startDate, endDate: today };
   };
 
-  // ✅ Filter absentees based on selected year/month
+  // ✅ Filter absentees based on selected year/month and class/section
   const filterAbsentees = (data: any[]) => {
     return data.filter((item: any) => {
-      if (!item.date) return false;
-
-      const recordDate = new Date(item.date);
-
-      // Treat multiple possible representations of "absent"
-      const status = (item.status || "").toString().toLowerCase();
-      const isExplicitAbsent = status === "absent";
-      const isFlagAbsent = item.is_absent === true || item.is_present === false;
-      const isAbsent = isExplicitAbsent || isFlagAbsent;
-
-      if (!isAbsent) return false;
-
+      // For absent students, we're already filtering by today's date in fetchAttendance
+      // But we still need to apply class/section/year/month filters if needed
+      
       const matchesYear = selectedYear
-        ? recordDate.getFullYear().toString() === selectedYear
+        ? new Date().getFullYear().toString() === selectedYear
         : true;
 
       const matchesMonth =
         selectedMonth !== ""
-          ? recordDate.getMonth() === Number(selectedMonth)
+          ? new Date().getMonth() === Number(selectedMonth)
           : true;
 
       return matchesYear && matchesMonth;
@@ -87,23 +78,46 @@ const AbsentStudentsReport = () => {
     }
   }, [attendance, selectedYear, selectedMonth]);
 
-  // ✅ Fetch Student Attendance (only source of absentees)
+  // ✅ Fetch Students and Attendance to calculate absentees
   const fetchAttendance = async () => {
     setRefreshing(true);
     try {
-      const res = await axios.get(`${API_BASE}/student_attendance/`);
-      const data = Array.isArray(res.data) ? res.data : [];
+      // Fetch all students
+      const studentsRes = await axios.get(`${API_BASE}/students/`);
+      const studentsData = Array.isArray(studentsRes.data) ? studentsRes.data : [];
+      
+      // Fetch today's attendance records
+      const today = new Date().toISOString().split('T')[0];
+      const attendanceRes = await axios.get(`${API_BASE}/student_attendance/?date=${today}`);
+      const attendanceData = Array.isArray(attendanceRes.data) ? attendanceRes.data : [];
 
-      // Normalize records so class_name and sec are consistently available
-      const normalized = data.map((item: any) => ({
-        ...item,
-        class_name: item.class_name || item.class || "",
-        sec: item.sec || item.section || "",
-      }));
+      // Create a set of present student emails for quick lookup
+      const presentStudentEmails = new Set(
+        attendanceData
+          .filter((record: any) => record.status?.toLowerCase() === 'present')
+          .map((record: any) => (record.student_email || record.student || '').toLowerCase())
+      );
 
-      setAttendance(normalized);
+      // Calculate absent students: all students minus present students
+      const absentStudents = studentsData
+        .filter((student: any) => {
+          const studentEmail = (student.email || '').toLowerCase();
+          return studentEmail && !presentStudentEmails.has(studentEmail);
+        })
+        .map((student: any) => ({
+          id: student.id,
+          student_name: student.fullname || student.name || 'Unknown Student',
+          date: today,
+          class_name: student.class_name || student.class || '',
+          sec: student.sec || student.section || '',
+          student_email: student.email || '',
+          status: 'Absent',
+          remarks: 'Absent today'
+        }));
+
+      setAttendance(absentStudents);
     } catch (error) {
-      console.error("Error fetching student attendance:", error);
+      // Error handling for student attendance fetch
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -170,7 +184,7 @@ const AbsentStudentsReport = () => {
               <TrendingDown className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
               Absent Students Report
             </h1>
-            <p className="text-gray-600 text-sm sm:text-base">Monitor and track student attendance patterns</p>
+            <p className="text-gray-600 text-sm sm:text-base">View students who are absent today</p>
           </div>
           
           <div className="flex gap-3 w-full sm:w-auto">
@@ -388,9 +402,9 @@ const AbsentStudentsReport = () => {
 
                   {/* Reason */}
                   <div className="border-t border-gray-100 pt-3">
-                    <p className="text-xs text-gray-600 mb-1">Reason:</p>
+                    <p className="text-xs text-gray-600 mb-1">Status:</p>
                     <p className="text-sm text-gray-800 line-clamp-2">
-                      {att.remarks || "No reason provided"}
+                      Absent today
                     </p>
                   </div>
                 </div>

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 const FEES_API = `${API_BASE}/fee_payments/`;
 const FEE_STRUCTURE_API = `${API_BASE}/fee_structures/`;
 
@@ -71,7 +71,6 @@ const StudentFeesPage = () => {
   // ✅ Flexible fetch of fee structures
   const fetchFeeStructures = async (studentClass: string, studentSection: string) => {
     try {
-      console.log("📚 Fetching fee structures for:", { studentClass, studentSection });
       const res = await axios.get(FEE_STRUCTURE_API);
       const all = res.data;
 
@@ -84,14 +83,9 @@ const StudentFeesPage = () => {
         return classMatch && sectionMatch;
       });
 
-      if (filtered.length === 0) {
-        console.warn("⚠️ No matching fee structures found for this class/section. Using fallback.");
-      }
-
       setFeeStructures(filtered);
       return filtered;
     } catch (err) {
-      console.error("❌ Error fetching fee structures:", err);
       return [];
     }
   };
@@ -112,6 +106,7 @@ const StudentFeesPage = () => {
           return;
         }
 
+        // Fetch student details by email
         const studentRes = await axios.get(`${API_BASE}/students/?email=${encodeURIComponent(email)}`);
         const studentData = Array.isArray(studentRes.data) ? studentRes.data[0] : studentRes.data;
 
@@ -122,7 +117,11 @@ const StudentFeesPage = () => {
         }
 
         setStudent(studentData);
+        
+        // Fetch fee structures based on student's class and section
         const structures = await fetchFeeStructures(studentData.class_name, studentData.section);
+        
+        // Fetch fee payments for this student
         const feesRes = await axios.get(FEES_API);
 
         const normalizedEmail = (studentData.email || "").toLowerCase().trim();
@@ -136,24 +135,40 @@ const StudentFeesPage = () => {
               return feeEmail === normalizedEmail;
             }
             return feeName === normalizedName;
-          })
-          .map((f: FeeDetails) => {
-            const matchedStructure = structures.find((fs: FeeStructure) => fs.id === f.fee_structure);
-            const total = matchedStructure ? parseFloat(matchedStructure.amount || "0") : 0;
-            const paid = parseFloat(f.amount_paid || "0");
-            const remaining = Math.max(total - paid, 0).toFixed(2);
-            return {
-              ...f,
-              total_amount: total.toString(),
-              structure_amount: matchedStructure?.amount,
-              calculated_remaining_amount: remaining,
-            };
           });
 
-        setFees(filteredFees);
-        console.log("✅ Final fee list:", filteredFees);
+        // Group fees by fee_structure to calculate total paid per structure
+        const feesByStructure: Record<number, FeeDetails[]> = {};
+        filteredFees.forEach((fee: FeeDetails) => {
+          const structureId = fee.fee_structure;
+          if (!feesByStructure[structureId]) {
+            feesByStructure[structureId] = [];
+          }
+          feesByStructure[structureId].push(fee);
+        });
+
+        // Create enhanced fee records with proper calculations
+        const enhancedFees = Object.entries(feesByStructure).flatMap(([structureId, feesForStructure]) => {
+          const structureIdNum = parseInt(structureId);
+          const matchedStructure = structures.find((fs: FeeStructure) => fs.id === structureIdNum);
+          
+          if (!matchedStructure) return feesForStructure;
+          
+          const totalAmount = parseFloat(matchedStructure.amount || "0");
+          const totalPaid = feesForStructure.reduce((sum, fee) => sum + parseFloat(fee.amount_paid || "0"), 0);
+          const remainingAmount = Math.max(totalAmount - totalPaid, 0);
+          
+          // Enhance each fee with structure info and calculated remaining
+          return feesForStructure.map((fee: FeeDetails) => ({
+            ...fee,
+            total_amount: totalAmount.toString(),
+            structure_amount: matchedStructure.amount,
+            calculated_remaining_amount: remainingAmount.toFixed(2), // Same for all fees in this structure
+          }));
+        });
+
+        setFees(enhancedFees);
       } catch (err) {
-        console.error("❌ Error loading student + fee data:", err);
         setError("Failed to load fee data.");
       } finally {
         setLoading(false);
@@ -193,19 +208,15 @@ const StudentFeesPage = () => {
         remarks: "Paid via student portal",
       };
 
-      console.log("💰 Final Payload:", payload);
-
       const response = await axios.post(FEES_API, payload, {
         headers: { "Content-Type": "application/json" },
       });
 
-      console.log("✅ Payment Response:", response.data);
       alert("✅ Payment submitted successfully!");
       setShowPaymentModal(false);
       window.location.reload();
 
     } catch (err: any) {
-      console.error("❌ Payment error:", err.response?.data || err);
       if (err.response?.data?.payment_method) {
         alert("⚠️ Invalid payment method. Please use Cash, Card, Bank Transfer, Online, or Cheque.");
       } else if (err.response?.data?.amount_paid) {
@@ -218,11 +229,29 @@ const StudentFeesPage = () => {
     }
   };
 
+  // Calculate total paid across all fees
   const totalPaid = fees.reduce((sum, f) => sum + parseFloat(f.amount_paid || "0"), 0);
-  const totalDue = fees.reduce(
-    (sum, f) => sum + parseFloat(f.calculated_remaining_amount || "0"),
-    0
-  );
+  
+  // Calculate total due - Perfect calculation using fee structures
+  const totalDue = (() => {
+    // Get unique fee structures from the fees
+    const uniqueStructures = [...new Set(fees.map(fee => fee.fee_structure))];
+    
+    let totalRemaining = 0;
+    
+    // For each unique structure, get the remaining amount from the first fee of that structure
+    uniqueStructures.forEach(structureId => {
+      // Find the first fee with this structure ID
+      const feeWithStructure = fees.find(fee => fee.fee_structure === structureId);
+      if (feeWithStructure) {
+        // Add the pre-calculated remaining amount for this structure
+        totalRemaining += parseFloat(feeWithStructure.calculated_remaining_amount || "0");
+      }
+    });
+    
+    return totalRemaining;
+  })();
+  
   const paidFees = fees.filter((f) => f.status === "Paid").length;
   const pendingFees = fees.filter((f) => f.status !== "Paid").length;
 
@@ -327,7 +356,6 @@ const StudentFeesPage = () => {
             </div>
             <button
               onClick={() => {
-                console.log("🟢 Pay Fees clicked. Student:", student);
                 if (!student) {
                   alert("⚠️ Student data not yet loaded. Please refresh.");
                   return;
@@ -422,6 +450,81 @@ const StudentFeesPage = () => {
           />
         )}
       </div>
+      
+      {/* Media Queries for Responsive Design */}
+      <style jsx global>{`
+        @media (max-width: 640px) {
+          .grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          
+          .grid-cols-1 {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+          }
+          
+          .text-2xl {
+            font-size: 1.5rem;
+            line-height: 2rem;
+          }
+          
+          .p-3 {
+            padding: 0.75rem;
+          }
+          
+          .gap-3 {
+            gap: 0.75rem;
+          }
+          
+          .rounded-xl {
+            border-radius: 0.75rem;
+          }
+        }
+        
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          
+          .lg\:grid-cols-4 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          
+          .lg\:grid-cols-3 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+        
+        @media (min-width: 1025px) {
+          .grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          
+          .lg\:grid-cols-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+          
+          .lg\:grid-cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+        
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          
+          body {
+            background-color: white !important;
+          }
+          
+          .receipt-modal {
+            position: static !important;
+            transform: none !important;
+            max-width: 100% !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
     </DashboardLayout>
   );
 };
@@ -460,7 +563,7 @@ const SummaryCard = ({ title, value, color, icon }: SummaryCardProps) => {
 // ✅ Enhanced Receipt Modal
 const ReceiptModal = ({ fee, onClose, onPrint }: any) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-3 sm:p-4">
-    <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+    <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden receipt-modal">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6 text-white">
         <h2 className="text-xl sm:text-2xl font-bold">Payment Receipt</h2>
         <p className="text-blue-100 text-xs sm:text-sm">Transaction Confirmation</p>

@@ -37,6 +37,7 @@ const TeachersDashboard = () => {
   const [recentLeaves, setRecentLeaves] = useState<any[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<any[]>([]);
   const [studentStats, setStudentStats] = useState({ total: 0, present: 0 });
+  const [teacherAttendancePercentage, setTeacherAttendancePercentage] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [activeStats, setActiveStats] = useState(0);
 
@@ -66,7 +67,7 @@ const TeachersDashboard = () => {
       setLoading(true);
       try {
         // Fetch all dashboard data with proper error handling
-        const [timetableRes, gradesRes, leavesRes, attendanceRes, studentsRes] = await Promise.all([
+        const [timetableRes, gradesRes, leavesRes, teacherAttendanceRes, studentsRes] = await Promise.all([
           axios.get(`${API_BASE}timetable/`).catch(err => {
             console.warn("Timetable API failed:", err.message);
             return { data: [] };
@@ -79,9 +80,9 @@ const TeachersDashboard = () => {
             console.warn("Leaves API failed:", err.message);
             return { data: [] };
           }),
-          // Use student_attendance for student records
-          axios.get(`${API_BASE}student_attendance/`).catch(err => {
-            console.warn("student_attendance API failed:", err.message);
+          // Use teacher_attendance for teacher records
+          axios.get(`${API_BASE}teacher_attendance/`).catch(err => {
+            console.warn("teacher_attendance API failed:", err.message);
             return { data: [] };
           }),
           axios.get(`${API_BASE}students/`).catch(err => {
@@ -143,12 +144,16 @@ const TeachersDashboard = () => {
           .filter((l: any) => l.status === "Approved")
           .slice(0, 4);
 
-        // Calculate student stats from student_attendance for this teacher
-        const teacherAttendance = attendanceRes.data.filter(
-          (a: any) => a.teacher === teacherEmail
+        // Calculate teacher attendance from teacher_attendance for this teacher
+        const teacherAttendanceRecords = teacherAttendanceRes.data.filter(
+          (a: any) => a.email === teacherEmail
         );
-        const present = teacherAttendance.filter((a: any) => a.status === "Present").length;
-        
+        const totalAttendanceDays = teacherAttendanceRecords.length;
+        const presentDays = teacherAttendanceRecords.filter((a: any) => a.status === "Present").length;
+        const attendancePercentage = totalAttendanceDays > 0 
+          ? Math.round((presentDays / totalAttendanceDays) * 100) 
+          : 0;
+
         // Get total students from teacher's classes
         const teacherStudents = studentsRes.data.filter(
   (s: { class_name: string; section: string }) =>
@@ -164,8 +169,9 @@ const TeachersDashboard = () => {
         setRecentLeaves(recent);
         setStudentStats({
           total: teacherStudents.length,
-          present: present
+          present: presentDays
         });
+        setTeacherAttendancePercentage(attendancePercentage);
       } catch (error: any) {
         console.error("Error loading teacher dashboard:", error);
         console.error("Error details:", error.response?.data || error.message);
@@ -177,6 +183,7 @@ const TeachersDashboard = () => {
         setAvgGrades(0);
         setRecentLeaves([]);
         setStudentStats({ total: 0, present: 0 });
+        setTeacherAttendancePercentage(0);
       } finally {
         setLoading(false);
       }
@@ -194,13 +201,6 @@ const TeachersDashboard = () => {
       description: "Total classes you teach"
     },
     {
-      label: "Avg Student Marks",
-      value: `${avgGrades.toFixed(1)}%`,
-      icon: BarChart3,
-      color: "green",
-      description: "Average performance"
-    },
-    {
       label: "Today's Classes",
       value: todayTimetable.length,
       icon: Clock,
@@ -208,11 +208,11 @@ const TeachersDashboard = () => {
       description: "Scheduled for today"
     },
     {
-      label: "Student Attendance",
-      value: `${studentStats.total > 0 ? Math.round((studentStats.present / studentStats.total) * 100) : 0}%`,
+      label: "Teacher Attendance",
+      value: `${teacherAttendancePercentage}%`,
       icon: UserCheck,
       color: "purple",
-      description: "Overall attendance rate"
+      description: "Your attendance percentage"
     }
   ];
 
@@ -254,15 +254,6 @@ const TeachersDashboard = () => {
                   day: 'numeric' 
                 })}
               </p>
-            </div>
-            <div className="mt-4 sm:mt-0 flex items-center gap-3">
-              <button className="p-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
-                <Bell className="h-5 w-5 text-gray-600" />
-              </button>
-              <button className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-medium">
-                <Download className="h-4 w-4" />
-                Export
-              </button>
             </div>
           </div>
         </div>

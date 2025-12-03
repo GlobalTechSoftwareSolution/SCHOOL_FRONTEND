@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 const ManagementMonthlyReport = () => {
   const [view, setView] = useState<"teachers" | "students" | "principals" | null>(null);
@@ -1099,34 +1099,34 @@ const fetchClasses = async (subjectId: number) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-between mb-4">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
               <div></div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Management Monthly Report
               </h1>
               <button
                 onClick={refreshData}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl font-medium flex items-center gap-2 transition-colors"
+                className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg sm:rounded-xl font-medium flex items-center gap-2 transition-colors text-sm sm:text-base"
               >
                 {loading ? "Refreshing..." : "🔄 Refresh"}
               </button>
             </div>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base sm:text-lg">
               Comprehensive overview of teachers and students performance
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-6 sm:mb-8">
             <button
               onClick={() => {
                 setView("teachers");
                 setSelectedTeacher(null);
                 fetchTeachers();
               }}
-              className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
                 view === "teachers"
                   ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
                   : "bg-white text-gray-700 border border-gray-300 hover:border-blue-500"
@@ -1140,7 +1140,7 @@ const fetchClasses = async (subjectId: number) => {
                 setSelectedStudent(null);
                 fetchStudents();
               }}
-              className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
                 view === "students"
                   ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
                   : "bg-white text-gray-700 border border-gray-300 hover:border-green-500"
@@ -1154,7 +1154,7 @@ const fetchClasses = async (subjectId: number) => {
                 setSelectedPrincipal(null);
                 fetchPrincipals();
               }}
-              className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
                 view === "principals"
                   ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg"
                   : "bg-white text-gray-700 border border-gray-300 hover:border-purple-500"
@@ -1216,15 +1216,15 @@ const fetchClasses = async (subjectId: number) => {
                   <span>←</span>
                   <span>Back to Teachers</span>
                 </button>
-                <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
                   <img
                     src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150"}
                     alt={selectedTeacher.fullname}
-                    className="w-32 h-32 rounded-2xl border-4 border-white shadow-lg"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
                   />
-                  <div className="flex-1">
-                    <h2 className="text-3xl font-bold mb-2">{selectedTeacher.fullname}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div className="flex-1 text-center sm:text-left">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedTeacher.fullname}</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div><b>Teacher ID:</b> {selectedTeacher.teacher_id}</div>
                       <div><b>Department:</b> {selectedTeacher.department_name}</div>
                       <div><b>Qualification:</b> {selectedTeacher.qualification}</div>
@@ -1271,13 +1271,13 @@ const fetchClasses = async (subjectId: number) => {
                   {/* Subjects */}
                   {/* Subjects */}
 <div className="bg-gray-50 p-6 rounded-xl">
-  <div className="flex justify-between items-center mb-4">
-    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+    <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
       📚 Subjects Taught
     </h3>
     <button
       onClick={showAllTimetableData}
-      className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-lg transition-colors"
+      className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-lg transition-colors self-start sm:self-auto"
     >
       🔍 Debug Data
     </button>
@@ -1356,15 +1356,15 @@ const fetchClasses = async (subjectId: number) => {
 
                   {/* Attendance Summary */}
                   <div className="bg-gray-50 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                         🗓️ Monthly Attendance
                       </h3>
                       <input
                         type="month"
                         value={attendanceMonth}
                         onChange={(e) => setAttendanceMonth(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
                       />
                     </div>
                     {(() => {
@@ -1403,15 +1403,15 @@ const fetchClasses = async (subjectId: number) => {
 
                   {/* Leaves Summary */}
                   <div className="bg-gray-50 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                         📝 Leave History
                       </h3>
                       <input
                         type="month"
                         value={leaveMonth}
                         onChange={(e) => setLeaveMonth(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
                       />
                     </div>
                     <div className="space-y-3">
@@ -1445,17 +1445,17 @@ const fetchClasses = async (subjectId: number) => {
           {view === "students" && !selectedStudent && (
             <>
               {/* Filters */}
-              <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                <div className="flex flex-wrap gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+              <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Class</label>
                     <select
                       value={studentClassFilter}
                       onChange={(e) => {
                         setStudentClassFilter(e.target.value);
                         setStudentSectionFilter("all");
                       }}
-                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                      className="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
                     >
                       <option value="all">All Classes</option>
                       {studentUniqueClasses.map((clsName) => (
@@ -1466,12 +1466,12 @@ const fetchClasses = async (subjectId: number) => {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
                     <select
                       value={studentSectionFilter}
                       onChange={(e) => setStudentSectionFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                      className="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
                       disabled={studentClassFilter === "all"}
                     >
                       <option value="all">All Sections</option>
@@ -1484,7 +1484,7 @@ const fetchClasses = async (subjectId: number) => {
                   </div>
                 </div>
 
-                <div className="text-sm text-gray-600">
+                <div className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                   Showing <span className="font-semibold">{filteredStudentsByClass.length}</span> students
                 </div>
               </div>
@@ -1576,32 +1576,30 @@ const fetchClasses = async (subjectId: number) => {
                   <span>Back to Students</span>
                 </button>
                 
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex flex-col md:flex-row gap-6 items-start">
-                    <img
-                      src={selectedStudent.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={selectedStudent.fullname}
-                      className="w-32 h-32 rounded-2xl border-4 border-white shadow-lg"
-                    />
-                    <div>
-                      <h2 className="text-3xl font-bold mb-2">{selectedStudent.fullname}</h2>
-                      {(() => {
-                        const classInfo = getClassInfoForStudent(selectedStudent);
-                        const className = classInfo?.class_name;
-                        const section = classInfo?.sec;
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
+                  <img
+                    src={selectedStudent.profile_picture || "https://i.pravatar.cc/150"}
+                    alt={selectedStudent.fullname}
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
+                  />
+                  <div className="text-center sm:text-left">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedStudent.fullname}</h2>
+                    {(() => {
+                      const classInfo = getClassInfoForStudent(selectedStudent);
+                      const className = classInfo?.class_name;
+                      const section = classInfo?.sec;
 
-                        return (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                            <div><b>Student ID:</b> {selectedStudent.student_id}</div>
-                            <div><b>Class:</b> {className || "Class ?"}</div>
-                            <div><b>Section:</b> {section || "-"}</div>
-                            <div><b>Roll No:</b> {selectedStudent.student_id}</div>
-                            <div><b>Gender:</b> {selectedStudent.gender}</div>
-                            <div><b>DOB:</b> {selectedStudent.date_of_birth}</div>
-                          </div>
-                        );
-                      })()}
-                    </div>
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
+                          <div><b>Student ID:</b> {selectedStudent.student_id}</div>
+                          <div><b>Class:</b> {className || "Class ?"}</div>
+                          <div><b>Section:</b> {section || "-"}</div>
+                          <div><b>Roll No:</b> {selectedStudent.student_id}</div>
+                          <div><b>Gender:</b> {selectedStudent.gender}</div>
+                          <div><b>DOB:</b> {selectedStudent.date_of_birth}</div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1738,13 +1736,13 @@ const fetchClasses = async (subjectId: number) => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {/* Attendance */}
                       <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-3">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
                           <h4 className="font-semibold text-gray-800">🗓️ Attendance</h4>
                           <input
                             type="month"
                             value={studentAttendanceMonth}
                             onChange={(e) => setStudentAttendanceMonth(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm w-full sm:w-auto"
                           />
                         </div>
                         {(() => {
@@ -1893,13 +1891,13 @@ const fetchClasses = async (subjectId: number) => {
 
                       {/* Leaves */}
                       <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-3">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
                           <h4 className="font-semibold text-gray-800">📝 Leaves</h4>
                           <input
                             type="month"
                             value={studentLeaveMonth}
                             onChange={(e) => setStudentLeaveMonth(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm w-full sm:w-auto"
                           />
                         </div>
                         {(() => {
@@ -1999,20 +1997,20 @@ const fetchClasses = async (subjectId: number) => {
                   <span>←</span>
                   <span>Back to Principals</span>
                 </button>
-                <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
                   <img
                     src={selectedPrincipal.profile_picture || "https://i.pravatar.cc/150"}
                     alt={selectedPrincipal.fullname}
-                    className="w-32 h-32 rounded-2xl border-4 border-white shadow-lg"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
                   />
-                  <div className="flex-1">
-                    <h2 className="text-3xl font-bold mb-2">{selectedPrincipal.fullname}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div className="flex-1 text-center sm:text-left">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedPrincipal.fullname}</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div><b>Principal ID:</b> {selectedPrincipal.principal_id}</div>
                       <div><b>School:</b> {selectedPrincipal.school_name}</div>
                       <div><b>Experience:</b> {selectedPrincipal.experience_years} years</div>
                       <div><b>Phone:</b> {selectedPrincipal.phone}</div>
-                      <div><b>email:</b> {selectedPrincipal.email}</div>
+                      <div><b>email:</b> <span className="break-words">{selectedPrincipal.email}</span></div>
                       <div><b>Qualification:</b> {selectedPrincipal.qualification}</div>
                     </div>
                   </div>
@@ -2103,15 +2101,15 @@ const fetchClasses = async (subjectId: number) => {
 
                   {/* Attendance Summary */}
                   <div className="bg-gray-50 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                         🗓️ Monthly Attendance
                       </h3>
                       <input
                         type="month"
                         value={attendanceMonth}
                         onChange={(e) => setAttendanceMonth(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 w-full sm:w-auto"
                       />
                     </div>
                     {(() => {
@@ -2150,15 +2148,15 @@ const fetchClasses = async (subjectId: number) => {
 
                   {/* Leaves Summary */}
                   <div className="bg-gray-50 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                         📝 Leave History
                       </h3>
                       <input
                         type="month"
                         value={leaveMonth}
                         onChange={(e) => setLeaveMonth(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 w-full sm:w-auto"
                       />
                     </div>
                     <div className="space-y-3">

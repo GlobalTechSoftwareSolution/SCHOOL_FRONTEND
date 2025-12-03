@@ -20,8 +20,8 @@ import {
   Info
 } from 'lucide-react';
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/fee_structures/";
-const CLASSES_API_URL = "https://school.globaltechsoftwaresolutions.cloud/classes/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/fee_structures/`;
+const CLASSES_API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/classes/`;
 
 // ================= TYPES =================
 type Fee = {

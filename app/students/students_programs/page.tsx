@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Calendar, Users, DollarSign, Clock, AlertCircle, RefreshCw, Filter } from "lucide-react";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface Program {
   id: number;
@@ -42,7 +42,7 @@ const ProgramsPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_URL}programs/`);
+      const response = await axios.get(`${API_URL}/programs/`);
       setPrograms(response.data);
     } catch (err: any) {
       console.error("Error fetching programs:", err);

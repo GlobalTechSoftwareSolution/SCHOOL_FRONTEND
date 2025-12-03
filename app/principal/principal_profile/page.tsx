@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface Principal {
   email: string;
@@ -40,8 +40,8 @@ const PrincipalProfilePage = () => {
 
   const email = getPrincipalEmail();
   
-  // 🔄 TEMPORARY: Override to test with test8@example.com
-  const testEmail = "test8@example.com";
+  // Use email from localStorage
+  const testEmail = email;
 
   // ✅ Fetch principal info by email
   useEffect(() => {

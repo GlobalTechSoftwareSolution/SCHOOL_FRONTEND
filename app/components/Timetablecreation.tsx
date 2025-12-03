@@ -76,11 +76,9 @@ interface SubjectInfo {
   color_code?: string;
 }
 
-const API_BASE = 'http://school.globaltechsoftwaresolutions.cloud';
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 export default function Timetablecreation() {
-  console.log('🚀 [APP] Timetablecreation component mounted');
-  console.log('📡 [API] API Base URL:', API_BASE);
   const [entries, setEntries] = useState<TimetableEntry[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number | 'all'>('all');
@@ -159,19 +157,13 @@ export default function Timetablecreation() {
       setLoading(true);
       setError('');
       const res = await axios.get(`${API_BASE}/timetable/`);
-      console.log('✅ [API] Timetable data fetched successfully');
       const data = Array.isArray(res.data) ? res.data : [];
-      console.log('📋 [API] Entries count:', data.length);
       setEntries(data);
     } catch (err: any) {
-      console.log('❌ [API] Error fetching timetable:', err);
-      console.error('❌ [API] Full error details:', err);
       const errorMessage = err?.response?.data?.message || 'Failed to load timetable';
-      console.log('❌ [API] Error message:', errorMessage);
       setError(errorMessage);
     } finally {
       setLoading(false);
-      console.log('🏁 [API] Fetch timetable operation completed');
     }
   }, []);
 
@@ -291,28 +283,15 @@ export default function Timetablecreation() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('📝 [FORM] Form submission started');
     
     // Validate required fields
-    console.log('🔍 [FORM] Validating required fields:', {
-      class_id: newEntry.class_id,
-      subject: newEntry.subject,
-      start_time: newEntry.start_time,
-      end_time: newEntry.end_time,
-      teacher: newEntry.teacher,
-      day_of_week: newEntry.day_of_week
-    });
-    
     if (!newEntry.class_id || !newEntry.subject || !newEntry.start_time || !newEntry.end_time || !newEntry.teacher || !newEntry.day_of_week) {
-      console.log('❌ [FORM] Required fields missing');
       setError('Please fill all required fields');
       return;
     }
 
-    console.log('🔍 [FORM] Checking for conflicts...');
     const conflictMessage = checkForConflicts(newEntry);
     if (conflictMessage) {
-      console.log('⚠️ [FORM] Conflict detected:', conflictMessage);
       setError(formatConflictMessage(conflictMessage));
       return;
     }
@@ -320,7 +299,6 @@ export default function Timetablecreation() {
     try {
       setSaving(true);
       setError('');
-      console.log('📡 [API] Preparing to save timetable entry');
 
       // Convert day_of_week from key to proper format if needed
       let formattedDay = newEntry.day_of_week;
@@ -339,11 +317,6 @@ export default function Timetablecreation() {
         room_number: newEntry.room_number || null,
         color_code: newEntry.color_code || null,
       };
-      
-      console.log('📡 [API] Day of week conversion:', { original: newEntry.day_of_week, formatted: formattedDay });
-
-      // Log the payload for debugging
-      console.log('📡 [API] Sending payload:', payload);
 
       // Remove empty fields
       Object.keys(payload).forEach(key => {
@@ -352,33 +325,22 @@ export default function Timetablecreation() {
         }
       });
 
-      console.log('📡 [API] Final payload after cleanup:', payload);
-
-      console.log('📡 [API] Payload:', payload);
-
       if (editingEntry) {
-        console.log('📡 [API] Sending PATCH request to update entry', `${API_BASE}/timetable/${editingEntry.id}/`);
         try {
           await axios.patch(`${API_BASE}/timetable/${editingEntry.id}/`, payload);
-          console.log('✅ [API] Entry updated successfully');
           setError(`✅ Timetable entry updated successfully!`);
         } catch (patchError: any) {
-          console.log('⚠️ [API] PATCH failed, trying PUT as fallback', patchError);
           // If PATCH fails, try PUT as fallback
           try {
             await axios.put(`${API_BASE}/timetable/${editingEntry.id}/`, payload);
-            console.log('✅ [API] Entry updated successfully with PUT');
             setError(`✅ Timetable entry updated successfully!`);
           } catch (putError: any) {
             // If both PATCH and PUT fail, re-throw the error
-            console.log('❌ [API] Both PATCH and PUT failed', putError);
             throw new Error(`Failed to update: ${putError?.response?.data?.message || putError?.message || 'Unknown error'}`);
           }
         }
       } else {
-        console.log('📡 [API] Sending POST request to create new entry', `${API_BASE}/timetable/`);
         await axios.post(`${API_BASE}/timetable/`, payload);
-        console.log('✅ [API] New entry created successfully');
         setError(`✅ New timetable entry created successfully!`);
       }
 
@@ -387,16 +349,11 @@ export default function Timetablecreation() {
       } else {
         resetNewEntryForm();
       }
-      console.log('🔄 [API] Refreshing timetable data');
       await fetchTimetable();
     } catch (err: any) {
-      console.log('❌ [API] Error saving timetable entry:', err);
-      console.error('❌ [API] Full error details:', err);
-      
       // Extract detailed error information
       let errorMessage = 'Failed to save timetable entry';
       if (err?.response?.data) {
-        console.log('❌ [API] Backend error response:', err.response.data);
         if (err.response.data.message) {
           errorMessage = err.response.data.message;
         } else if (err.response.data.detail) {
@@ -409,12 +366,9 @@ export default function Timetablecreation() {
       } else if (err?.message) {
         errorMessage = err.message;
       }
-      
-      console.log('❌ [API] Final error message:', errorMessage);
       setError(`Failed to save timetable entry: ${errorMessage}`);
     } finally {
       setSaving(false);
-      console.log('🏁 [FORM] Save operation completed');
       // Clear success message after 3 seconds
       setTimeout(() => {
         if (!saving && error?.startsWith('✅')) {
@@ -957,21 +911,14 @@ export default function Timetablecreation() {
   const confirmDelete = async () => {
     if (!deletingEntryId) return;
     
-    console.log('📝 [FORM] Delete confirmation started for entry:', deletingEntryId);
-    
     try {
-      console.log('📡 [API] Sending DELETE request for entry:', deletingEntryId);
       await axios.delete(`${API_BASE}/timetable/${deletingEntryId}/`);
-      console.log('✅ [API] Entry deleted successfully');
       await fetchTimetable();
       setShowDeleteConfirm(false);
       setDeletingEntryId(null);
       setError(`✅ Timetable entry deleted successfully!`);
     } catch (err: any) {
-      console.log('❌ [API] Error deleting timetable entry:', err);
-      console.error('❌ [API] Full error details:', err);
       const errorMessage = err?.response?.data?.message || 'Failed to delete timetable entry';
-      console.log('❌ [API] Error message:', errorMessage);
       setError(errorMessage);
       setShowDeleteConfirm(false);
       setDeletingEntryId(null);

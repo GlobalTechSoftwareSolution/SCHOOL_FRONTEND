@@ -22,7 +22,7 @@ import {
 } from "react-icons/fi";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/issues/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/issues/`;
 
 interface Issue {
   id: number;
@@ -74,16 +74,68 @@ const Issues_Page = () => {
   const fetchIssues = async () => {
     try {
       setLoading(true);
+      
+      // Get user email from localStorage
+      const userEmail = localStorage.getItem("email") || 
+                       JSON.parse(localStorage.getItem("userData") || "{}")?.email ||
+                       JSON.parse(localStorage.getItem("userInfo") || "{}")?.email;
+      
+      console.log("🔍 User email from localStorage:", userEmail);
+      
+      if (!userEmail) {
+        console.error("No user email found in localStorage");
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch all issues
+      console.log("🔍 Fetching issues from:", API_URL);
       const res = await axios.get(API_URL);
-      setIssues(res.data);
-    } catch (err) {
+      
+      console.log("📥 All issues from API:", res.data);
+      
+      // Check if we got data
+      if (!res.data || !Array.isArray(res.data)) {
+        console.error("Invalid data received from API:", res.data);
+        setIssues([]);
+        return;
+      }
+      
+      // Filter issues to show those raised to the current user OR raised by the current user
+      const userIssues = res.data.filter((issue: Issue) => {
+        const issueRaisedTo = issue.raised_to?.toLowerCase().trim();
+        const issueRaisedBy = issue.raised_by?.toLowerCase().trim();
+        const userEmailLower = userEmail.toLowerCase().trim();
+        const matches = issueRaisedTo === userEmailLower || issueRaisedBy === userEmailLower;
+        console.log(`🔍 Issue ${issue.id}: raised_to="${issue.raised_to}", raised_by="${issue.raised_by}", user="${userEmail}", matches=${matches}`);
+        return matches;
+      });
+      
+      console.log("✅ Filtered issues for user:", userIssues);
+      
+      setIssues(userIssues);
+    } catch (err: any) {
       console.error("Error fetching issues:", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
+      // Set empty array on error to avoid infinite loading
+      setIssues([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    console.log("🔍 Checking localStorage values:");
+    console.log("email:", localStorage.getItem("email"));
+    console.log("userData:", localStorage.getItem("userData"));
+    console.log("userInfo:", localStorage.getItem("userInfo"));
+    
     fetchIssues();
   }, []);
 
@@ -91,9 +143,19 @@ const Issues_Page = () => {
   const handleAddIssue = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Get user email from localStorage
+      const userEmail = localStorage.getItem("email") || 
+                       JSON.parse(localStorage.getItem("userData") || "{}")?.email ||
+                       JSON.parse(localStorage.getItem("userInfo") || "{}")?.email;
+      
+      if (!userEmail) {
+        alert("User email not found. Please log in again.");
+        return;
+      }
+      
       const issueData = {
         ...newIssue,
-        raised_by: localStorage.getItem("email") || "admin@school.com",
+        raised_by: userEmail,
         status: "Open"
       };
       
@@ -106,8 +168,14 @@ const Issues_Page = () => {
         raised_to: "",
       });
       fetchIssues();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error adding issue:", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       alert("Failed to create issue.");
     }
   };
@@ -120,8 +188,14 @@ const Issues_Page = () => {
       if (selectedIssue && selectedIssue.id === id) {
         setSelectedIssue({ ...selectedIssue, status: newStatus });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating status:", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       alert("Failed to update issue status.");
     }
   };
@@ -132,10 +206,10 @@ const Issues_Page = () => {
 
     try {
       // 🔹 Get commenter email from localStorage
-      const commenterEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("email")
-          : "admin@school.com";
+      const commenterEmail = localStorage.getItem("email") || 
+                           JSON.parse(localStorage.getItem("userData") || "{}")?.email ||
+                           JSON.parse(localStorage.getItem("userInfo") || "{}")?.email ||
+                           "admin@school.com";
 
       // 🔹 Format the comment with email + timestamp
       const updatedDescription =
@@ -152,8 +226,14 @@ const Issues_Page = () => {
       setSelectedIssue(res.data);
       setNewComment("");
       fetchIssues(); // Refresh list silently
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error adding comment:", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       // Instead of alert, show smooth inline message
       setNewComment("❌ Failed to add comment. Try again.");
       setTimeout(() => setNewComment(""), 2000);
@@ -170,8 +250,14 @@ const Issues_Page = () => {
         setShowView(false);
         setSelectedIssue(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting issue:", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       alert("Failed to delete issue.");
     }
   };
@@ -186,8 +272,14 @@ const Issues_Page = () => {
     try {
       const res = await axios.get(`${API_URL}${issue.id}/`);
       setSelectedIssue(res.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching issue details:", err);
+      console.error("Error details:", {
+        message: err.message,
+        code: err.code,
+        response: err.response?.data,
+        status: err.response?.status
+      });
     }
   };
 

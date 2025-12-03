@@ -39,37 +39,39 @@ export default function ContactPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
 
-    emailjs
-      .send(
-        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "",
-        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || "",
-        formData,
-        process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || ""
-      )
-      .then(
-        () => {
-          setSending(false);
-          setShowPopup(true);
-          setFormData({
-            from_name: "",
-            from_email: "",
-            phone: "",
-            subject: "",
-            message: "",
-            institution: "",
-            department: ""
-          });
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/contact/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        (error) => {
-          console.error("EmailJS Error:", error);
-          setSending(false);
-          alert("❌ Failed to send message. Please try again later.");
-        }
-      );
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setSending(false);
+        setShowPopup(true);
+        setFormData({
+          from_name: "",
+          from_email: "",
+          phone: "",
+          subject: "",
+          message: "",
+          institution: "",
+          department: ""
+        });
+      } else {
+        throw new Error("Failed to send message");
+      }
+    } catch (error) {
+      // Silently handle API errors
+      setSending(false);
+      alert("❌ Failed to send message. Please try again later.");
+    }
   };
 
   const contactFeatures = [

@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 // Type definitions
 interface AttendanceData {

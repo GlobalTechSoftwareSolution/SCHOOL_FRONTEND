@@ -27,7 +27,7 @@ import {
   Eye
 } from "lucide-react";
 
-const API_BASE = "http://school.globaltechsoftwaresolutions.cloud";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 const TeachersPage = () => {
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -314,7 +314,7 @@ const TeachersPage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6">
+                <div className="grid grid-cols-1 xs:grid-cols-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6">
                   {filteredTeachers.map((teacher) => (
                     <div
                       key={teacher.id || teacher.email}
@@ -410,7 +410,7 @@ const TeachersPage = () => {
                     <img
                       src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150?img=12"}
                       alt={selectedTeacher.fullname}
-                      className="w-20 h-20 xs:w-24 xs:h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-lg xs:rounded-xl sm:rounded-2xl border-2 xs:border-2 sm:border-4 border-white/80 shadow-2xl"
+                      className="w-20 h-20 xs:w-24 xs:h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-lg xs:rounded-xl sm:rounded-2xl border-2 xs:border-2 sm:border-4 border-white/80 shadow-2xl mx-auto lg:mx-0"
                     />
                     <div className="absolute -bottom-1 xs:-bottom-1 sm:-bottom-2 -right-1 xs:-right-1 sm:-right-2 w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-green-400 border-2 border-white rounded-full shadow-lg"></div>
                   </div>
@@ -421,30 +421,30 @@ const TeachersPage = () => {
                       {selectedTeacher.department_name}
                     </p>
                     
-                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 xs:gap-3 sm:gap-4 text-xs sm:text-sm">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 xs:gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div className="flex items-center gap-1.5 xs:gap-2 justify-center lg:justify-start min-w-0">
-                        <span className="font-semibold text-blue-200 flex-shrink-0">Teacher ID:</span>
-                        <span className="font-mono truncate">{selectedTeacher.teacher_id}</span>
+                        <span className="font-semibold text-blue-200 flex-shrink-0 text-xs">Teacher ID:</span>
+                        <span className="font-mono truncate text-xs">{selectedTeacher.teacher_id}</span>
                       </div>
                       <div className="flex items-center gap-1.5 xs:gap-2 justify-center lg:justify-start min-w-0">
                         <Mail className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 text-blue-200 flex-shrink-0" />
-                        <span className="truncate">{selectedTeacher.email}</span>
+                        <span className="truncate text-xs">{selectedTeacher.email}</span>
                       </div>
                       <div className="flex items-center gap-1.5 xs:gap-2 justify-center lg:justify-start">
                         <Phone className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 text-blue-200 flex-shrink-0" />
-                        <span>{selectedTeacher.phone}</span>
+                        <span className="text-xs">{selectedTeacher.phone}</span>
                       </div>
                       <div className="flex items-center gap-1.5 xs:gap-2 justify-center lg:justify-start">
-                        <span className="font-semibold text-blue-200 flex-shrink-0">Exp:</span>
-                        <span>{selectedTeacher.experience_years} yrs</span>
+                        <span className="font-semibold text-blue-200 flex-shrink-0 text-xs">Exp:</span>
+                        <span className="text-xs">{selectedTeacher.experience_years} yrs</span>
                       </div>
                       <div className="flex items-center gap-1.5 xs:gap-2 justify-center lg:justify-start min-w-0">
-                        <span className="font-semibold text-blue-200 flex-shrink-0">Qual:</span>
-                        <span className="truncate">{selectedTeacher.qualification}</span>
+                        <span className="font-semibold text-blue-200 flex-shrink-0 text-xs">Qual:</span>
+                        <span className="truncate text-xs">{selectedTeacher.qualification}</span>
                       </div>
                       <div className="flex items-center gap-1.5 xs:gap-2 justify-center lg:justify-start">
-                        <span className="font-semibold text-blue-200 flex-shrink-0">Joined:</span>
-                        <span className="truncate">{selectedTeacher.date_joined}</span>
+                        <span className="font-semibold text-blue-200 flex-shrink-0 text-xs">Joined:</span>
+                        <span className="truncate text-xs">{selectedTeacher.date_joined}</span>
                       </div>
                     </div>
                   </div>
@@ -489,29 +489,29 @@ const TeachersPage = () => {
               {/* Tabs Section */}
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
                 <div className="border-b border-gray-200">
-                  <nav className="flex overflow-x-auto">
-                    {["overview", "subjects", "attendance", "leaves", "contact", "analytics"].map((tab) => (
+                  <nav className="flex overflow-x-auto pb-1">
+                    {['overview', 'subjects', 'attendance', 'leaves', 'contact', 'analytics'].map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`flex items-center gap-2 px-8 py-4 font-medium text-sm transition-all whitespace-nowrap border-b-2 ${
+                        className={`flex items-center gap-1.5 xs:gap-2 px-3 xs:px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm transition-all whitespace-nowrap border-b-2 ${
                           activeTab === tab
                             ? "text-blue-600 border-blue-600 bg-blue-50/50"
                             : "text-gray-500 hover:text-gray-700 border-transparent hover:bg-gray-50"
                         }`}
                       >
-                        {tab === "overview" && <User className="w-4 h-4" />}
-                        {tab === "subjects" && <BookMarked className="w-4 h-4" />}
-                        {tab === "attendance" && <Calendar className="w-4 h-4" />}
-                        {tab === "leaves" && <Clock className="w-4 h-4" />}
-                        {tab === "contact" && <Contact className="w-4 h-4" />}
-                        {tab === "analytics" && <BarChart3 className="w-4 h-4" />}
-                        {tab === "overview" && "Overview"}
-                        {tab === "subjects" && "Subjects & Classes"}
-                        {tab === "attendance" && "Attendance"}
-                        {tab === "leaves" && "Leave History"}
-                        {tab === "contact" && "Contact Info"}
-                        {tab === "analytics" && "Analytics"}
+                        {tab === "overview" && <User className="w-3.5 h-3.5 xs:w-4 xs:h-4" />}
+                        {tab === "subjects" && <BookMarked className="w-3.5 h-3.5 xs:w-4 xs:h-4" />}
+                        {tab === "attendance" && <Calendar className="w-3.5 h-3.5 xs:w-4 xs:h-4" />}
+                        {tab === "leaves" && <Clock className="w-3.5 h-3.5 xs:w-4 xs:h-4" />}
+                        {tab === "contact" && <Contact className="w-3.5 h-3.5 xs:w-4 xs:h-4" />}
+                        {tab === "analytics" && <BarChart3 className="w-3.5 h-3.5 xs:w-4 xs:h-4" />}
+                        {tab === "overview" && <span className="hidden xs:inline">Overview</span>}
+                        {tab === "subjects" && <span className="hidden xs:inline">Subjects & Classes</span>}
+                        {tab === "attendance" && <span className="hidden xs:inline">Attendance</span>}
+                        {tab === "leaves" && <span className="hidden xs:inline">Leave History</span>}
+                        {tab === "contact" && <span className="hidden xs:inline">Contact Info</span>}
+                        {tab === "analytics" && <span className="hidden xs:inline">Analytics</span>}
                       </button>
                     ))}
                   </nav>
@@ -520,16 +520,16 @@ const TeachersPage = () => {
                 <div className="p-6">
                   {/* ✅ Overview Tab */}
                   {activeTab === "overview" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       {/* Personal Information */}
-                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 rounded-xl">
-                            <User className="w-5 h-5 text-blue-600" />
+                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3">
+                          <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg sm:rounded-xl">
+                            <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                           </div>
                           Personal Information
                         </h3>
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {[
                             { label: "Full Name", value: selectedTeacher.fullname },
                             { label: "Gender", value: selectedTeacher.gender },
@@ -537,23 +537,23 @@ const TeachersPage = () => {
                             { label: "Nationality", value: selectedTeacher.nationality || "N/A" },
                             { label: "Blood Group", value: selectedTeacher.blood_group || "N/A" }
                           ].map((item, index) => (
-                            <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                              <span className="text-gray-600 font-medium">{item.label}:</span>
-                              <span className="font-semibold text-gray-800">{item.value}</span>
+                            <div key={index} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-gray-100 last:border-b-0">
+                              <span className="text-gray-600 font-medium text-sm sm:text-base">{item.label}:</span>
+                              <span className="font-semibold text-gray-800 text-sm sm:text-base">{item.value}</span>
                             </div>
                           ))}
                         </div>
                       </div>
 
                       {/* Professional Information */}
-                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                          <div className="p-2 bg-green-100 rounded-xl">
-                            <Award className="w-5 h-5 text-green-600" />
+                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3">
+                          <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg sm:rounded-xl">
+                            <Award className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                           </div>
                           Professional Details
                         </h3>
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {[
                             { label: "Teacher ID", value: selectedTeacher.teacher_id },
                             { label: "Department", value: selectedTeacher.department_name },
@@ -561,32 +561,32 @@ const TeachersPage = () => {
                             { label: "Experience", value: `${selectedTeacher.experience_years} years` },
                             { label: "Date Joined", value: selectedTeacher.date_joined }
                           ].map((item, index) => (
-                            <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                              <span className="text-gray-600 font-medium">{item.label}:</span>
-                              <span className="font-semibold text-gray-800">{item.value}</span>
+                            <div key={index} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-gray-100 last:border-b-0">
+                              <span className="text-gray-600 font-medium text-sm sm:text-base">{item.label}:</span>
+                              <span className="font-semibold text-gray-800 text-sm sm:text-base">{item.value}</span>
                             </div>
                           ))}
                         </div>
                       </div>
 
                       {/* Quick Stats */}
-                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm lg:col-span-2">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                          <div className="p-2 bg-purple-100 rounded-xl">
-                            <TrendingUp className="w-5 h-5 text-purple-600" />
+                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm md:col-span-2">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3">
+                          <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg sm:rounded-xl">
+                            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                           </div>
                           Performance Overview
                         </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 xs:grid-cols-4 gap-3 sm:gap-4">
                           {[
                             { value: stats.presentDays, label: "Days Present", color: "text-blue-600", bg: "bg-blue-50" },
                             { value: stats.absentDays, label: "Days Absent", color: "text-red-600", bg: "bg-red-50" },
                             { value: stats.totalSubjects, label: "Subjects", color: "text-green-600", bg: "bg-green-50" },
                             { value: stats.totalClasses, label: "Classes", color: "text-purple-600", bg: "bg-purple-50" }
                           ].map((stat, index) => (
-                            <div key={index} className={`p-4 rounded-2xl ${stat.bg} text-center group hover:scale-105 transition-transform`}>
-                              <div className={`text-2xl font-bold ${stat.color} mb-1`}>{stat.value}</div>
-                              <div className="text-sm text-gray-600 font-medium">{stat.label}</div>
+                            <div key={index} className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl ${stat.bg} text-center group hover:scale-105 transition-transform`}>
+                              <div className={`text-xl sm:text-2xl font-bold ${stat.color} mb-1`}>{stat.value}</div>
+                              <div className="text-xs sm:text-sm text-gray-600 font-medium">{stat.label}</div>
                             </div>
                           ))}
                         </div>
@@ -596,33 +596,33 @@ const TeachersPage = () => {
 
                   {/* ✅ Subjects & Classes Tab */}
                   {activeTab === "subjects" && (
-                    <div className="space-y-6">
+                    <div className="space-y-4 sm:space-y-6">
                       {/* Subjects */}
-                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                          <div className="p-2 bg-green-100 rounded-xl">
-                            <BookMarked className="w-5 h-5 text-green-600" />
+                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+                          <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg sm:rounded-xl">
+                            <BookMarked className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                           </div>
                           Subjects Taught
                         </h3>
 
                         {selectedTeacher.subject_list && selectedTeacher.subject_list.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             {selectedTeacher.subject_list.map((subject: any, index: number) => (
                               <div
                                 key={index}
                                 onClick={() => handleSubjectSelect(subject)}
-                                className={`bg-white rounded-xl p-4 border cursor-pointer transition-all shadow-sm hover:shadow-md group ${
+                                className={`bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border cursor-pointer transition-all shadow-sm hover:shadow-md group ${
                                   selectedSubject?.id === subject.id ? "border-blue-500 ring-2 ring-blue-300" : "border-gray-200 hover:border-blue-300"
                                 }`}
                               >
-                                <div className="flex items-start justify-between mb-3">
-                                  <h4 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
+                                <div className="flex items-start justify-between mb-2 sm:mb-3">
+                                  <h4 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors text-sm sm:text-base">
                                     {subject.subject_name}
                                   </h4>
-                                  <Eye className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                                  <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
                                 </div>
-                                <div className="space-y-2 text-sm text-gray-600">
+                                <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600">
                                   <div className="flex justify-between">
                                     <span className="font-medium">Subject ID:</span>
                                     <span className="font-mono text-xs">{subject.id}</span>
@@ -642,52 +642,52 @@ const TeachersPage = () => {
                             ))}
                           </div>
                         ) : (
-                          <div className="text-center py-12">
-                            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                              <BookMarked className="w-8 h-8 text-gray-400" />
+                          <div className="text-center py-8 sm:py-12">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                              <BookMarked className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                             </div>
-                            <h4 className="text-gray-700 font-semibold mb-2">No Subjects Assigned</h4>
-                            <p className="text-gray-500">No subjects assigned to this teacher.</p>
+                            <h4 className="text-gray-700 font-semibold mb-1.5 sm:mb-2 text-sm sm:text-base">No Subjects Assigned</h4>
+                            <p className="text-gray-500 text-xs sm:text-sm">No subjects assigned to this teacher.</p>
                           </div>
                         )}
                       </div>
 
                       {/* Classes from Timetable for selected subject */}
                       {selectedSubject && (
-                        <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                          <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-3">
-                              <div className="p-2 bg-purple-100 rounded-xl">
-                                <Building className="w-5 h-5 text-purple-600" />
+                        <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+                          <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 sm:gap-0 mb-4 sm:mb-6">
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2 sm:gap-3">
+                              <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg sm:rounded-xl">
+                                <Building className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                               </div>
-                              Classes Assigned — <span className="text-blue-600 ml-2">{selectedSubject.subject_name}</span>
+                              Classes Assigned — <span className="text-blue-600 ml-1.5 sm:ml-2 text-sm sm:text-base">{selectedSubject.subject_name}</span>
                             </h3>
-                            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                            <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full w-fit">
                               {filteredTimetable.length} classes
                             </span>
                           </div>
 
                           {timetableLoading ? (
-                            <div className="flex justify-center items-center py-12">
+                            <div className="flex justify-center items-center py-8 sm:py-12">
                               <div className="text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
-                                <p className="text-gray-500">Loading classes...</p>
+                                <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500 mx-auto mb-2 sm:mb-3"></div>
+                                <p className="text-gray-500 text-sm sm:text-base">Loading classes...</p>
                               </div>
                             </div>
                           ) : filteredTimetable.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                               {filteredTimetable.map((item: any, index: number) => (
                                 <div
                                   key={index}
-                                  className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all group"
+                                  className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm hover:shadow-md transition-all group"
                                 >
-                                  <h4 className="font-semibold text-gray-800 mb-3 group-hover:text-purple-600 transition-colors">
+                                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 group-hover:text-purple-600 transition-colors text-sm sm:text-base">
                                     {item.class_name}
                                   </h4>
-                                  <div className="space-y-2 text-sm text-gray-600">
-                                    <div className="flex justify-between">
+                                  <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600">
+                                    <div className="flex justify-between items-center">
                                       <span className="font-medium">Section:</span>
-                                      <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
+                                      <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full text-xs font-medium">
                                         {item.section}
                                       </span>
                                     </div>
@@ -704,12 +704,12 @@ const TeachersPage = () => {
                               ))}
                             </div>
                           ) : (
-                            <div className="text-center py-12">
-                              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <Building className="w-8 h-8 text-gray-400" />
+                            <div className="text-center py-8 sm:py-12">
+                              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                                <Building className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                               </div>
-                              <h4 className="text-gray-700 font-semibold mb-2">No Classes Found</h4>
-                              <p className="text-gray-500">No timetable entries found for this subject.</p>
+                              <h4 className="text-gray-700 font-semibold mb-1.5 sm:mb-2 text-sm sm:text-base">No Classes Found</h4>
+                              <p className="text-gray-500 text-xs sm:text-sm">No timetable entries found for this subject.</p>
                             </div>
                           )}
                         </div>
@@ -719,173 +719,245 @@ const TeachersPage = () => {
 
                   {/* ✅ Attendance Tab */}
                   {activeTab === "attendance" && (
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-xl">
-                          <Calendar className="w-5 h-5 text-blue-600" />
+                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg sm:rounded-xl">
+                          <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                         </div>
                         Attendance Records
                       </h3>
                       {loading ? (
-                        <div className="flex justify-center items-center py-12">
+                        <div className="flex justify-center items-center py-8 sm:py-12">
                           <div className="text-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
-                            <p className="text-gray-500">Loading attendance records...</p>
-                          </div>
-                        </div>
-                      ) : attendance.filter((a: any) => {
-                          const email = selectedTeacher.email?.toLowerCase();
-                          if (!email) return false;
-
-                          return a.user_email?.toLowerCase() === email;
-                        }).length > 0 ? (
-                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full">
-                              <thead className="bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                  {["Date", "Day", "Status", "Check-in Time"].map((header) => (
-                                    <th
-                                      key={header}
-                                      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
-                                    >
-                                      {header}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {attendance
-                                  .filter((record: any) => {
-                                    const email = selectedTeacher.email?.toLowerCase();
-                                    if (!email) return false;
-
-                                    return record.user_email?.toLowerCase() === email;
-                                  })
-                                  .map((record: any, index: number) => (
-                                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {record.date}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' })}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                                          record.status === "Present" 
-                                            ? "bg-green-100 text-green-800 border border-green-200"
-                                            : "bg-red-100 text-red-800 border border-red-200"
-                                        }`}>
-                                          {record.status === "Present" ? (
-                                            <CheckCircle className="w-3 h-3 mr-1" />
-                                          ) : (
-                                            <XCircle className="w-3 h-3 mr-1" />
-                                          )}
-                                          {record.status}
-                                        </span>
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {record.check_in_time || record.check_in || (
-                                          <span className="text-gray-400">Not recorded</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                              </tbody>
-                            </table>
+                            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500 mx-auto mb-2 sm:mb-3"></div>
+                            <p className="text-gray-500 text-sm sm:text-base">Loading attendance records...</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-12">
-                          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <Calendar className="w-8 h-8 text-gray-400" />
+                        <>
+                          {/* Table view for larger screens */}
+                          <div className="hidden sm:block bg-white rounded-lg sm:rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full">
+                                <thead className="bg-gray-50 border-b border-gray-200">
+                                  <tr>
+                                    {['Date', 'Day', 'Status', 'Check-in Time'].map((header) => (
+                                      <th
+                                        key={header}
+                                        className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                      >
+                                        {header}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {attendance
+                                    .filter((record: any) => {
+                                      const email = selectedTeacher.email?.toLowerCase();
+                                      if (!email) return false;
+
+                                      return record.user_email?.toLowerCase() === email;
+                                    })
+                                    .map((record: any, index: number) => (
+                                      <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
+                                          {record.date}
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                                          {new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                          <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold ${
+                                            record.status === "Present" 
+                                              ? "bg-green-100 text-green-800 border border-green-200"
+                                              : "bg-red-100 text-red-800 border border-red-200"
+                                          }`}>
+                                            {record.status === "Present" ? (
+                                              <CheckCircle className="w-3 h-3 mr-1" />
+                                            ) : (
+                                              <XCircle className="w-3 h-3 mr-1" />
+                                            )}
+                                            {record.status}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                                          {record.check_in_time || record.check_in || (
+                                            <span className="text-gray-400 text-xs">Not recorded</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                          <h4 className="text-gray-700 font-semibold mb-2">No Attendance Records</h4>
-                          <p className="text-gray-500">No attendance records found for this teacher.</p>
-                        </div>
+                          
+                          {/* Card view for small screens */}
+                          <div className="sm:hidden grid grid-cols-1 gap-3">
+                            {attendance
+                              .filter((record: any) => {
+                                const email = selectedTeacher.email?.toLowerCase();
+                                if (!email) return false;
+
+                                return record.user_email?.toLowerCase() === email;
+                              })
+                              .map((record: any, index: number) => (
+                                <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+                                  <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                      <h4 className="font-semibold text-gray-900 text-sm">{record.date}</h4>
+                                      <p className="text-xs text-gray-600">
+                                        {new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                                      </p>
+                                    </div>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                                      record.status === "Present" 
+                                        ? "bg-green-100 text-green-800 border border-green-200"
+                                        : "bg-red-100 text-red-800 border border-red-200"
+                                    }`}>
+                                      {record.status === "Present" ? (
+                                        <CheckCircle className="w-3 h-3 mr-1" />
+                                      ) : (
+                                        <XCircle className="w-3 h-3 mr-1" />
+                                      )}
+                                      {record.status}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    <span className="font-medium">Check-in:</span> 
+                                    <span className="ml-1">
+                                      {record.check_in_time || record.check_in || "Not recorded"}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </>
                       )}
                     </div>
                   )}
 
                   {/* ✅ Leaves Tab */}
                   {activeTab === "leaves" && (
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <div className="p-2 bg-orange-100 rounded-xl">
-                          <Clock className="w-5 h-5 text-orange-600" />
+                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg sm:rounded-xl">
+                          <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                         </div>
                         Leave History
                       </h3>
                       {loading ? (
-                        <div className="flex justify-center items-center py-12">
+                        <div className="flex justify-center items-center py-8 sm:py-12">
                           <div className="text-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
-                            <p className="text-gray-500">Loading leave records...</p>
+                            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500 mx-auto mb-2 sm:mb-3"></div>
+                            <p className="text-gray-500 text-sm sm:text-base">Loading leave records...</p>
                           </div>
                         </div>
                       ) : leaves.length > 0 ? (
-                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full">
-                              <thead className="bg-gray-50 border-b border-gray-200">
-                                <tr>
-                                  {["Leave Type", "Start Date", "End Date", "Reason", "Status", "Approved By"].map((header) => (
-                                    <th
-                                      key={header}
-                                      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
-                                    >
-                                      {header}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {leaves.map((leave: any, index: number) => (
-                                  <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                      {leave.leave_type}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                      {leave.start_date}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                      {leave.end_date}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
-                                      <div className="line-clamp-2">{leave.reason}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                                        leave.status === "Approved" 
-                                          ? "bg-green-100 text-green-800 border border-green-200"
-                                          : leave.status === "Pending"
-                                          ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                                          : "bg-red-100 text-red-800 border border-red-200"
-                                      }`}>
-                                        {leave.status === "Approved" && <CheckCircle className="w-3 h-3 mr-1" />}
-                                        {leave.status === "Pending" && <Clock4 className="w-3 h-3 mr-1" />}
-                                        {leave.status === "Rejected" && <XCircle className="w-3 h-3 mr-1" />}
-                                        {leave.status}
-                                      </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">
-                                      {leave.approved_by_email || (
-                                        <span className="text-gray-400">Not specified</span>
-                                      )}
-                                    </td>
+                        <>
+                          {/* Table view for larger screens */}
+                          <div className="hidden sm:block bg-white rounded-lg sm:rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full">
+                                <thead className="bg-gray-50 border-b border-gray-200">
+                                  <tr>
+                                    {["Leave Type", "Start Date", "End Date", "Reason", "Status", "Approved By"].map((header) => (
+                                      <th
+                                        key={header}
+                                        className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                      >
+                                        {header}
+                                      </th>
+                                    ))}
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {leaves.map((leave: any, index: number) => (
+                                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
+                                        {leave.leave_type}
+                                      </td>
+                                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                                        {leave.start_date}
+                                      </td>
+                                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                                        {leave.end_date}
+                                      </td>
+                                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 max-w-xs">
+                                        <div className="line-clamp-2">{leave.reason}</div>
+                                      </td>
+                                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                                        <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold ${
+                                          leave.status === "Approved" 
+                                            ? "bg-green-100 text-green-800 border border-green-200"
+                                            : leave.status === "Pending"
+                                            ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                                            : "bg-red-100 text-red-800 border border-red-200"
+                                        }`}>
+                                          {leave.status === "Approved" && <CheckCircle className="w-3 h-3 mr-1" />}
+                                          {leave.status === "Pending" && <Clock4 className="w-3 h-3 mr-1" />}
+                                          {leave.status === "Rejected" && <XCircle className="w-3 h-3 mr-1" />}
+                                          {leave.status}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600">
+                                        {leave.approved_by_email || (
+                                          <span className="text-gray-400 text-xs">Not specified</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
+                          
+                          {/* Card view for small screens */}
+                          <div className="sm:hidden grid grid-cols-1 gap-3">
+                            {leaves.map((leave: any, index: number) => (
+                              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">{leave.leave_type}</h4>
+                                    <p className="text-xs text-gray-600">
+                                      {leave.start_date} to {leave.end_date}
+                                    </p>
+                                  </div>
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                                    leave.status === "Approved" 
+                                      ? "bg-green-100 text-green-800 border border-green-200"
+                                      : leave.status === "Pending"
+                                      ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                                      : "bg-red-100 text-red-800 border border-red-200"
+                                  }`}>
+                                    {leave.status === "Approved" && <CheckCircle className="w-3 h-3 mr-1" />}
+                                    {leave.status === "Pending" && <Clock4 className="w-3 h-3 mr-1" />}
+                                    {leave.status === "Rejected" && <XCircle className="w-3 h-3 mr-1" />}
+                                    {leave.status}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-600 mb-1.5">
+                                  <span className="font-medium">Reason:</span> 
+                                  <span className="ml-1">{leave.reason}</span>
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  <span className="font-medium">Approved by:</span> 
+                                  <span className="ml-1">
+                                    {leave.approved_by_email || "Not specified"}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
                       ) : (
-                        <div className="text-center py-12">
-                          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <Clock className="w-8 h-8 text-gray-400" />
+                        <div className="text-center py-8 sm:py-12">
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                           </div>
-                          <h4 className="text-gray-700 font-semibold mb-2">No Leave Records</h4>
-                          <p className="text-gray-500">No leave records found for this teacher.</p>
+                          <h4 className="text-gray-700 font-semibold mb-1.5 sm:mb-2 text-sm sm:text-base">No Leave Records</h4>
+                          <p className="text-gray-500 text-xs sm:text-sm">No leave records found for this teacher.</p>
                         </div>
                       )}
                     </div>
@@ -893,74 +965,74 @@ const TeachersPage = () => {
 
                   {/* ✅ Contact Tab */}
                   {activeTab === "contact" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       {/* Contact Information */}
-                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 rounded-xl">
-                            <Contact className="w-5 h-5 text-blue-600" />
+                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3">
+                          <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg sm:rounded-xl">
+                            <Contact className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                           </div>
                           Contact Information
                         </h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
-                            <Mail className="w-5 h-5 text-gray-400" />
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200">
+                            <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
                             <div>
-                              <div className="text-sm text-gray-500">Email</div>
-                              <div className="font-semibold">{selectedTeacher.email}</div>
+                              <div className="text-xs sm:text-sm text-gray-500">Email</div>
+                              <div className="font-semibold text-sm sm:text-base">{selectedTeacher.email}</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
-                            <Phone className="w-5 h-5 text-gray-400" />
+                          <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200">
+                            <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
                             <div>
-                              <div className="text-sm text-gray-500">Phone</div>
-                              <div className="font-semibold">{selectedTeacher.phone}</div>
+                              <div className="text-xs sm:text-sm text-gray-500">Phone</div>
+                              <div className="font-semibold text-sm sm:text-base">{selectedTeacher.phone}</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
-                            <MapPin className="w-5 h-5 text-gray-400" />
+                          <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200">
+                            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
                             <div>
-                              <div className="text-sm text-gray-500">Residential Address</div>
-                              <div className="font-semibold">{selectedTeacher.residential_address || "N/A"}</div>
+                              <div className="text-xs sm:text-sm text-gray-500">Residential Address</div>
+                              <div className="font-semibold text-sm sm:text-base">{selectedTeacher.residential_address || "N/A"}</div>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Emergency Contact */}
-                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                          <div className="p-2 bg-red-100 rounded-xl">
-                            <User className="w-5 h-5 text-red-600" />
+                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3">
+                          <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg sm:rounded-xl">
+                            <User className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
                           </div>
                           Emergency Contact
                         </h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
-                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 text-red-600" />
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <User className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
                             </div>
                             <div>
-                              <div className="text-sm text-gray-500">Contact Person</div>
-                              <div className="font-semibold">{selectedTeacher.emergency_contact_name || "N/A"}</div>
+                              <div className="text-xs sm:text-sm text-gray-500">Contact Person</div>
+                              <div className="font-semibold text-sm sm:text-base">{selectedTeacher.emergency_contact_name || "N/A"}</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
-                            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                              <Contact className="w-4 h-4 text-orange-600" />
+                          <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Contact className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
                             </div>
                             <div>
-                              <div className="text-sm text-gray-500">Relationship</div>
-                              <div className="font-semibold">{selectedTeacher.emergency_contact_relationship || "N/A"}</div>
+                              <div className="text-xs sm:text-sm text-gray-500">Relationship</div>
+                              <div className="font-semibold text-sm sm:text-base">{selectedTeacher.emergency_contact_relationship || "N/A"}</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200">
-                            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                              <Phone className="w-4 h-4 text-yellow-600" />
+                          <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-gray-200">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
                             </div>
                             <div>
-                              <div className="text-sm text-gray-500">Emergency Phone</div>
-                              <div className="font-semibold">{selectedTeacher.emergency_contact_no || "N/A"}</div>
+                              <div className="text-xs sm:text-sm text-gray-500">Emergency Phone</div>
+                              <div className="font-semibold text-sm sm:text-base">{selectedTeacher.emergency_contact_no || "N/A"}</div>
                             </div>
                           </div>
                         </div>
@@ -978,21 +1050,21 @@ const TeachersPage = () => {
                         Teacher Analytics
                       </h3>
                       
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         {/* Attendance Analytics */}
-                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                        <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-sm">
                           <h4 className="text-lg font-semibold text-gray-800 mb-4">Attendance Overview</h4>
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Total Days Recorded</span>
+                              <span className="text-gray-600 text-sm">Total Days Recorded</span>
                               <span className="font-semibold">{stats.totalDays}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Present Days</span>
+                              <span className="text-gray-600 text-sm">Present Days</span>
                               <span className="font-semibold text-green-600">{stats.presentDays}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Absent Days</span>
+                              <span className="text-gray-600 text-sm">Absent Days</span>
                               <span className="font-semibold text-red-600">{stats.absentDays}</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
@@ -1008,39 +1080,39 @@ const TeachersPage = () => {
                         </div>
 
                         {/* Workload Analytics */}
-                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                        <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-sm">
                           <h4 className="text-lg font-semibold text-gray-800 mb-4">Workload Summary</h4>
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Subjects Assigned</span>
+                              <span className="text-gray-600 text-sm">Subjects Assigned</span>
                               <span className="font-semibold">{stats.totalSubjects}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Classes Assigned</span>
+                              <span className="text-gray-600 text-sm">Classes Assigned</span>
                               <span className="font-semibold text-purple-600">{stats.totalClasses}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600">Teaching Experience</span>
+                              <span className="text-gray-600 text-sm">Teaching Experience</span>
                               <span className="font-semibold text-green-600">{selectedTeacher.experience_years} years</span>
                             </div>
                           </div>
                         </div>
 
                         {/* Leave Analytics */}
-                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm lg:col-span-2">
+                        <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-sm md:col-span-2">
                           <h4 className="text-lg font-semibold text-gray-800 mb-4">Leave Statistics</h4>
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="text-center p-4 bg-green-50 rounded-xl">
-                              <div className="text-2xl font-bold text-green-600">{stats.approvedLeaves}</div>
-                              <div className="text-sm text-gray-600">Approved</div>
+                          <div className="grid grid-cols-1 xs:grid-cols-3 sm:grid-cols-3 gap-3 sm:gap-4">
+                            <div className="text-center p-3 sm:p-4 bg-green-50 rounded-xl">
+                              <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.approvedLeaves}</div>
+                              <div className="text-xs sm:text-sm text-gray-600">Approved</div>
                             </div>
-                            <div className="text-center p-4 bg-yellow-50 rounded-xl">
-                              <div className="text-2xl font-bold text-yellow-600">{stats.pendingLeaves}</div>
-                              <div className="text-sm text-gray-600">Pending</div>
+                            <div className="text-center p-3 sm:p-4 bg-yellow-50 rounded-xl">
+                              <div className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.pendingLeaves}</div>
+                              <div className="text-xs sm:text-sm text-gray-600">Pending</div>
                             </div>
-                            <div className="text-center p-4 bg-blue-50 rounded-xl">
-                              <div className="text-2xl font-bold text-blue-600">{stats.approvedLeaves + stats.pendingLeaves}</div>
-                              <div className="text-sm text-gray-600">Total Leaves</div>
+                            <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-xl">
+                              <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.approvedLeaves + stats.pendingLeaves}</div>
+                              <div className="text-xs sm:text-sm text-gray-600">Total Leaves</div>
                             </div>
                           </div>
                         </div>

@@ -41,7 +41,7 @@ const AttendancePage = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [studentInfo, setStudentInfo] = useState<StudentData | null>(null);
 
-  const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+  const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
   // Get user data from localStorage
   const getUserData = () => {
@@ -63,62 +63,50 @@ const AttendancePage = () => {
         role: storedRole || "Student" 
       };
     } catch (error) {
-      console.error("Error reading user data from localStorage:", error);
       return { email: "", role: "" };
     }
   };
 
   // Fetch student details by email
   const fetchStudentDetails = async (email: string): Promise<StudentData | null> => {
-    console.log(`🔍 Fetching student details for email: ${email}`);
     
     try {
       const response = await axios.get(
         `${API_BASE}/students/?email=${encodeURIComponent(email)}`
       );
       
-      console.log("📥 Student details response:", response.data);
-      
       const studentData = Array.isArray(response.data) 
         ? response.data[0] 
         : response.data;
 
-      console.log("✅ Student data extracted:", studentData);
       return studentData || null;
     } catch (error) {
-      console.error("❌ Error fetching student details:", error);
       return null;
     }
   };
 
   // Fetch all classes
   const fetchClasses = async (): Promise<Map<number, ClassDetails>> => {
-    console.log("🔍 Fetching all classes...");
     
     try {
       const response = await axios.get(`${API_BASE}/classes/`);
-      console.log("📥 Classes response:", response.data);
       
       const classList: ClassDetails[] = response.data || [];
       const classMap = new Map(classList.map((cls: ClassDetails) => [cls.id, cls]));
       
-      console.log("✅ Classes map created with", classMap.size, "entries");
       return classMap;
     } catch (error) {
-      console.error("❌ Error fetching classes:", error);
       return new Map();
     }
   };
 
   // Fetch attendance data
   const fetchAttendanceData = async (email: string, studentData: StudentData, classMap: Map<number, ClassDetails>) => {
-    console.log(`🔍 Fetching attendance data for student: ${email}`);
     
     try {
       const response = await axios.get(`${API_BASE}/student_attendance/`);
       const rawAttendance: any[] = response.data || [];
       
-      console.log("📋 Total student_attendance records:", rawAttendance.length);
 
       // Filter attendance for the logged-in student
       const filteredAttendance: AttendanceRecord[] = rawAttendance
@@ -133,7 +121,6 @@ const AttendancePage = () => {
           ).toLowerCase().trim();
 
           const isMatch = recordEmail === email.toLowerCase().trim();
-          console.log(`🔍 Record email: ${recordEmail}, User email: ${email}, Match: ${isMatch}`);
           return isMatch;
         })
         .map((record) => {
@@ -151,21 +138,18 @@ const AttendancePage = () => {
             class_name: record.class_name || classDetails?.class_name || studentData.class_name || "Unknown",
           };
           
-          console.log("📄 Mapped attendance record:", mappedRecord);
           return mappedRecord;
         });
 
-      console.log("✅ Filtered attendance records:", filteredAttendance.length);
+
       return filteredAttendance;
     } catch (error) {
-      console.error("❌ Error fetching attendance data:", error);
       throw error;
     }
   };
 
   // Main data fetching function
   const fetchAttendance = async () => {
-    console.log("🔄 Starting attendance fetch process...");
     
     try {
       setLoading(true);
@@ -174,7 +158,6 @@ const AttendancePage = () => {
       const { email, role } = getUserData();
       
       if (!email) {
-        console.warn("⚠️ No logged-in user found");
         setError("⚠️ No logged-in user found. Please log in again.");
         return;
       }
@@ -182,18 +165,15 @@ const AttendancePage = () => {
       setUserEmail(email);
       setUserRole(role);
 
-      console.log("🎓 Fetching attendance for:", email);
 
       // Fetch student details
       const studentData = await fetchStudentDetails(email);
       if (!studentData) {
-        console.warn("⚠️ No student data found for user");
         setError("❌ No student data found for your account.");
         return;
       }
 
       setStudentInfo(studentData);
-      console.log("✅ Student found:", studentData);
 
       // Fetch classes and create mapping
       const classMap = await fetchClasses();
@@ -202,18 +182,14 @@ const AttendancePage = () => {
       const attendanceRecords = await fetchAttendanceData(email, studentData, classMap);
       
       if (attendanceRecords.length === 0) {
-        console.warn("⚠️ No attendance records found for student");
         setError("📝 No attendance records found for your account.");
       }
 
       setAttendanceData(attendanceRecords);
-      console.log("✅ Attendance data updated with", attendanceRecords.length, "records");
     } catch (err) {
-      console.error("❌ Error in fetchAttendance:", err);
       setError("Failed to fetch attendance data. Please try again later.");
     } finally {
       setLoading(false);
-      console.log("🏁 Attendance fetch process completed");
     }
   };
 

@@ -3,8 +3,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/grades/";
-const STUDENTS_API = "https://school.globaltechsoftwaresolutions.cloud/api/students/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/grades/`;
+const STUDENTS_API = `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`;
 
 type Grade = {
   id: number;

@@ -21,7 +21,7 @@ import {
   FiTrendingUp
 } from "react-icons/fi";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/issues/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/issues/`;
 
 interface Issue {
   id: number;
