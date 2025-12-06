@@ -36,6 +36,8 @@ interface Assignment {
   due_date: string;
   attachment?: string;
   created_at: string;
+  // Add any other potential fields
+  [key: string]: any; // Allow for additional fields
 }
 
 interface Student {
@@ -45,6 +47,8 @@ interface Student {
   class_id: number;
   class_name: string;
   section: string;
+  // Add any other potential fields
+  [key: string]: any; // Allow for additional fields
 }
 
 interface SubmittedAssignment {
@@ -55,6 +59,14 @@ interface SubmittedAssignment {
   feedback: string;
   is_late: boolean;
   submission_date: string;
+  // Add optional fields that might be in the API response
+  student_email?: string;
+  student_name?: string;
+  subject_name?: string;
+  class_name?: string;
+  section?: string;
+  assignment_title?: string;
+  grade?: string | null;
 }
 
 type TabType = "all" | "pending" | "overdue" | "submitted";
@@ -157,8 +169,9 @@ const SubmitAssignmentModal: React.FC<{
   onClose: () => void;
   assignment: Assignment | null;
   student: Student | null;
+  submitted: SubmittedAssignment[];
   onSuccess: () => void;
-}> = ({ isOpen, onClose, assignment, student, onSuccess }) => {
+}> = ({ isOpen, onClose, assignment, student, submitted, onSuccess }) => {
   const [file, setFile] = useState<File | null>(null);
   const [comment, setComment] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -196,21 +209,140 @@ const SubmitAssignmentModal: React.FC<{
       setUploading(true);
       setError("");
 
+      // Check if this is an update to an existing submission
+      const existingSubmission = submitted.find((s: SubmittedAssignment) => {
+        const isMatch = s.assignment === assignment.id;
+        console.log(`Checking submission ${s.id}: assignment ${s.assignment} === ${assignment.id} ? ${isMatch}`);
+        return isMatch;
+      });
+      
+      console.log("Existing submission check:", { 
+        existingSubmission, 
+        allSubmissions: submitted, 
+        assignmentId: assignment.id,
+        submittedLength: submitted.length,
+        submittedIds: submitted.map(s => ({id: s.id, assignment: s.assignment}))
+      });
+      
+      // Create form data
       const formData = new FormData();
+      
+      // Add core fields
       formData.append("student", student.email);
       formData.append("assignment", assignment.id.toString());
       formData.append("file", file);
-      formData.append("feedback", comment);
-
-      await axios.post(`${API_BASE}/submitted_assignments/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      formData.append("feedback", comment); // Ensure feedback is always included
+      
+      console.log("Submitting assignment with feedback:", { 
+        student: student.email,
+        assignment: assignment.id,
+        feedback: comment,
+        fileName: file.name
       });
+      
+      // Add additional fields to match the API response structure
+      formData.append("student_email", student.email);
+      formData.append("student_name", student.fullname || '');
+      formData.append("subject_name", assignment.subject_name || '');
+      formData.append("class_name", assignment.class_name || '');
+      formData.append("section", assignment.section || '');
+      formData.append("assignment_title", assignment.title || '');
+      
+      // If updating existing submission, preserve existing data
+      if (existingSubmission) {
+        console.log("Updating existing submission:", existingSubmission.id);
+        console.log("Existing submission data:", existingSubmission);
+        console.log("New feedback being sent:", comment);
+        
+        // Preserve existing data that we're not updating
+        if (existingSubmission.student_email && !formData.has("student_email")) {
+          formData.append("student_email", existingSubmission.student_email);
+        }
+        if (existingSubmission.student_name && !formData.has("student_name")) {
+          formData.append("student_name", existingSubmission.student_name);
+        }
+        if (existingSubmission.subject_name && !formData.has("subject_name")) {
+          formData.append("subject_name", existingSubmission.subject_name);
+        }
+        if (existingSubmission.class_name && !formData.has("class_name")) {
+          formData.append("class_name", existingSubmission.class_name);
+        }
+        if (existingSubmission.section && !formData.has("section")) {
+          formData.append("section", existingSubmission.section);
+        }
+        if (existingSubmission.assignment_title && !formData.has("assignment_title")) {
+          formData.append("assignment_title", existingSubmission.assignment_title);
+        }
+        // Preserve other fields that might exist
+        if (existingSubmission.submission_date && !formData.has("submission_date")) {
+          formData.append("submission_date", existingSubmission.submission_date);
+        }
+        if (existingSubmission.is_late !== undefined && !formData.has("is_late")) {
+          formData.append("is_late", existingSubmission.is_late.toString());
+        }
+        if (existingSubmission.grade !== undefined && !formData.has("grade")) {
+          formData.append("grade", existingSubmission.grade || "");
+        }
+      }
+      
+      // Log all form data entries
+      console.log("Form data entries:");
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+      
+      let response;
+      if (existingSubmission) {
+        // Update existing submission
+        console.log("Updating existing submission with data:");
+        console.log("Request URL:", `${API_BASE}/submitted_assignments/${existingSubmission.id}/`);
+        console.log("Request Headers:", { "Content-Type": "multipart/form-data" });
+        
+        try {
+          response = await axios.put(`${API_BASE}/submitted_assignments/${existingSubmission.id}/`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          
+          console.log("PUT Response:", response);
+          console.log("PUT Response Data:", response.data);
+        } catch (putError) {
+          console.error("PUT request failed, trying POST instead:", putError);
+          // If PUT fails, try POST as fallback
+          response = await axios.post(`${API_BASE}/submitted_assignments/`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        }
+      } else {
+        // Create new submission
+        console.log("Creating new submission with data:");
+        console.log("Request URL:", `${API_BASE}/submitted_assignments/`);
+        console.log("Request Headers:", { "Content-Type": "multipart/form-data" });
+        
+        response = await axios.post(`${API_BASE}/submitted_assignments/`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        
+        console.log("POST Response:", response);
+        console.log("POST Response Data:", response.data);
+      }
+      
+      console.log("Assignment submission response:", response.data);
 
-      onSuccess();
+      // Log the updated submissions after successful submission
+      console.log("Updated submissions list after submission:", submitted);
+      
+      // Add a small delay to ensure the backend has processed the submission
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh the data to ensure UI is updated
+      await onSuccess();
       onClose();
     } catch (err: any) {
+      console.error("Assignment submission error:", err);
       const msg =
         err.response?.data?.error ||
+        err.response?.data?.detail ||
+        err.message ||
         "Failed to submit assignment. Please check your class or try again.";
       setError(msg);
     } finally {
@@ -315,7 +447,7 @@ const SubmitAssignmentModal: React.FC<{
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
                 <MessageCircle className="w-4 h-4 inline mr-2" />
-                Comments (Optional)
+                Comments 
               </label>
               <textarea
                 placeholder="Add any comments or notes for your teacher..."
@@ -375,9 +507,10 @@ const SubmitAssignmentModal: React.FC<{
 const AssignmentCard: React.FC<{
   assignment: Assignment;
   student: Student | null;
-  submitted?: boolean;
+  submitted?: boolean;  // This is a boolean indicating if the assignment is submitted
+  allSubmitted: SubmittedAssignment[];  // This is the full array of submitted assignments
   onSubmitted: () => Promise<void>;
-}> = ({ assignment, student, submitted, onSubmitted }) => {
+}> = ({ assignment, student, submitted, allSubmitted, onSubmitted }) => {
   const [open, setOpen] = useState(false);
   const status = AssignmentUtils.getStatus(assignment.due_date, submitted);
   const StatusIcon = status.icon;
@@ -449,23 +582,25 @@ const AssignmentCard: React.FC<{
           
           <div className="flex-1"></div>
           
-          {submitted ? (
-            <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium border border-green-200">
+          {/* Show submitted badge if already submitted */}
+          {submitted && (
+            <div className="flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-lg font-medium border border-green-200 text-sm mr-2">
               <CheckCircle2 className="w-4 h-4" />
               Submitted
             </div>
-          ) : (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setOpen(true)}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-green-200"
-            >
-              <Send className="w-4 h-4" />
-              Submit Now
-            </motion.button>
           )}
         </div>
+        
+          {/* Allow resubmission - always show the submit button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setOpen(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl mt-5 items-center justify-center font-medium hover:from-green-700 hover:to-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-green-200"
+          >
+            <Send className="w-4 h-4" />
+            {submitted ? "Re-submit" : "Submit Now"}
+          </motion.button>
       </motion.div>
 
       <SubmitAssignmentModal
@@ -473,6 +608,7 @@ const AssignmentCard: React.FC<{
         onClose={() => setOpen(false)}
         assignment={assignment}
         student={student}
+        submitted={allSubmitted}  // Pass the submitted assignments array
         onSuccess={onSubmitted}
       />
     </>
@@ -484,6 +620,12 @@ const StudentAssignmentsPage = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submitted, setSubmitted] = useState<SubmittedAssignment[]>([]);
+  
+  // Add effect to monitor submitted state changes
+  useEffect(() => {
+    console.log("Submitted state updated:", submitted);
+  }, [submitted]);
+  
   const [tab, setTab] = useState<TabType>("all");
   const [loading, setLoading] = useState(true);
   const [popup, setPopup] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -493,40 +635,86 @@ const StudentAssignmentsPage = () => {
 
   const fetchStudent = async () => {
     const email = getUserEmail();
+    console.log("Fetching student data for email:", email);
     if (!email) throw new Error("No student email found.");
     const res = await axios.get(`${API_BASE}/students/${email}/`);
+    console.log("Student data fetched:", res.data);
     return res.data;
   };
 
   const fetchAssignments = async (class_id: number) => {
+    console.log("Fetching assignments for class_id:", class_id);
     const res = await axios.get(`${API_BASE}/assignments/?class_id=${class_id}`);
+    console.log("Assignments fetched:", res.data);
     return res.data;
   };
 
   const fetchSubmittedAssignments = async (email: string) => {
-    const res = await axios.get(`${API_BASE}/submitted_assignments/`).catch((err) => {
-      return { data: [] };
-    });
+    try {
+      console.log("Fetching submitted assignments for email:", email);
+      const response = await axios.get(`${API_BASE}/submitted_assignments/`).catch((err) => {
+        console.error("Error fetching submitted assignments:", err);
+        return { data: [] };
+      });
 
-    const data: SubmittedAssignment[] = Array.isArray(res.data) ? res.data : [res.data];
-    const filtered = data.filter(
-      (record) => record?.student?.toLowerCase?.() === email.toLowerCase()
-    );
-    return filtered;
+      const data: SubmittedAssignment[] = Array.isArray(response.data) ? response.data : [response.data];
+      
+      console.log("Raw submitted assignments data:", data);
+      console.log("All submitted assignments data:", submitted);
+      submitted.forEach((s, index) => {
+        console.log(`Submitted assignment ${index}:`, {
+          id: s.id,
+          assignment: s.assignment,
+          assignmentType: typeof s.assignment,
+          student: s.student,
+          studentEmail: s.student_email
+        });
+      });
+      
+      // More robust filtering to ensure we match the student's submissions
+      const filtered = data.filter((record) => {
+        // Check multiple possible fields for student email
+        const recordEmail = record.student || record.student_email || '';
+        const isMatch = recordEmail.toLowerCase() === email.toLowerCase();
+        console.log(`Checking record: ${recordEmail} === ${email} ? ${isMatch}`);
+        return isMatch;
+      });
+      
+      console.log("Filtered submitted assignments:", filtered);
+      
+      return filtered;
+    } catch (err) {
+      console.error("Error in fetchSubmittedAssignments:", err);
+      return [];
+    }
   };
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      console.log("Loading student data and assignments...");
+      
       const studentData = await fetchStudent();
+      console.log("Student data loaded:", studentData);
+      
       setStudent(studentData);
+      
       const [assignList, submittedList] = await Promise.all([
         fetchAssignments(studentData.class_id),
         fetchSubmittedAssignments(studentData.email),
       ]);
+      
+      console.log("Assignments loaded:", assignList);
+      console.log("Submitted assignments loaded:", submittedList);
+      console.log("Setting submitted state with:", submittedList);
+      
       setAssignments(assignList);
       setSubmitted(submittedList);
+      
+      // Log the state after setting
+      console.log("State after setting submitted:", submittedList);
     } catch (err) {
+      console.error("Error loading data:", err);
       setPopup({ message: "Failed to load assignments. Please try again.", type: "error" });
     } finally {
       setLoading(false);
@@ -538,12 +726,18 @@ const StudentAssignmentsPage = () => {
   }, [loadData]);
 
   const handleSubmissionSuccess = useCallback(async () => {
+    console.log("handleSubmissionSuccess called");
+    // Add a small delay to ensure the backend has processed the submission
+    await new Promise(resolve => setTimeout(resolve, 1000));
     await loadData();
     setPopup({ message: "Assignment submitted successfully!", type: "success" });
   }, [loadData]);
 
-  const isSubmitted = (assignmentId: number) =>
-    submitted.some((s) => s.assignment === assignmentId);
+  const isSubmitted = (assignmentId: number) => {
+    const result = submitted.some((s) => s.assignment === assignmentId);
+    console.log(`Checking if assignment ${assignmentId} is submitted: ${result}`, submitted);
+    return result;
+  };
 
   const filteredAndSortedAssignments = useMemo(() => {
     let filtered = assignments.filter(assignment => {
@@ -552,6 +746,8 @@ const StudentAssignmentsPage = () => {
                            assignment.subject_name.toLowerCase().includes(searchTerm.toLowerCase());
       
       const submittedStatus = isSubmitted(assignment.id);
+      
+      console.log(`Filtering assignment ${assignment.id}:`, { matchesSearch, submittedStatus, tab });
       
       if (tab === "pending") return matchesSearch && !submittedStatus && new Date(assignment.due_date) >= new Date();
       if (tab === "overdue") return matchesSearch && !submittedStatus && new Date(assignment.due_date) < new Date();
@@ -576,15 +772,26 @@ const StudentAssignmentsPage = () => {
       }
     });
 
+    console.log("Filtered and sorted assignments:", filtered);
+    
     return filtered;
   }, [assignments, tab, submitted, searchTerm, sortBy]);
 
-  const stats = useMemo(() => ({
-    total: assignments.length,
-    pending: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) >= new Date()).length,
-    overdue: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) < new Date()).length,
-    submitted: assignments.filter(a => isSubmitted(a.id)).length,
-  }), [assignments, submitted]);
+  const stats = useMemo(() => {
+    const total = assignments.length;
+    const pending = assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) >= new Date()).length;
+    const overdue = assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) < new Date()).length;
+    const submitted = assignments.filter(a => isSubmitted(a.id)).length;
+    
+    console.log("Stats calculation:", { total, pending, overdue, submitted, assignments, submittedAssignments: submitted });
+    
+    return {
+      total,
+      pending,
+      overdue,
+      submitted,
+    };
+  }, [assignments, submitted]);
 
   if (loading) {
     return (
@@ -787,6 +994,7 @@ const StudentAssignmentsPage = () => {
                     assignment={assignment}
                     student={student}
                     submitted={isSubmitted(assignment.id)}
+                    allSubmitted={submitted}  // Pass the full array of submitted assignments
                     onSubmitted={handleSubmissionSuccess}
                   />
                 ))}

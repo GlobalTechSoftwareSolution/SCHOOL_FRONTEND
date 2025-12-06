@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import emailjs from "@emailjs/browser";
+import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,6 +33,23 @@ export default function ContactPage() {
   const [showPopup, setShowPopup] = useState(false);
   const [sending, setSending] = useState(false);
   const [activeField, setActiveField] = useState<string | null>(null);
+
+  // Check for query parameters and auto-fill form
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('name') || '';
+    const email = urlParams.get('email') || '';
+    const message = urlParams.get('message') || '';
+    
+    if (name || email || message) {
+      setFormData(prev => ({
+        ...prev,
+        from_name: name,
+        from_email: email,
+        message: message || `Hello, I'm interested in learning more about your school ERP system.`
+      }));
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

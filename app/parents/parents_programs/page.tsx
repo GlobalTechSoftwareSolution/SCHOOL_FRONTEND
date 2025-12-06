@@ -210,30 +210,6 @@ const ParentProgramsPage = () => {
               </div>
             </div>
           </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Upcoming</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.upcomingPrograms}</p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-xl">
-                <Clock className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Enrollment</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.totalEnrollment}</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <Users className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Filters and Search */}
@@ -468,6 +444,21 @@ const ParentProgramsPage = () => {
                               )}
                             </div>
                           </div>
+
+                            <div>
+                            <h4 className="font-medium text-gray-900 mb-3">Coordinator Information</h4>
+                            <div className="space-y-3 text-sm">
+                              {/* <div className="flex justify-between">
+                                <span className="text-gray-600">Coordinator Name:</span>
+                                <span className="text-gray-900 font-medium">{program.coordinator || "Not specified"}</span>
+                              </div> */}
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Coordinator Email:</span>
+                                <span className="text-gray-900 font-medium">{program.coordinator_email || "Not specified"}</span>
+                              </div>  
+                            </div>
+                          </div>
+
                         </div>
 
                         {/* Full Description */}

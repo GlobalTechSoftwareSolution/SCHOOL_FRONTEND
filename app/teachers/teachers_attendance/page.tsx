@@ -25,6 +25,7 @@ type ClassInfoType = {
 type StudentInfo = {
   email?: string;
   fullname?: string;
+  profile_picture?: string;
 };
 
 type SubjectOption = {
@@ -869,28 +870,39 @@ export default function Attendance() {
                       key={rowKey}
                       className={`${submittedAttendance[stu.email?.toLowerCase() || ''] ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'} rounded-2xl p-5 hover:shadow-md transition-all duration-200 border`}
                     >
-                      {/* Student Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                            {stu.fullname?.charAt(0) || 'S'}
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="font-bold text-gray-900 text-base truncate">
-                              {stu.fullname || "Unnamed Student"}
-                            </h3>
-                            <p className="text-gray-600 text-sm truncate">
-                              {stu.email}
-                            </p>
+                     {/* Student Header */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+
+                            {/* Profile Image or Initial */}
+                            {stu.profile_picture ? (
+                              <img
+                                src={stu.profile_picture}
+                                alt={stu.fullname}
+                                className="w-12 h-12 rounded-full object-cover border"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                {stu.fullname?.charAt(0) || "S"}
+                              </div>
+                            )}
+
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-gray-900 text-base truncate">
+                                {stu.fullname || "Unnamed Student"}
+                              </h3>
+                              <p className="text-gray-600 text-sm truncate">{stu.email}</p>
+                            </div>
                           </div>
                         </div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyles(status)}`}>
+
+                      
+                       <span className={`inline-flex items-center mb-5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyles(status)}`}>
                           {status || "Not Marked"}
                           {submittedAttendance[stu.email?.toLowerCase() || ''] && (
                             <span className="ml-1 text-green-500">✓ Submitted</span>
                           )}
                         </span>
-                      </div>
 
                       {/* Action Buttons */}
                       <div className="flex gap-2">

@@ -17,7 +17,7 @@ interface AttendanceRecord {
   check_in: string;
   check_out: string | null;
   sec: string;
-  status: "Present" | "Absent" | "Late" | string;
+  status: "Present" | "Absent" | string;
   role: string;
   marked_by_role: string;
   marked_by_email?: string;
@@ -57,7 +57,6 @@ const PrincipalAttendanceReport = () => {
       switch (status) {
         case "Present": return "bg-green-100 text-green-800 border-green-200";
         case "Absent": return "bg-red-100 text-red-800 border-red-200";
-        case "Late": return "bg-yellow-100 text-yellow-800 border-yellow-200";
         default: return "bg-gray-100 text-gray-800 border-gray-200";
       }
     };
@@ -66,7 +65,6 @@ const PrincipalAttendanceReport = () => {
       switch (status) {
         case "Present": return "✅";
         case "Absent": return "❌";
-        case "Late": return "⏰";
         default: return "📝";
       }
     };
@@ -118,9 +116,11 @@ const PrincipalAttendanceReport = () => {
                 </p>
               </div>
               <div>
-                <span className="text-gray-500">Class/Sec:</span>
+                <span className="text-gray-500">{record.role === 'student' ? 'Class/Sec:' : 'Department:'}</span>
                 <p className="font-medium text-gray-900">
-                  {record.class_name || 'N/A'} / {record.sec || 'N/A'}
+                  {record.role === 'student' 
+                    ? `${record.class_name || 'N/A'} / ${record.sec || 'N/A'}`
+                    : (record.department_name || 'N/A')}
                 </p>
               </div>
             </div>
@@ -401,7 +401,6 @@ const PrincipalAttendanceReport = () => {
       const pdfData = filteredData.length > 0 ? filteredData : allAttendance;
       const pdfPresent = pdfData.filter(s => s.status === "Present");
       const pdfAbsent = pdfData.filter(s => s.status === "Absent");
-      const pdfLate = pdfData.filter(s => s.status === "Late");
       
       // Colors for professional design
       const colors = {
@@ -537,7 +536,6 @@ const PrincipalAttendanceReport = () => {
       const totalRecords = pdfData.length;
       const totalPresent = pdfPresent.length;
       const totalAbsent = pdfAbsent.length;
-      const totalLate = pdfLate.length;
       const overallPercentage = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
       
       // Statistics cards
@@ -545,7 +543,6 @@ const PrincipalAttendanceReport = () => {
       addStatCard('Total Records', totalRecords.toString(), colors.primary, margin, yPosition, cardWidth);
       addStatCard('Present', totalPresent.toString(), colors.success, margin + cardWidth + 5, yPosition, cardWidth);
       addStatCard('Absent', totalAbsent.toString(), colors.danger, margin + (cardWidth * 2) + 10, yPosition, cardWidth);
-      addStatCard('Late', totalLate.toString(), colors.warning, margin + (cardWidth * 3) + 15, yPosition, cardWidth);
       
       yPosition += 35;
       
@@ -690,7 +687,6 @@ const PrincipalAttendanceReport = () => {
         `• Overall attendance rate: ${overallPercentage}%`,
         `• Present: ${totalPresent} (${totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0}%)`,
         `• Absent: ${totalAbsent} (${totalRecords > 0 ? Math.round((totalAbsent / totalRecords) * 100) : 0}%)`,
-        `• Late arrivals: ${totalLate} (${totalRecords > 0 ? Math.round((totalLate / totalRecords) * 100) : 0}%)`,
         `• Report period: ${months[selectedMonth - 1]} ${selectedYear}`,
         `• Data filter: ${filterType.charAt(0).toUpperCase() + filterType.slice(1)} view`,
         activeTab === 'students' && selectedClass ? `• Class filter: ${selectedClass}${selectedSection ? ` - ${selectedSection}` : ''}` : '',
@@ -772,7 +768,6 @@ const PrincipalAttendanceReport = () => {
     totalRecords: filteredData.length,
     present: filteredData.filter(item => item.status === "Present").length,
     absent: filteredData.filter(item => item.status === "Absent").length,
-    late: filteredData.filter(item => item.status === "Late").length,
     presentPercentage: filteredData.length > 0 ? 
       Math.round((filteredData.filter(item => item.status === "Present").length / filteredData.length) * 100) : 0
   };
@@ -958,12 +953,6 @@ const PrincipalAttendanceReport = () => {
               color="red" 
               icon={<UserX className="h-4 w-4 sm:h-5 sm:w-5" />}
             />
-            <StatsCard 
-              title="Late" 
-              value={stats.late} 
-              color="yellow" 
-              icon={<Calendar className="h-4 w-4 sm:h-5 sm:w-5" />}
-            />
           </div>
 
           {/* Tab Navigation */}
@@ -1010,7 +999,7 @@ const PrincipalAttendanceReport = () => {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                ✅ Present ({presentStudents.length})
+                ✅ Present
               </button>
               <button
                 onClick={() => {
@@ -1024,7 +1013,7 @@ const PrincipalAttendanceReport = () => {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                ❌ Absent ({absentStudents.length})
+                ❌ Absent 
               </button>
             </div>
 
@@ -1234,10 +1223,6 @@ const PrincipalAttendanceReport = () => {
                     <div className="flex items-center gap-1 sm:gap-2">
                       <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
                       <span>Absent: {stats.absent}</span>
-                    </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <div className="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-500 rounded-full"></div>
-                      <span>Late: {stats.late}</span>
                     </div>
                   </div>
                 </div>

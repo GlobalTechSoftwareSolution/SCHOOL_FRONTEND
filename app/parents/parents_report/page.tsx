@@ -70,7 +70,6 @@ const ParentReportsPage: React.FC = () => {
   // ✅ Core Fetch Function
   const fetchParentAndReports = async (email: string) => {
     try {
-      console.log("📩 Fetching parent details for:", email);
 
       // 1️⃣ Get all parents
       const parentRes = await axios.get(`${API_BASE}/parents/`);
@@ -87,18 +86,15 @@ const ParentReportsPage: React.FC = () => {
       // 3️⃣ Get children list
       const childrenList = parentData.children_list || [];
       setChildren(childrenList);
-      console.log("🧒 Children List:", childrenList);
 
       // 4️⃣ Get reports
       const reportsRes = await axios.get(`${API_BASE}/reports/`);
       const allReports: Report[] = reportsRes.data || [];
-      console.log("📄 All Reports:", allReports);
 
       // 5️⃣ Collect children emails
       const childEmails = childrenList
         .map((child: Child) => child.email?.toLowerCase())
         .filter(Boolean);
-      console.log("👧 Child Emails:", childEmails);
 
       // 6️⃣ Filter reports that match any child
       const filteredReports = allReports.filter((report) => {
@@ -111,7 +107,6 @@ const ParentReportsPage: React.FC = () => {
         return childEmails.includes(studentEmail);
       });
 
-      console.log("✅ Filtered Reports:", filteredReports);
       setReports(filteredReports);
     } catch (error) {
       console.error("❌ Error fetching reports:", error);

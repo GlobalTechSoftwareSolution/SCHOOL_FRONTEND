@@ -15,13 +15,12 @@ import {
   FileText,
   MoreVertical,
   ChevronDown,
-  AlertCircle,
   CheckCircle2,
   Clock,
   TrendingUp
 } from "lucide-react";
 
-  const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`
 
 interface Program {
   id: number;
@@ -29,7 +28,7 @@ interface Program {
   description: string;
   start_date: string;
   end_date: string;
-  status: "Planned" | "Active" | "Completed" | "Cancelled";
+  status: "Active" | "Completed";
   coordinator_email: string;
   coordinator: string;
   category?: string;
@@ -44,7 +43,7 @@ interface ProgramFormData {
   description: string;
   start_date: string;
   end_date: string;
-  status: "Planned" | "Active" | "Completed" | "Cancelled";
+  status: "Active" | "Completed";
   coordinator_email: string;
   coordinator: string;
   category: string;
@@ -70,14 +69,13 @@ const ProgramsPage = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [budgetRange, setBudgetRange] = useState({ min: "", max: "" });
-  const [studentName, setStudentName] = useState(""); 
 
   const [newProgram, setNewProgram] = useState<ProgramFormData>({
     name: "",
     description: "",
     start_date: "",
     end_date: "",
-    status: "Planned",
+    status: "Active",
     coordinator_email: "",
     coordinator: "",
     category: "Academic",
@@ -88,16 +86,34 @@ const ProgramsPage = () => {
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
-    planned: 0,
     completed: 0
   });
+
+  // Function to calculate status based on current date
+  const calculateStatus = (endDate: string): "Active" | "Completed" => {
+    const today = new Date();
+    const end = new Date(endDate);
+    
+    // Reset time parts to compare only dates
+    today.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    
+    return today <= end ? "Active" : "Completed";
+  };
 
   // ✅ Fetch Programs
   const fetchPrograms = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}programs/`);
-      setPrograms(response.data);
+      
+      // Calculate status for each program based on end date
+      const programsWithCalculatedStatus = response.data.map((program: any) => ({
+        ...program,
+        status: calculateStatus(program.end_date)
+      }));
+      
+      setPrograms(programsWithCalculatedStatus);
       setError(null);
     } catch (err: any) {
       console.error("Error fetching programs:", err);
@@ -115,10 +131,9 @@ const ProgramsPage = () => {
   useEffect(() => {
     const total = programs.length;
     const active = programs.filter(p => p.status === "Active").length;
-    const planned = programs.filter(p => p.status === "Planned").length;
     const completed = programs.filter(p => p.status === "Completed").length;
 
-    setStats({ total, active, planned, completed });
+    setStats({ total, active, completed });
   }, [programs]);
 
   // ✅ Add New Program
@@ -131,16 +146,21 @@ const ProgramsPage = () => {
     }
 
     try {
-      await axios.post(`${API_URL}programs/`, newProgram);
+      const programToAdd = {
+        ...newProgram,
+        status: calculateStatus(newProgram.end_date)
+      };
+      
+      await axios.post(`${API_URL}programs/`, programToAdd);
       alert("✅ Program added successfully!");
       
       setShowAddForm(false);
-      setNewProgram({
+      setNewProgram({ 
         name: "",
         description: "",
         start_date: "",
         end_date: "",
-        status: "Planned",
+        status: "Active",
         coordinator_email: "",
         coordinator: "",
         category: "Academic",
@@ -159,7 +179,12 @@ const ProgramsPage = () => {
     if (!editingProgram) return;
 
     try {
-      await axios.put(`${API_URL}programs/${editingProgram.id}/`, newProgram);
+      const programToUpdate = {
+        ...newProgram,
+        status: calculateStatus(newProgram.end_date)
+      };
+      
+      await axios.put(`${API_URL}programs/${editingProgram.id}/`, programToUpdate);
       alert("✅ Program updated successfully!");
       setEditingProgram(null);
       fetchPrograms();
@@ -248,8 +273,7 @@ const ProgramsPage = () => {
     switch (status) {
       case "Active": return <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />;
       case "Completed": return <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />;
-      case "Planned": return <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500" />;
-      default: return <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />;
+      default: return <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />;
     }
   };
 
@@ -257,8 +281,6 @@ const ProgramsPage = () => {
     switch (status) {
       case "Active": return "bg-green-50 text-green-700 border-green-200";
       case "Completed": return "bg-blue-50 text-blue-700 border-blue-200";
-      case "Planned": return "bg-orange-50 text-orange-700 border-orange-200";
-      case "Cancelled": return "bg-red-50 text-red-700 border-red-200";
       default: return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
@@ -339,10 +361,11 @@ const ProgramsPage = () => {
 
             <div className="modal-field">
               <label className="block text-sm font-semibold text-gray-700 mb-2 modal-label">
-                End Date
+                End Date *
               </label>
               <input
                 type="date"
+                required
                 value={newProgram.end_date}
                 onChange={(e) =>
                   setNewProgram({
@@ -354,25 +377,22 @@ const ProgramsPage = () => {
               />
             </div>
 
-            {/* Status and Category */}
+            {/* Status Display (Read-only) */}
             <div className="modal-field">
               <label className="block text-sm font-semibold text-gray-700 mb-2 modal-label">
-                Status
+                Current Status
               </label>
-              <select
-                value={newProgram.status}
-                onChange={(e) =>
-                  setNewProgram({ ...newProgram, status: e.target.value as any })
-                }
-                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base modal-select"
-              >
-                <option value="Planned">Planned</option>
-                <option value="Active">Active</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
+              <div className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg sm:rounded-xl bg-gray-50 text-gray-700 text-sm sm:text-base">
+                {newProgram.end_date 
+                  ? calculateStatus(newProgram.end_date)
+                  : "Active (default)"}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Status is automatically calculated based on end date
+              </p>
             </div>
 
+            {/* Category */}
             <div className="modal-field">
               <label className="block text-sm font-semibold text-gray-700 mb-2 modal-label">
                 Category
@@ -641,7 +661,7 @@ const ProgramsPage = () => {
             
             /* Ensure card format for all elements on small screens */
             .stats-grid {
-              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+              grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
             }
             
             .program-grid {
@@ -666,8 +686,8 @@ const ProgramsPage = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stats-grid">
-          <div className="stats-card bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 col-span-2 lg:col-span-1">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 stats-grid">
+          <div className="stats-card bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 stats-label">Total Programs</p>
@@ -694,23 +714,11 @@ const ProgramsPage = () => {
           <div className="stats-card bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 stats-label">Planned</p>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 stats-value">{stats.planned}</p>
-              </div>
-              <div className="p-2 sm:p-3 bg-orange-50 rounded-lg sm:rounded-xl stats-icon-container">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-orange-600 stats-icon" />
-              </div>
-            </div>
-          </div>
-
-          <div className="stats-card bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 stats-label">Completed</p>
                 <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 stats-value">{stats.completed}</p>
               </div>
-              <div className="p-2 sm:p-3 bg-purple-50 rounded-lg sm:rounded-xl stats-icon-container">
-                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-purple-600 stats-icon" />
+              <div className="p-2 sm:p-3 bg-blue-50 rounded-lg sm:rounded-xl stats-icon-container">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-600 stats-icon" />
               </div>
             </div>
           </div>
@@ -752,10 +760,8 @@ const ProgramsPage = () => {
                 className="px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base w-full xs:w-auto status-filter"
               >
                 <option value="all">All Status</option>
-                <option value="planned">Planned</option>
                 <option value="active">Active</option>
                 <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
               </select>
 
               <button

@@ -153,7 +153,6 @@ export default function Timetablecreation() {
 
   const fetchTimetable = useCallback(async () => {
     try {
-      console.log('📡 [API] Fetching timetable data...');
       setLoading(true);
       setError('');
       const res = await axios.get(`${API_BASE}/timetable/`);

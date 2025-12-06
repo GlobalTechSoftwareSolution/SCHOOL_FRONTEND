@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import {
@@ -27,7 +27,8 @@ import {
   Globe,
   UserCheck,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Image as ImageIcon
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -72,6 +73,10 @@ interface Student {
   nationality?: string;
   previous_school?: string;
   academic_year?: string;
+  profile_image?: string;
+  profile_picture?: string;
+  image?: string;
+  avatar?: string;
 }
 
 interface StudentPerformance {
@@ -96,6 +101,47 @@ const TeacherMonthlyreport = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedStudent, setExpandedStudent] = useState<number | null>(null);
   const [expandedPerformance, setExpandedPerformance] = useState<number | null>(null);
+
+  // Create refs for scrolling
+  const performanceSectionRef = useRef<HTMLDivElement>(null);
+  const studentsListRef = useRef<HTMLDivElement>(null);
+
+  // ✅ Helper function to get profile image URL from student object
+  const getStudentProfileImage = (student: Student): string | null => {
+    // Check all possible image fields
+    const imageSources = [
+      student.profile_image,
+      student.profile_picture,
+      student.image,
+      student.avatar
+    ];
+    
+    for (const source of imageSources) {
+      if (source) {
+        // If it's already a full URL or data URL
+        if (source.startsWith('http://') || source.startsWith('https://') || source.startsWith('data:')) {
+          return source;
+        }
+        
+        // If it's a relative path, construct full URL
+        if (source.startsWith('/')) {
+          return `${API_BASE.replace('/api/', '')}${source.substring(1)}`;
+        }
+        
+        // If it's just a filename, construct the full URL
+        return `${API_BASE}media/${source}`;
+      }
+    }
+    
+    return null; // No image found
+  };
+
+  // ✅ Helper function to get student initials
+  const getStudentInitials = (student: Student): string => {
+    const firstInitial = student.first_name?.[0] || '';
+    const lastInitial = student.last_name?.[0] || '';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
+  };
 
   // ✅ Step 1: Fetch teacher's timetable and linked classes
   useEffect(() => {
@@ -168,7 +214,7 @@ const TeacherMonthlyreport = () => {
         (s: any) => s.class_id === classInfo.id
       );
 
-      // Format student data with enhanced details
+      // Format student data with enhanced details including all possible image fields
       const formattedStudents: Student[] = classStudents.map((student: any) => ({
         id: student.id,
         first_name: student.first_name || student.fullname?.split(' ')[0] || 'Unknown',
@@ -188,9 +234,19 @@ const TeacherMonthlyreport = () => {
         nationality: student.nationality,
         previous_school: student.previous_school,
         academic_year: student.academic_year || student.year,
+        // Store all possible image fields
+        profile_image: student.profile_image,
+        profile_picture: student.profile_picture,
+        image: student.image,
+        avatar: student.avatar
       }));
 
       setStudents(formattedStudents);
+      
+      // Scroll to students section
+      setTimeout(() => {
+        studentsListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (err) {
       console.error("❌ Error fetching students:", err);
       setError("Failed to fetch students.");
@@ -199,7 +255,7 @@ const TeacherMonthlyreport = () => {
     }
   };
 
-  // ✅ Step 3: Fetch student performance (based on student email)
+  // ✅ Step 3: Fetch student performance (based on student email) and scroll to performance section
   const fetchStudentPerformance = async (student: Student) => {
     try {
       setSelectedStudent(student);
@@ -243,6 +299,14 @@ const TeacherMonthlyreport = () => {
       );
 
       setPerformance({ attendance, leaves, grades });
+      
+      // Scroll to performance section after data is loaded
+      setTimeout(() => {
+        performanceSectionRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start'
+        });
+      }, 300);
     } catch (err) {
       console.error("❌ Error fetching performance:", err);
       setError("Failed to fetch performance data.");
@@ -384,7 +448,12 @@ const TeacherMonthlyreport = () => {
           .animate-progress {
             animation: progress 3s ease-in-out infinite;
           }
+          /* Smooth scroll behavior for the entire page */
+          html {
+            scroll-behavior: smooth;
+          }
         `}</style>
+        
         {/* Header Section */}
         <div className="bg-white professional-card p-4 mb-4">
           <div className="flex flex-col items-center gap-3 mb-4">
@@ -512,7 +581,7 @@ const TeacherMonthlyreport = () => {
 
         {/* Students Section - Professional Design */}
         {selectedClass && (
-          <div className="professional-card bg-white p-4 mb-6">
+          <div ref={studentsListRef} className="professional-card bg-white p-4 mb-6">
             <div className="flex flex-col gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-sm">
@@ -557,125 +626,163 @@ const TeacherMonthlyreport = () => {
                 </p>
               </div>
             ) : (
-              // Professional Student Cards
+              // Professional Student Cards with Individual Profile Images
               <div className="space-y-3">
-                {filteredStudents.map((student) => (
-                  <div
-                    key={student.id}
-                    className={`student-card transition-all duration-200 ${
-                      selectedStudent?.id === student.id
-                        ? "border-green-500 bg-gradient-to-r from-green-50 to-emerald-50"
-                        : "bg-white"
-                    }`}
-                  >
-                    {/* Student Card Header - Enhanced Design */}
-                    <div 
-                      className="p-4 cursor-pointer"
-                      onClick={() => {
-                        if (expandedStudent === student.id) {
-                          setExpandedStudent(null);
-                        } else {
-                          setExpandedStudent(student.id);
-                        }
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-sm ${
-                            selectedStudent?.id === student.id
-                              ? "bg-gradient-to-r from-green-500 to-emerald-600"
-                              : "bg-gradient-to-r from-blue-500 to-indigo-600"
-                          }`}>
-                            <User className="w-6 h-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-gray-900 text-lg">
-                              {student.first_name} {student.last_name}
-                            </h3>
-                            <p className="text-gray-500 text-sm">{student.email}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {student.student_id && (
-                            <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
-                              ID: {student.student_id}
-                            </span>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              fetchStudentPerformance(student);
-                            }}
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-sm"
-                          >
-                            View
-                          </button>
-                          {expandedStudent === student.id ? (
-                            <ChevronUp className="w-5 h-5 text-gray-500" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5 text-gray-500" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                {filteredStudents.map((student) => {
+                  const profileImageUrl = getStudentProfileImage(student);
+                  const initials = getStudentInitials(student);
 
-                    {/* Expanded Student Details - Card Format */}
-                    {expandedStudent === student.id && (
-                      <div className="border-t border-gray-200 p-4 bg-gray-50">
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-1 gap-2">
-                            <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
-                              <Phone className="w-4 h-4 text-gray-500" />
-                              <span className="font-medium">{student.phone || 'Not provided'}</span>
+                  return (
+                    <div
+                      key={student.id}
+                      className={`student-card transition-all duration-200 ${
+                        selectedStudent?.id === student.id
+                          ? "border-green-500 bg-gradient-to-r from-green-50 to-emerald-50"
+                          : "bg-white"
+                      }`}
+                    >
+                      {/* Student Card Header - Enhanced Design with Individual Profile Image */}
+                      <div 
+                        className="p-4 cursor-pointer"
+                        onClick={() => {
+                          if (expandedStudent === student.id) {
+                            setExpandedStudent(null);
+                          } else {
+                            setExpandedStudent(student.id);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {/* Individual Student Profile Image */}
+                            <div className="relative">
+                              {profileImageUrl ? (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden shadow-sm border-2 border-white">
+                                  <img
+                                    src={profileImageUrl}
+                                    alt={`${student.first_name} ${student.last_name}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      // If image fails to load, show initials
+                                      e.currentTarget.style.display = 'none';
+                                      const placeholder = document.createElement('div');
+                                      placeholder.className = `w-12 h-12 rounded-lg flex items-center justify-center shadow-sm ${
+                                        selectedStudent?.id === student.id
+                                          ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                          : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                      }`;
+                                      if (initials) {
+                                        placeholder.innerHTML = `<span class="text-white font-bold text-sm">${initials}</span>`;
+                                      } else {
+                                        placeholder.innerHTML = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
+                                      }
+                                      e.currentTarget.parentElement?.appendChild(placeholder);
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-sm ${
+                                  selectedStudent?.id === student.id
+                                    ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                    : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                }`}>
+                                  {initials ? (
+                                    <span className="text-white font-bold text-sm">{initials}</span>
+                                  ) : (
+                                    <User className="w-6 h-6 text-white" />
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            
-                            {student.parent_name && (
-                              <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
-                                <UserCheck className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium">Parent: {student.parent_name}</span>
-                              </div>
-                            )}
-                            
-                            {(student.gender || student.date_of_birth) && (
-                              <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
-                                <User className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium">
-                                  {student.gender} {student.date_of_birth ? `• ${student.date_of_birth}` : ''}
-                                </span>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
-                              <Calendar className="w-4 h-4 text-gray-500" />
-                              <span className="font-medium">Enrolled: {student.enrollment_date || 'Unknown'}</span>
+                            <div>
+                              <h3 className="font-bold text-gray-900 text-lg">
+                                {student.first_name} {student.last_name}
+                              </h3>
+                              <p className="text-gray-500 text-sm">{student.email}</p>
                             </div>
-                            
-                            {student.blood_group && (
-                              <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
-                                <Shield className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium">Blood: {student.blood_group}</span>
-                              </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {student.student_id && (
+                              <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                                ID: {student.student_id}
+                              </span>
                             )}
-                            
-                            {student.nationality && (
-                              <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
-                                <Globe className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium">Nationality: {student.nationality}</span>
-                              </div>
-                            )}
-                            
-                            {student.previous_school && (
-                              <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
-                                <Book className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium">Prev: {student.previous_school}</span>
-                              </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                fetchStudentPerformance(student);
+                              }}
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-sm"
+                            >
+                              View Performance
+                            </button>
+                            {expandedStudent === student.id ? (
+                              <ChevronUp className="w-5 h-5 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-gray-500" />
                             )}
                           </div>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {/* Expanded Student Details - Card Format */}
+                      {expandedStudent === student.id && (
+                        <div className="border-t border-gray-200 p-4 bg-gray-50">
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-1 gap-2">
+                              <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
+                                <Phone className="w-4 h-4 text-gray-500" />
+                                <span className="font-medium">{student.phone || 'Not provided'}</span>
+                              </div>
+                              
+                              {student.parent_name && (
+                                <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
+                                  <UserCheck className="w-4 h-4 text-gray-500" />
+                                  <span className="font-medium">Parent: {student.parent_name}</span>
+                                </div>
+                              )}
+                              
+                              {(student.gender || student.date_of_birth) && (
+                                <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
+                                  <User className="w-4 h-4 text-gray-500" />
+                                  <span className="font-medium">
+                                    {student.gender} {student.date_of_birth ? `• ${student.date_of_birth}` : ''}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
+                                <Calendar className="w-4 h-4 text-gray-500" />
+                                <span className="font-medium">Enrolled: {student.enrollment_date || 'Unknown'}</span>
+                              </div>
+                              
+                              {student.blood_group && (
+                                <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
+                                  <Shield className="w-4 h-4 text-gray-500" />
+                                  <span className="font-medium">Blood: {student.blood_group}</span>
+                                </div>
+                              )}
+                              
+                              {student.nationality && (
+                                <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
+                                  <Globe className="w-4 h-4 text-gray-500" />
+                                  <span className="font-medium">Nationality: {student.nationality}</span>
+                                </div>
+                              )}
+                              
+                              {student.previous_school && (
+                                <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
+                                  <Book className="w-4 h-4 text-gray-500" />
+                                  <span className="font-medium">Prev: {student.previous_school}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -697,14 +804,44 @@ const TeacherMonthlyreport = () => {
           </div>
         )}
 
-        {/* Student Performance Section - Professional Design */}
+        {/* Student Performance Section - Professional Design with ref for scrolling */}
         {performance && selectedStudent && (
-          <div className="professional-card bg-white p-4 space-y-6">
-            {/* Student Header - Enhanced Design */}
+          <div ref={performanceSectionRef} id="performance-section" className="professional-card bg-white p-4 space-y-6">
+            {/* Student Header - Enhanced Design with Individual Profile Image */}
             <div className="professional-card p-5 bg-gradient-to-r from-gray-50 to-gray-100">
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-                  <User className="w-8 h-8 text-white" />
+                {/* Individual Student Profile Image in Performance Section */}
+                <div className="relative">
+                  {getStudentProfileImage(selectedStudent) ? (
+                    <div className="w-16 h-16 rounded-xl overflow-hidden shadow-md border-4 border-white">
+                      <img
+                        src={getStudentProfileImage(selectedStudent) as string}
+                        alt={`${selectedStudent.first_name} ${selectedStudent.last_name}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // If image fails to load, show placeholder
+                          e.currentTarget.style.display = 'none';
+                          const placeholder = document.createElement('div');
+                          placeholder.className = "w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md";
+                          const initials = getStudentInitials(selectedStudent);
+                          if (initials) {
+                            placeholder.innerHTML = `<span class="text-white font-bold text-lg">${initials}</span>`;
+                          } else {
+                            placeholder.innerHTML = '<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
+                          }
+                          e.currentTarget.parentElement?.appendChild(placeholder);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
+                      {getStudentInitials(selectedStudent) ? (
+                        <span className="text-white font-bold text-lg">{getStudentInitials(selectedStudent)}</span>
+                      ) : (
+                        <User className="w-8 h-8 text-white" />
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">

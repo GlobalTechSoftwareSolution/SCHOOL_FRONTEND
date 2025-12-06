@@ -16,6 +16,12 @@ interface AttendanceRecord {
   section?: string;
   class_id?: number;
   class_name?: string;
+  // Timing fields from API
+  start_time?: string;
+  end_time?: string;
+  created_time?: string;
+  subject_name?: string;
+  teacher_name?: string;
 }
 
 interface ClassDetails {
@@ -126,7 +132,7 @@ const AttendancePage = () => {
         .map((record) => {
           const classDetails = record.class_id ? classMap.get(record.class_id) : undefined;
           
-          const mappedRecord = {
+          const mappedRecord: AttendanceRecord = {
             id: record.id,
             student_name: record.student_name || studentData.fullname || email,
             date: record.date,
@@ -136,6 +142,10 @@ const AttendancePage = () => {
             section: record.section || classDetails?.sec || studentData.section || "N/A",
             class_id: record.class_id,
             class_name: record.class_name || classDetails?.class_name || studentData.class_name || "Unknown",
+            subject_name: record.subject_name || "",
+            teacher_name: record.teacher_name || "",
+            // Using created_time from API response as the marking time
+            created_time: record.created_time || ""
           };
           
           return mappedRecord;
@@ -230,6 +240,41 @@ const AttendancePage = () => {
     }
   };
 
+  // Format time from created_time (e.g., "2025-12-04 16:41:02")
+  const formatCreatedTime = (createdTime: string | undefined) => {
+    if (!createdTime) return "N/A";
+    
+    try {
+      // Split date and time
+      const [date, time] = createdTime.split(' ');
+      if (!time) return "N/A";
+      
+      // Extract just the time part (HH:MM:SS)
+      const [hours, minutes] = time.split(':');
+      if (hours && minutes) {
+        return `${hours}:${minutes}`;
+      }
+      return time;
+    } catch (error) {
+      return createdTime;
+    }
+  };
+
+  // Format date display
+  const formatDisplayDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   // Card component for attendance records
   const AttendanceCard = ({ record }: { record: AttendanceRecord }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
@@ -240,8 +285,50 @@ const AttendancePage = () => {
               {record.class_name}
             </h3>
             <p className="text-gray-600 text-sm mb-2">
-              Section {record.section} • {record.date}
+              Section {record.section} • {formatDisplayDate(record.date)}
             </p>
+            {record.subject_name && (
+              <p className="text-gray-700 text-sm mb-1">
+                <span className="font-medium">Subject:</span> {record.subject_name}
+              </p>
+            )}
+            
+            {/* Display timing information from created_time */}
+            <div className="text-sm text-gray-600 mt-2 space-y-1">
+              {record.created_time && (
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>
+                    <span className="font-medium">Marked at:</span> {formatCreatedTime(record.created_time)}
+                  </span>
+                </div>
+              )}
+              
+              {/* Additional timing info if available from other fields */}
+              {record.start_time && (
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>
+                    <span className="font-medium">Start Time:</span> {formatCreatedTime(record.start_time)}
+                  </span>
+                </div>
+              )}
+              
+              {record.end_time && (
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>
+                    <span className="font-medium">End Time:</span> {formatCreatedTime(record.end_time)}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           <span
             className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeClass(record.status)}`}
@@ -251,9 +338,15 @@ const AttendancePage = () => {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+          {record.teacher_name && (
+            <div>
+              <span className="text-gray-500">Teacher:</span>
+              <span className="ml-2 text-gray-700">{record.teacher_name}</span>
+            </div>
+          )}
           <div>
             <span className="text-gray-500">Marked By:</span>
-            <span className="ml-2 text-gray-700">{record.marked_by_role || "—"}</span>
+            <span className="ml-2 text-gray-700">{record.marked_by_role || record.teacher_name || "—"}</span>
           </div>
           <div className="sm:col-span-2">
             <span className="text-gray-500">Remarks:</span>
@@ -373,21 +466,53 @@ const AttendancePage = () => {
                       {dayAttendance.map((attendance) => (
                         <div
                           key={attendance.id}
-                          className="flex items-center justify-between bg-white rounded-xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm border border-gray-100"
+                          className="flex flex-col bg-white rounded-xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm border border-gray-100"
                         >
-                          <div className="flex-1">
-                            <p className="font-semibold text-gray-800 text-sm sm:text-base">
-                              {attendance.class_name}
-                            </p>
-                            <p className="text-xs sm:text-sm text-gray-500">
-                              Section {attendance.section}
-                            </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                                {attendance.class_name}
+                              </p>
+                              <p className="text-xs sm:text-sm text-gray-500">
+                                Section {attendance.section}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getStatusBadgeClass(attendance.status)}`}
+                            >
+                              {attendance.status}
+                            </span>
                           </div>
-                          <span
-                            className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getStatusBadgeClass(attendance.status)}`}
-                          >
-                            {attendance.status}
-                          </span>
+                          
+                          {/* Display timing information for selected date */}
+                          <div className="text-xs sm:text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100 space-y-1">
+                            {attendance.created_time && (
+                              <div className="flex items-center">
+                                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span><span className="font-medium">Marked at:</span> {formatCreatedTime(attendance.created_time)}</span>
+                              </div>
+                            )}
+                            
+                            {attendance.start_time && (
+                              <div className="flex items-center">
+                                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span><span className="font-medium">Start Time:</span> {formatCreatedTime(attendance.start_time)}</span>
+                              </div>
+                            )}
+                            
+                            {attendance.end_time && (
+                              <div className="flex items-center">
+                                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span><span className="font-medium">End Time:</span> {formatCreatedTime(attendance.end_time)}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

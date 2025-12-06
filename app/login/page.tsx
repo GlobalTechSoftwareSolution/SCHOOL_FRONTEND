@@ -5,6 +5,8 @@ import { Dialog } from '@headlessui/react';
 import { Eye, EyeOff, User, Lock, Mail, School, Sparkles, BookOpen, GraduationCap } from 'lucide-react';
 
 function LoginPageContent() {
+  console.log('[LOGIN PAGE] LoginPageContent component initialized');
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
@@ -16,18 +18,67 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl');
-
   useEffect(() => {
     setIsMounted(true);
+    
+    // Log when component mounts
+    console.log('[LOGIN PAGE] Component mounted');
+    console.log('[LOGIN PAGE] Callback URL from params:', callbackUrl);
+    
+    // Check if user is already logged in
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+    if (token) {
+      console.log('[LOGIN PAGE] User already has token, redirecting...');
+      handleRedirect(token);
+    }
   }, []);
-
   // Helper: show dialog
   const showDialog = (title: string, message: string) => {
+    console.log(`[LOGIN PAGE] Showing dialog: ${title} - ${message}`);
     setDialog({ open: true, title, message });
   };
+  // Helper function to handle redirects
+  const handleRedirect = (token: string) => {
+    console.log('[LOGIN PAGE] Handling redirect, callbackUrl:', callbackUrl);
+    
+    // Redirect based on verified role or callback URL
+    if (callbackUrl && callbackUrl.startsWith('/')) {
+      console.log('[LOGIN PAGE] Redirecting to callback URL:', callbackUrl);
+      router.push(callbackUrl);
+    } else {
+      // Get user role from token or stored data
+      let userRole = '';
+      try {
+        const userInfo = localStorage.getItem('userInfo');
+        if (userInfo) {
+          const parsed = JSON.parse(userInfo);
+          userRole = parsed.role?.toLowerCase();
+        }
+      } catch (e) {
+        // Fallback to role state
+        userRole = role.toLowerCase();
+      }
+      
+      console.log('[LOGIN PAGE] Determining redirect path for role:', userRole);
+      
+      const redirectPaths = {
+        'admin': '/admin',
+        'teacher': '/teachers', 
+        'student': '/students',
+        'management': '/management',
+        'principal': '/principal',
+        'parent': '/parents'
+      };
 
+      const redirectPath = redirectPaths[userRole as keyof typeof redirectPaths] || '/students';
+      console.log('[LOGIN PAGE] Redirecting to:', redirectPath);
+      router.push(redirectPath);
+    }
+  };
   // Helper function to handle successful login
   const handleSuccessfulLogin = async (userData: any, tokenData: any) => {
+    console.log('[LOGIN PAGE] Login successful, user data:', userData);
+    
     // Validate that user has the expected role or is approved
     if (!userData.role) {
       userData.role = role;
@@ -35,12 +86,14 @@ function LoginPageContent() {
 
     // Check if user is approved/has access
     if (userData.is_active === false) {
+      console.log('[LOGIN PAGE] Account inactive');
       showDialog("Account Inactive", "Your account is inactive. Please contact administrator.");
       setLoading(false);
       return;
     }
 
     if (userData.is_approved === false) {
+      console.log('[LOGIN PAGE] Account pending approval');
       showDialog("Approval Pending", "Your account is pending approval. Please contact administrator.");
       setLoading(false);
       return;
@@ -48,6 +101,7 @@ function LoginPageContent() {
 
     // Check if role matches (case-insensitive)
     if (userData.role.toLowerCase() !== role.toLowerCase()) {
+      console.log('[LOGIN PAGE] Role mismatch', { userRole: userData.role, selectedRole: role });
       showDialog("Role Mismatch", `Your account is registered as ${userData.role}. Please select the correct role.`);
       setLoading(false);
       return;
@@ -62,7 +116,7 @@ function LoginPageContent() {
   name: email.split('@')[0]   // fallback username
 };
 
-
+    console.log('[LOGIN PAGE] Storing user data in localStorage');
     localStorage.setItem('userData', JSON.stringify(userData));
     localStorage.setItem('userInfo', JSON.stringify(userInfo));
     localStorage.setItem('userRole', userData.role);
@@ -72,6 +126,7 @@ function LoginPageContent() {
 
     // Redirect based on verified role
     const userRole = userInfo.role.toLowerCase();
+    console.log('[LOGIN PAGE] Determining redirect path for role:', userRole);
 
     const redirectPaths = {
       'admin': '/admin',
@@ -82,12 +137,15 @@ function LoginPageContent() {
       'parent': '/parents'
     };
 
-    const redirectPath = redirectPaths[userRole as keyof typeof redirectPaths] || '/students';    
+    const redirectPath = redirectPaths[userRole as keyof typeof redirectPaths] || '/students';
+    console.log('[LOGIN PAGE] Redirecting to:', redirectPath);    
     router.push(redirectPath);
   };
-
   const login = async () => {
+    console.log('[LOGIN PAGE] Login initiated', { email, role });
+    
     if (!email || !password) {
+      console.log('[LOGIN PAGE] Missing email or password');
       showDialog("Invalid Input", "Please fill in all fields");
       return;
     }
@@ -97,6 +155,7 @@ function LoginPageContent() {
     try {
       // STEP 1: Get JWT token and user data from token endpoint
       const formattedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+      console.log('[LOGIN PAGE] Attempting login with role:', formattedRole);
 
       const tokenRes = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/token/', {
         method: 'POST',
@@ -110,7 +169,10 @@ function LoginPageContent() {
         })
       });
 
+      console.log('[LOGIN PAGE] Token response status:', tokenRes.status);
+      
       if (!tokenRes.ok) {
+        console.log('[LOGIN PAGE] Login failed with status:', tokenRes.status);
         setLoading(false);
         if (tokenRes.status === 401) {
           showDialog("Invalid Credentials", "Invalid email or password.");
@@ -123,8 +185,10 @@ function LoginPageContent() {
       }
 
       const tokenData = await tokenRes.json();
+      console.log('[LOGIN PAGE] Token data received:', tokenData);
 
       // Store the tokens
+      console.log('[LOGIN PAGE] Storing tokens in localStorage');
       localStorage.setItem('accessToken', tokenData.access);
       localStorage.setItem('refreshToken', tokenData.refresh);
       localStorage.setItem('authToken', tokenData.access);
@@ -137,14 +201,14 @@ function LoginPageContent() {
   is_approved: tokenData.is_approved
 };
 
-
+      console.log('[LOGIN PAGE] Processing successful login');
       await handleSuccessfulLogin(userData, tokenData);
     } catch (error) {
+      console.error('[LOGIN PAGE] Network error during login:', error);
       setLoading(false);
       showDialog("Network Error", "Please check your internet connection and try again.");
     }
   };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       login();

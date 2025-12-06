@@ -463,31 +463,6 @@ const TeachersDashboard = () => {
                 })}
               </div>
             </div>
-
-            {/* Performance Summary */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                <TrendingUp className="h-6 w-6 text-green-600" />
-                Performance Summary
-              </h2>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Average Grades</span>
-                  <span className="font-semibold text-green-600">{avgGrades.toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Student Attendance</span>
-                  <span className="font-semibold text-blue-600">
-                    {studentStats.total > 0 ? Math.round((studentStats.present / studentStats.total) * 100) : 0}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Classes This Week</span>
-                  <span className="font-semibold text-orange-600">{todayTimetable.length}</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

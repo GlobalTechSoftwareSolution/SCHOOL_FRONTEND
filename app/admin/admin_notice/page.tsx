@@ -44,7 +44,7 @@ const Notice_Page = () => {
     const fetchNotices = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/notices/`);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/notices/`);
         setNotices(response.data || []);
         
         // Calculate stats
@@ -295,33 +295,7 @@ const Notice_Page = () => {
                   <Users className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
                 </div>
               </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-white to-amber-50/50 rounded-xl sm:rounded-2xl shadow-sm border border-amber-200/30 p-3 sm:p-4 lg:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-              <div className="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-amber-500/5 rounded-full -translate-y-4 sm:-translate-y-6 translate-x-4 sm:translate-x-6"></div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Important</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{stats.important}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg sm:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Star className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-white to-green-50/50 rounded-xl sm:rounded-2xl shadow-sm border border-green-200/30 p-3 sm:p-4 lg:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-              <div className="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-green-500/5 rounded-full -translate-y-4 sm:-translate-y-6 translate-x-4 sm:translate-x-6"></div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Active</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{stats.active}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg sm:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
-                </div>
-              </div>
-            </div>
+            </div>  
           </div>
 
           {/* Search and Filters */}

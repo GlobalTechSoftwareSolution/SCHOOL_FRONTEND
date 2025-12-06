@@ -80,7 +80,6 @@ const Issues_Page = () => {
                        JSON.parse(localStorage.getItem("userData") || "{}")?.email ||
                        JSON.parse(localStorage.getItem("userInfo") || "{}")?.email;
       
-      console.log("🔍 User email from localStorage:", userEmail);
       
       if (!userEmail) {
         console.error("No user email found in localStorage");
@@ -89,10 +88,8 @@ const Issues_Page = () => {
       }
       
       // Fetch all issues
-      console.log("🔍 Fetching issues from:", API_URL);
       const res = await axios.get(API_URL);
       
-      console.log("📥 All issues from API:", res.data);
       
       // Check if we got data
       if (!res.data || !Array.isArray(res.data)) {
@@ -107,11 +104,9 @@ const Issues_Page = () => {
         const issueRaisedBy = issue.raised_by?.toLowerCase().trim();
         const userEmailLower = userEmail.toLowerCase().trim();
         const matches = issueRaisedTo === userEmailLower || issueRaisedBy === userEmailLower;
-        console.log(`🔍 Issue ${issue.id}: raised_to="${issue.raised_to}", raised_by="${issue.raised_by}", user="${userEmail}", matches=${matches}`);
         return matches;
       });
       
-      console.log("✅ Filtered issues for user:", userIssues);
       
       setIssues(userIssues);
     } catch (err: any) {

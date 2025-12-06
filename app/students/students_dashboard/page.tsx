@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
+import { isAuthenticated } from '@/app/utils/auth';
+import { useRouter } from 'next/navigation';
 
 // Interfaces
 interface Attendance {
@@ -47,6 +49,7 @@ interface Leave {
 }
 
 const StudentDashboard = () => {
+  const router = useRouter();
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [marks, setMarks] = useState<Mark[]>([]);
@@ -56,6 +59,14 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
+
+  // Check authentication on component mount
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/login?callbackUrl=/students/students_dashboard');
+      return;
+    }
+  }, [router]);
 
   // ✅ STEP 1: Fetch the student info from API by matching email
   const fetchStudentInfo = async () => {

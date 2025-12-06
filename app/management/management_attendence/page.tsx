@@ -102,7 +102,6 @@ export default function AttendanceByRole() {
   }, [teachers]);
 
   useEffect(() => {
-    console.log("🔄 AttendanceByRole: starting fetch for attendance data");
     const load = async () => {
       try {
         // Load all necessary data
@@ -112,18 +111,11 @@ export default function AttendanceByRole() {
           axios.get(`${API}/classes/`),
         ]);
 
-        console.log("🎓 students count:", stuRes.data.length);
-        console.log("👩‍🏫 teachers count:", teaRes.data.length);
-        console.log("🏫 classes count:", clsRes.data.length);
-        console.log("📋 students sample:", stuRes.data.slice(0, 3));
-        console.log("📋 classes sample:", clsRes.data.slice(0, 3));
-
         setStudents(stuRes.data || []);
         setTeachers(teaRes.data || []);
         setClasses(clsRes.data || []);
         setLoading(false);
       } catch (e) {
-        console.error("❌ fetch error:", e);
         setError(e instanceof Error ? e.message : String(e));
         setLoading(false);
       }
@@ -172,11 +164,9 @@ export default function AttendanceByRole() {
           });
         }
 
-        console.log(`📅 ${mode} attendance count:`, normalizedAttendance.length);
-        console.log(`📋 ${mode} attendance sample:`, normalizedAttendance.slice(0, 3));
+        setAttendance(normalizedAttendance);
         setAttendance(normalizedAttendance);
       } catch (e) {
-        console.error(`❌ ${mode} attendance fetch error:`, e);
         setError(e instanceof Error ? e.message : String(e));
       }
     };
@@ -189,7 +179,6 @@ export default function AttendanceByRole() {
 
   // compute filtered attendance by selected date
   const attendanceForDate = useMemo(() => {
-    console.log("📆 Filtering attendance for date:", dateStr);
     return attendance.filter((a) => {
       return String(a.date || "").startsWith(dateStr);
     });
@@ -261,7 +250,6 @@ export default function AttendanceByRole() {
       );
     }
 
-    console.log(`🔎 Rows for mode=${mode} with filters:`, rows.length);
     return rows;
   }, [attendanceForDate, mode, selectedClass, selectedSection, selectedDepartment, students, teachers]);
 
@@ -287,19 +275,13 @@ export default function AttendanceByRole() {
     const normalizedEmail = email.toLowerCase();
     const student = students.find((s) => s.email && s.email.toLowerCase() === normalizedEmail);
     
-    // Debug logging
     if (!student) {
-      console.log("🔍 No student found for email:", normalizedEmail);
-      console.log("📧 Available student emails:", students.map(s => s.email));
       return null;
     }
     
     const cls = classes.find((c) => c.id === student.class_id);
     
-    // Debug logging
     if (!cls) {
-      console.log("📚 No class found for student:", student);
-      console.log("🏫 Available classes:", classes);
       return { student, classObj: null };
     }
     
@@ -750,7 +732,6 @@ export default function AttendanceByRole() {
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {filteredBySearch.map((row) => {
-                  console.log("📱 Rendering mobile card for:", row);
                   const role = normalizeRole(row.role);
                   const isStudent = role === "student";
                   const isTeacher = role === "teacher";
@@ -762,13 +743,6 @@ export default function AttendanceByRole() {
 
                   if (isStudent) {
                     const resolved = resolveClassForEmail(row.user_email);
-                    // Debug logging
-                    console.log("📱 Mobile view - Resolved student data:", { 
-                      user_email: row.user_email, 
-                      resolved,
-                      className: resolved?.classObj?.class_name || "-", 
-                      section: resolved?.classObj?.sec || resolved?.classObj?.section || "-" 
-                    });
                     
                     if (resolved && resolved.classObj) {
                       className = resolved.classObj.class_name || "-";

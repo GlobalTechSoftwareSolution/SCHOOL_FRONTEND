@@ -375,20 +375,6 @@ const TeachersProgramsPage = () => {
                       className="mobile-search search-mobile pl-12 pr-6 py-3 w-full border border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg shadow-sm transition-all duration-200"
                     />
                   </div>
-
-                  {/* Status Filter */}
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="mobile-select select-mobile px-4 py-3 border border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg shadow-sm transition-all duration-200"
-                  >
-                    <option value="all">All Status</option>
-                    {statuses.filter(status => status !== 'all').map(status => (
-                      <option key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 {/* View Toggle */}

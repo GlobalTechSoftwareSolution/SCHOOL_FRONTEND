@@ -10,6 +10,8 @@ import {
   Calendar,
   BarChart3
 } from "lucide-react";
+import Link from "next/link";
+
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
@@ -556,24 +558,6 @@ const ManagementDashboard = () => {
                       <p className="text-sm text-gray-600">Pending Fees</p>
                     </div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-xl flex items-center gap-3 hover:bg-green-100 transition-colors">
-                    <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-green-600">{safeQuickStats.newAdmissions}</p>
-                      <p className="text-sm text-gray-600">New Admissions</p>
-                    </div>
-                  </div>
-                  <div className="bg-orange-50 p-4 rounded-xl flex items-center gap-3 hover:bg-orange-100 transition-colors">
-                    <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
-                      <BarChart3 className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-orange-600">{safeQuickStats.pendingApprovals}</p>
-                      <p className="text-sm text-gray-600">Pending Approvals</p>
-                    </div>
-                  </div>
                   <div className="bg-blue-50 p-4 rounded-xl flex items-center gap-3 hover:bg-blue-100 transition-colors">
                     <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
                       <Calendar className="w-6 h-6 text-white" />
@@ -581,31 +565,6 @@ const ManagementDashboard = () => {
                     <div>
                       <p className="text-2xl font-bold text-blue-600">{safeQuickStats.totalNotices}</p>
                       <p className="text-sm text-gray-600">Total Notices</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Performance Metrics */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Performance Metrics</h2>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-medium text-gray-700">Attendance Rate</h4>
-                      <span className="text-lg font-bold text-gray-800">{safeOverview.attendanceRate}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: `${safeOverview.attendanceRate}%` }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-medium text-gray-700">Pass Percentage</h4>
-                      <span className="text-lg font-bold text-gray-800">{safeOverview.passPercentage}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: `${safeOverview.passPercentage}%` }}></div>
                     </div>
                   </div>
                 </div>
@@ -705,9 +664,9 @@ const ManagementDashboard = () => {
                     ))}
                     {notices.length > 4 && (
                       <div className="text-center pt-2">
-                        <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        <Link href="/management/management_notice" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                           View all {notices.length} notices →
-                        </button>
+                        </Link>
                       </div>
                     )}
                   </div>

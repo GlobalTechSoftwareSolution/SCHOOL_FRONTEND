@@ -21,6 +21,18 @@ const PrincipalMonthlyReport = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
+
+  // Category filter based on teacher ID prefix
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+
+  // Class teacher assignment states
+  const [showAssignClassModal, setShowAssignClassModal] = useState(false);
+  const [availableClasses, setAvailableClasses] = useState<any[]>([]);
+  const [selectedClassForAssignment, setSelectedClassForAssignment] = useState<any>(null);
+  const [assigningClass, setAssigningClass] = useState(false);
+  const [assignmentSuccess, setAssignmentSuccess] = useState<string>("");
+
   const [studentExtra, setStudentExtra] = useState<{ 
     leaves: any[]; 
     grades: any[]; 
@@ -70,51 +82,99 @@ const PrincipalMonthlyReport = () => {
   const [studentClassFilter, setStudentClassFilter] = useState<string>("all");
   const [studentSectionFilter, setStudentSectionFilter] = useState<string>("all");
 
-// ✅ Updated handleSubjectClick with debugging
-const handleSubjectClick = (subject: any) => {
-  setSelectedSubject(subject);
-  
-  console.log("🔍 Clicked Subject:", subject);
-  console.log("📅 All Classes:", teacherExtra.classes);
-  
-  // Show sample entry to understand the data structure
-  if (teacherExtra.classes.length > 0) {
-    console.log("📊 Sample timetable entry:", teacherExtra.classes[0]);
-  }
-  
-  // Filter timetable for this specific subject - check multiple possible field names
-  const subjectTimetable = teacherExtra.classes.filter((entry: any) => {
-    const possibleFields = [
-      entry.subject_id,
-      entry.subjectId, 
-      entry.subject,
-      entry.subject_name,
-      entry.subject_code,
-      entry.subject_name_id
-    ];
+  // Function to get category from teacher ID
+  const getTeacherCategory = (teacherId: string): string => {
+    if (!teacherId) return "Unknown";
     
-    console.log("🎯 Comparing - Subject ID:", subject.id, "Entry fields:", possibleFields);
+    const firstChar = teacherId.charAt(0).toUpperCase();
     
-    return possibleFields.some(field => field === subject.id) ||
-           possibleFields.some(field => field === subject.subject_name) ||
-           possibleFields.some(field => field === subject.subject_code);
-  });
-  
-  console.log("✅ Filtered Timetable:", subjectTimetable);
-  setFilteredTimetable(subjectTimetable);
-};
+    switch(firstChar) {
+      case 'N': return "Nursery";
+      case 'P': return "Higher Primary";
+      case 'S': return "School";
+      case 'H': return "School";
+      case 'L': return "College";
+      default: return "Other";
+    }
+  };
 
-// ✅ Add debug function to show all available data
-const showAllTimetableData = () => {
-  console.log("🔍 All Teacher Extra Data:", teacherExtra);
-  console.log("📚 All Subjects:", teacherExtra.subjects);
-  console.log("🏫 All Classes:", teacherExtra.classes);
-  
-  // Show sample entries to understand the data structure
-  if (teacherExtra.classes.length > 0) {
-    console.log("📊 Sample Class Entry:", teacherExtra.classes[0]);
-  }
-};
+  // Function to get category for filtering
+  const getCategoryForFilter = (teacherId: string): string => {
+    if (!teacherId) return "other";
+    
+    const firstChar = teacherId.charAt(0).toUpperCase();
+    
+    switch(firstChar) {
+      case 'N': return "nursery";
+      case 'P': return "primary";
+      case 'S': return "school";
+      case 'H': return "highschool";
+      case 'L': return "college";
+      default: return "other";
+    }
+  };
+
+  // Get unique categories from teachers
+  const uniqueCategories = Array.from(
+    new Set(
+      teachers
+        .map((teacher: any) => getCategoryForFilter(teacher.teacher_id))
+        .filter((cat: any) => Boolean(cat))
+    )
+  ).filter(cat => cat !== "other");
+
+  // Add "all" option to the beginning
+  const allCategories = ["all", ...uniqueCategories];
+
+  // Get unique departments for filtered teachers
+  const uniqueDepartments = Array.from(
+    new Set(
+      teachers
+        .filter((teacher: any) => {
+          const category = getCategoryForFilter(teacher.teacher_id);
+          return categoryFilter === "all" || category === categoryFilter;
+        })
+        .map((teacher: any) => teacher.department_name)
+        .filter((dept: any) => Boolean(dept))
+    )
+  );
+
+  // Teachers filtered by category and department
+  const filteredTeachersByCategoryAndDepartment = teachers.filter((teacher: any) => {
+    const category = getCategoryForFilter(teacher.teacher_id);
+    const matchesCategory = categoryFilter === "all" || category === categoryFilter;
+    const matchesDepartment = departmentFilter === "all" || teacher.department_name === departmentFilter;
+    
+    return matchesCategory && matchesDepartment;
+  });
+
+  // ✅ Updated handleSubjectClick with debugging
+  const handleSubjectClick = (subject: any) => {
+    setSelectedSubject(subject);
+    
+    // Filter timetable for this specific subject - check multiple possible field names
+    const subjectTimetable = teacherExtra.classes.filter((entry: any) => {
+      const possibleFields = [
+        entry.subject_id,
+        entry.subjectId, 
+        entry.subject,
+        entry.subject_name,
+        entry.subject_code,
+        entry.subject_name_id
+      ];
+      
+      return possibleFields.some(field => field === subject.id) ||
+            possibleFields.some(field => field === subject.subject_name) ||
+            possibleFields.some(field => field === subject.subject_code);
+    });
+    
+    setFilteredTimetable(subjectTimetable);
+  };
+
+  // ✅ Add debug function to show all available data
+  const showAllTimetableData = () => {
+    // This function was used for debugging and can be removed or kept as a placeholder
+  };
 
   // Refresh data based on current view
   const refreshData = async () => {
@@ -204,428 +264,628 @@ const showAllTimetableData = () => {
     }
   };
 
-  
-// ✅ Try different timetable API endpoints
-const fetchTeacherDetails = async (teacher: any) => {
-  setSelectedTeacher(teacher);
-  setLoading(true);
+  // Fetch all classes for assignment
+  const fetchAvailableClasses = async () => {
+    try {
+      console.log("📚 Fetching all classes for assignment...");
+      const response = await axios.get(`${API_BASE}/classes/`);
+      const classesData = response.data || [];
+      
+      console.log("✅ Available classes:", classesData);
+      setAvailableClasses(classesData);
+    } catch (err) {
+      console.error("❌ Error fetching classes:", err);
+    }
+  };
 
-  try {
-    // Use teacher's subject list from the teacher object if available
-    const subjectsFromTeacher = Array.isArray(teacher.subject_list) ? teacher.subject_list : [];
-    const teacherSubjectIds = subjectsFromTeacher.map((subject: any) => subject.id);
+  // Assign class teacher
+  const assignClassTeacher = async (classId: string) => {
+    if (!selectedTeacher || !classId) {
+      setError("Please select a teacher and class first");
+      return;
+    }
+
+    setAssigningClass(true);
+    setAssignmentSuccess("");
+    setError("");
+
+    try {
+      console.log("📝 Assigning class teacher:", {
+        teacherEmail: selectedTeacher.email,
+        classId: classId
+      });
+
+      // Find the class info
+      const selectedClass = availableClasses.find(cls => cls.id === classId);
+      
+      if (!selectedClass) {
+        setError("Class not found");
+        setAssigningClass(false);
+        return;
+      }
+
+      // Prepare the request body
+      const requestBody = {
+        class_teacher: selectedTeacher.email
+      };
+
+      console.log("📤 Sending PATCH request to:", `${API_BASE}/classes/${classId}/`);
+      console.log("📦 Request body:", requestBody);
+
+      // Make PATCH request to assign class teacher
+      const response = await axios.patch(
+        `${API_BASE}/classes/${classId}/`,
+        requestBody,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log("✅ Assignment response:", response.data);
+
+      // Show success message
+      setAssignmentSuccess(
+        `Successfully assigned ${selectedTeacher.fullname} as class teacher for ${selectedClass.class_name} - ${selectedClass.sec}`
+      );
+
+      // Refresh classes data
+      await fetchAvailableClasses();
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShowAssignClassModal(false);
+        setAssignmentSuccess("");
+      }, 2000);
+
+    } catch (err: any) {
+      console.error("❌ Error assigning class teacher:", err);
+      console.error("❌ Error details:", err.response?.data || err.message);
+      
+      setError(
+        err.response?.data?.message || 
+        err.response?.data?.error || 
+        err.message || 
+        "Failed to assign class teacher. Please try again."
+      );
+    } finally {
+      setAssigningClass(false);
+    }
+  };
+
+  // Open assign class modal
+  const openAssignClassModal = async () => {
+    if (!selectedTeacher) return;
     
-    console.log("🔍 Teacher Subjects (from teacher object):", subjectsFromTeacher);
-    console.log("🎯 Teacher Subject IDs:", teacherSubjectIds);
+    setShowAssignClassModal(true);
+    setSelectedClassForAssignment(null);
+    setAssignmentSuccess("");
+    setError("");
+    
+    // Fetch available classes
+    await fetchAvailableClasses();
+  };
 
-    // Try multiple timetable endpoints with different parameters
-    const endpoints = [
-      `${API_BASE}/timetable/`,
-      `${API_BASE}/timetable/?teacher_email=${teacher.email}`,
-      `${API_BASE}/timetable/?teacher_id=${teacher.teacher_id}`,
-      `${API_BASE}/timetable/?email=${teacher.email}`,
-      `${API_BASE}/timetable/?teacher=${teacher.teacher_id}`,
-      `${API_BASE}/class-timetable/`,
-      `${API_BASE}/class-timetable/?teacher_email=${teacher.email}`,
-    ];
+  // ✅ Try different timetable API endpoints
+  const fetchTeacherDetails = async (teacher: any) => {
+    setSelectedTeacher(teacher);
+    setLoading(true);
 
-    let allTimetableEntries: any[] = [];
+    try {
+      // Use teacher's subject list from the teacher object if available
+      const subjectsFromTeacher = Array.isArray(teacher.subject_list) ? teacher.subject_list : [];
+      const teacherSubjectIds = subjectsFromTeacher.map((subject: any) => subject.id);
 
-    for (let endpoint of endpoints) {
-      try {
-        console.log("🔍 Trying endpoint:", endpoint);
-        const response = await axios.get(endpoint);
-        const data = response.data || [];
-        console.log("📊 Data from", endpoint, ":", data);
-        
-        if (Array.isArray(data) && data.length > 0) {
-          allTimetableEntries = data;
-          console.log("✅ Found data from:", endpoint);
-          break;
+      // Try multiple timetable endpoints with different parameters
+      const endpoints = [
+        `${API_BASE}/timetable/`,
+        `${API_BASE}/timetable/?teacher_email=${teacher.email}`,
+        `${API_BASE}/timetable/?teacher_id=${teacher.teacher_id}`,
+        `${API_BASE}/timetable/?email=${teacher.email}`,
+        `${API_BASE}/timetable/?teacher=${teacher.teacher_id}`,
+        `${API_BASE}/class-timetable/`,
+        `${API_BASE}/class-timetable/?teacher_email=${teacher.email}`,
+      ];
+
+      let allTimetableEntries: any[] = [];
+
+      for (let endpoint of endpoints) {
+        try {
+          const response = await axios.get(endpoint);
+          const data = response.data || [];
+          
+          if (Array.isArray(data) && data.length > 0) {
+            allTimetableEntries = data;
+            break;
+          }
+        } catch (err: any) {
+          // Endpoint failed, continue to next
         }
-      } catch (err: any) {
-        console.log("❌ Failed for endpoint:", endpoint, err?.response?.status || err);
       }
-    }
 
-    // If still no data, try to fetch all timetable entries and filter
-    if (allTimetableEntries.length === 0) {
-      try {
-        console.log("🔍 Trying to fetch all timetable entries...");
-        const allResponse = await axios.get(`${API_BASE}/timetable/`);
-        const allData = allResponse.data || [];
-        console.log("📊 All timetable data:", allData);
-        
-        if (Array.isArray(allData)) {
-          // Filter by teacher email or teacher ID
-          allTimetableEntries = allData.filter((entry: any) => 
-            entry.teacher_email === teacher.email || 
-            entry.teacher_id === teacher.teacher_id ||
-            entry.teacher === teacher.teacher_id
+      // If still no data, try to fetch all timetable entries and filter
+      if (allTimetableEntries.length === 0) {
+        try {
+          const allResponse = await axios.get(`${API_BASE}/timetable/`);
+          const allData = allResponse.data || [];
+          
+          if (Array.isArray(allData)) {
+            // Filter by teacher email or teacher ID
+            allTimetableEntries = allData.filter((entry: any) => 
+              entry.teacher_email === teacher.email || 
+              entry.teacher_id === teacher.teacher_id ||
+              entry.teacher === teacher.teacher_id
+            );
+          }
+        } catch (err) {
+          console.log("❌ Failed to fetch all timetable:", err);
+        }
+      }
+
+      // If we don't have explicit subject IDs from the teacher, keep all timetable entries
+      let classes = allTimetableEntries;
+
+      // If teacherSubjectIds is available, further filter classes by those subject IDs
+      if (teacherSubjectIds.length > 0) {
+        classes = allTimetableEntries.filter((entry: any) => {
+          const possibleFields = [
+            entry.subject_id,
+            entry.subjectId, 
+            entry.subject,
+            entry.subject_name_id
+          ];
+          
+          const matches = possibleFields.some(field => 
+            teacherSubjectIds.includes(field)
           );
-          console.log("🎯 Filtered by teacher:", allTimetableEntries);
-        }
-      } catch (err) {
-        console.log("❌ Failed to fetch all timetable:", err);
+          
+          return matches;
+        });
       }
-    }
 
-    // If we don't have explicit subject IDs from the teacher, keep all timetable entries
-    let classes = allTimetableEntries;
 
-    // If teacherSubjectIds is available, further filter classes by those subject IDs
-    if (teacherSubjectIds.length > 0) {
-      classes = allTimetableEntries.filter((entry: any) => {
-        const possibleFields = [
-          entry.subject_id,
-          entry.subjectId, 
-          entry.subject,
-          entry.subject_name_id
+
+      // 🔥 FIXED: Fetch leaves for the specific teacher
+      let leaves: any[] = [];
+      try {
+
+        
+        const [leaveYear, leaveMonthNum] = leaveMonth.split("-");
+        
+        // Try multiple leaves endpoints
+        const leaveEndpoints = [
+          `${API_BASE}/leaves/?email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
+          `${API_BASE}/leaves/?applicant_email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
+          `${API_BASE}/leaves/?teacher_email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
+          `${API_BASE}/leaves/?staff_email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
         ];
         
-        const matches = possibleFields.some(field => 
-          teacherSubjectIds.includes(field)
-        );
-        
-        if (matches) {
-          console.log("✅ Matched entry:", entry);
+        for (let endpoint of leaveEndpoints) {
+          try {
+            const leavesResponse = await axios.get(endpoint);
+            const data = leavesResponse.data || [];
+            
+            if (Array.isArray(data) && data.length > 0) {
+              // Filter to ensure we only get this teacher's leaves
+              const filteredLeaves = data.filter((leave: any) => {
+                const matchesEmail = 
+                  leave.email === teacher.email ||
+                  leave.applicant_email === teacher.email ||
+                  leave.teacher_email === teacher.email ||
+                  leave.staff_email === teacher.email;
+                
+                return matchesEmail;
+              });
+              
+              if (filteredLeaves.length > 0) {
+                leaves = filteredLeaves;
+                break;
+              }
+            }
+          } catch (err: any) {
+            // Endpoint failed, continue to next
+          }
         }
-        return matches;
-      });
-    }
-
-    console.log("🎯 Final classes used for timetable:", classes);
-
-    // Fetch leaves and attendance for the specific teacher
-    let leaves: any[] = [];
-    let attendance: any[] = [];
-
-    try {
-      // Fetch leaves with month/year filter
-      const [leaveYear, leaveMonthNum] = leaveMonth.split("-");
-      const leavesResponse = await axios.get(
-        `${API_BASE}/leaves/?email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`
-      );
-      leaves = leavesResponse.data || [];
-    } catch (err) {
-      console.log("❌ Failed to fetch leaves:", err);
-    }
-
-    // Try multiple attendance endpoints for teachers with month/year filter
-    const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
-    const attendanceEndpoints = [
-      `${API_BASE}/attendance/?teacher_email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/attendance/?teacher=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/teacher-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/staff-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-    ];
-
-    for (let endpoint of attendanceEndpoints) {
-      try {
-        console.log("🔍 Trying attendance endpoint:", endpoint);
-        const attendanceResponse = await axios.get(endpoint);
-        const data = attendanceResponse.data || [];
-        console.log("📊 Attendance data from", endpoint, ":", data);
         
-        if (Array.isArray(data) && data.length > 0) {
-          // Check if this is teacher data (should have teacher fields, not student fields)
-          const hasTeacherData = data.some((record: any) => 
-            record.teacher_email || record.teacher_name || !record.student_email
-          );
-          
-          if (hasTeacherData) {
-            // Further restrict to this teacher and teacher role when available
-            const filtered = data.filter((record: any) => {
-              const role = (record.role || record.user_type || record.user_role || '').toString().toLowerCase();
-              const isTeacherRole = !role || role.includes('teacher');
-              const recEmail =
-                record.teacher_email ||
-                record.email ||
-                record.user_email ||
-                record.staff_email;
-              const matchesEmail = recEmail === teacher.email;
-              return isTeacherRole && matchesEmail;
+        // If still no leaves, try to fetch all leaves and filter client-side
+        if (leaves.length === 0) {
+          try {
+            const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
+            const allLeaves = allLeavesResponse.data || [];
+            
+            // Filter by teacher email
+            leaves = allLeaves.filter((leave: any) => {
+              const matchesEmail = 
+                leave.email === teacher.email ||
+                leave.applicant_email === teacher.email ||
+                leave.teacher_email === teacher.email ||
+                leave.staff_email === teacher.email;
+              
+              // Also filter by month if available
+              if (matchesEmail && leave.start_date) {
+                const leaveDate = new Date(leave.start_date);
+                const leaveYearMonth = `${leaveDate.getFullYear()}-${String(leaveDate.getMonth() + 1).padStart(2, '0')}`;
+                return leaveYearMonth === leaveMonth;
+              }
+              
+              return matchesEmail;
             });
-
-            attendance = filtered.length > 0 ? filtered : data;
-            console.log("✅ Found teacher attendance data from:", endpoint, "Filtered count:", filtered.length);
-            break;
-          } else {
-            console.log("⚠️ This endpoint returns student data, not teacher data");
+          } catch (err: any) {
+            // Failed to fetch all leaves
           }
         }
-      } catch (err: any) {
-        console.log("❌ Failed for attendance endpoint:", endpoint, err?.response?.status || err);
-      }
-    }
+        
 
-    console.log("📝 Final Teacher Leaves:", leaves);
-    console.log("📊 Final Teacher Attendance:", attendance);
-
-    // Ensure we have full class info (class_name, sec) for timetable entries
-    let currentClasses = allClasses;
-    if (currentClasses.length === 0) {
-      try {
-        const classesRes = await axios.get(`${API_BASE}/classes/`);
-        currentClasses = classesRes.data || [];
-        setAllClasses(currentClasses);
       } catch (err) {
-        console.log("❌ Failed to load classes for timetable view:", err);
+        console.log("❌ Failed to fetch leaves:", err);
       }
-    }
 
-    // Derive teacher subjects from timetable entries + subjects API
-    let derivedSubjects: any[] = [];
-    try {
-      const subjectsRes = await axios.get(`${API_BASE}/subjects/`);
-      const allSubjects = Array.isArray(subjectsRes.data) ? subjectsRes.data : [];
+      // 🔥 FIXED: Fetch attendance for the specific teacher
+      let attendance: any[] = [];
+      try {
 
-      const seen = new Set<number | string>();
-      classes.forEach((entry: any) => {
-        const subjectId = entry.subject_id ?? entry.subjectId ?? entry.subject ?? entry.subject_name_id;
-        if (!subjectId || seen.has(subjectId)) return;
-        seen.add(subjectId);
+        
+        const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
+        
+        // Try multiple attendance endpoints for teachers
+        const attendanceEndpoints = [
+          `${API_BASE}/attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+          `${API_BASE}/teacher-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+          `${API_BASE}/staff-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+          `${API_BASE}/attendance/?teacher_email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        ];
 
-        const subj = allSubjects.find((s: any) => s.id === subjectId || s.subject_id === subjectId);
-        if (subj) {
-          derivedSubjects.push(subj);
-        } else {
-          // Fallback subject object from timetable entry
-          derivedSubjects.push({
-            id: subjectId,
-            subject_name: entry.subject_name || String(subjectId),
-            subject_code: entry.subject_code || '',
-          });
+        for (let endpoint of attendanceEndpoints) {
+          try {
+            const attendanceResponse = await axios.get(endpoint);
+            const data = attendanceResponse.data || [];
+            
+            if (Array.isArray(data) && data.length > 0) {
+              // Filter to ensure we only get this teacher's attendance
+              const filteredAttendance = data.filter((record: any) => {
+                const matchesEmail = 
+                  record.email === teacher.email ||
+                  record.teacher_email === teacher.email ||
+                  record.staff_email === teacher.email ||
+                  record.user_email === teacher.email;
+                
+                // Also check role if available
+                const role = (record.role || record.user_type || '').toString().toLowerCase();
+                const isTeacherRole = !role || role.includes('teacher') || role.includes('staff');
+                
+                return matchesEmail && isTeacherRole;
+              });
+              
+              if (filteredAttendance.length > 0) {
+                attendance = filteredAttendance;
+                break;
+              }
+            }
+          } catch (err: any) {
+            // Endpoint failed, continue to next
+          }
         }
+        
+        // If still no attendance, try to fetch all attendance and filter client-side
+        if (attendance.length === 0) {
+          try {
+            const allAttendanceResponse = await axios.get(`${API_BASE}/attendance/`);
+            const allAttendance = allAttendanceResponse.data || [];
+            
+            // Filter by teacher email and month
+            attendance = allAttendance.filter((record: any) => {
+              const matchesEmail = 
+                record.email === teacher.email ||
+                record.teacher_email === teacher.email ||
+                record.staff_email === teacher.email;
+              
+              const isTeacherRole = !record.role || 
+                record.role.toString().toLowerCase().includes('teacher') ||
+                record.role.toString().toLowerCase().includes('staff');
+              
+              // Filter by month if date is available
+              if (matchesEmail && isTeacherRole && record.date) {
+                const recordDate = new Date(record.date);
+                const recordYearMonth = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}`;
+                return recordYearMonth === attendanceMonth;
+              }
+              
+              return matchesEmail && isTeacherRole;
+            });
+          } catch (err: any) {
+            // Failed to fetch all attendance
+          }
+        }
+        
+
+      } catch (err) {
+        console.log("❌ Failed to fetch attendance:", err);
+      }
+
+      // Ensure we have full class info (class_name, sec) for timetable entries
+      let currentClasses = allClasses;
+      if (currentClasses.length === 0) {
+        try {
+          const classesRes = await axios.get(`${API_BASE}/classes/`);
+          currentClasses = classesRes.data || [];
+          setAllClasses(currentClasses);
+        } catch (err) {
+          console.log("❌ Failed to load classes for timetable view:", err);
+        }
+      }
+
+      // Derive teacher subjects from timetable entries + subjects API
+      let derivedSubjects: any[] = [];
+      try {
+        const subjectsRes = await axios.get(`${API_BASE}/subjects/`);
+        const allSubjects = Array.isArray(subjectsRes.data) ? subjectsRes.data : [];
+
+        const seen = new Set<number | string>();
+        classes.forEach((entry: any) => {
+          const subjectId = entry.subject_id ?? entry.subjectId ?? entry.subject ?? entry.subject_name_id;
+          if (!subjectId || seen.has(subjectId)) return;
+          seen.add(subjectId);
+
+          const subj = allSubjects.find((s: any) => s.id === subjectId || s.subject_id === subjectId);
+          if (subj) {
+            derivedSubjects.push(subj);
+          } else {
+            // Fallback subject object from timetable entry
+            derivedSubjects.push({
+              id: subjectId,
+              subject_name: entry.subject_name || String(subjectId),
+              subject_code: entry.subject_code || '',
+            });
+          }
+        });
+      } catch (err) {
+        derivedSubjects = [];
+      }
+
+      // Prefer derived subjects; if empty, fall back to any subjects from teacher object
+      const finalSubjects = derivedSubjects.length > 0 ? derivedSubjects : subjectsFromTeacher;
+
+      setTeacherExtra({
+        leaves: leaves,
+        subjects: finalSubjects,
+        classes: classes,
+        reports: [],
+        attendance: attendance,
       });
     } catch (err) {
-      console.log("❌ Failed to derive subjects from /subjects/ API:", err);
-      derivedSubjects = [];
+      setTeacherExtra({
+        leaves: [],
+        subjects: teacher.subject_list || [],
+        classes: [],
+        reports: [],
+        attendance: [],
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Prefer derived subjects; if empty, fall back to any subjects from teacher object
-    const finalSubjects = derivedSubjects.length > 0 ? derivedSubjects : subjectsFromTeacher;
-
-    setTeacherExtra({
-      leaves: leaves,
-      subjects: finalSubjects,
-      classes: classes,
-      reports: [],
-      attendance: attendance,
-    });
-  } catch (err) {
-    console.error("❌ Error in fetchTeacherDetails:", err);
-    setTeacherExtra({
-      leaves: [],
-      subjects: teacher.subject_list || [],
-      classes: [],
-      reports: [],
-      attendance: [],
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
-// Refresh attendance data when month/year changes
-const refreshAttendanceData = async () => {
-  if (!selectedTeacher) return;
-  
-  try {
-    const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
-    const attendanceEndpoints = [
-      `${API_BASE}/attendance/?teacher_email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/attendance/?teacher=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/teacher-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/staff-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-    ];
-
-    let attendance: any[] = [];
-    for (let endpoint of attendanceEndpoints) {
-      try {
-        const response = await axios.get(endpoint);
-        const data = response.data || [];
-        
-        if (Array.isArray(data) && data.length > 0) {
-          const hasTeacherData = data.some((record: any) => 
-            record.teacher_email || record.teacher_name || !record.student_email
-          );
-          
-          if (hasTeacherData) {
-            attendance = data;
-            break;
-          }
-        }
-      } catch (err) {
-        console.log("Failed attendance endpoint:", endpoint);
-      }
-    }
-
-    setTeacherExtra(prev => ({ ...prev, attendance }));
-  } catch (err) {
-    console.error("Error refreshing attendance:", err);
-  }
-};
-
-// Refresh leaves data when month/year changes
-const refreshLeavesData = async () => {
-  if (!selectedTeacher) return;
-  
-  try {
-    const [leaveYear, leaveMonthNum] = leaveMonth.split("-");
-    const response = await axios.get(
-      `${API_BASE}/leaves/?email=${selectedTeacher.email}&year=${leaveYear}&month=${leaveMonthNum}`
-    );
-    const leaves = response.data || [];
+  // 🔥 FIXED: Refresh attendance data when month/year changes
+  const refreshAttendanceData = async () => {
+    if (!selectedTeacher) return;
     
-    setTeacherExtra(prev => ({ ...prev, leaves }));
-  } catch (err) {
-    console.error("Error refreshing leaves:", err);
-  }
-};
-
-// Refresh data when month/year changes
-useEffect(() => {
-  if (selectedTeacher) {
-    refreshAttendanceData();
-  }
-}, [attendanceMonth]);
-
-useEffect(() => {
-  if (selectedTeacher) {
-    refreshLeavesData();
-  }
-}, [leaveMonth]);
-
-// Refresh student attendance data when month changes
-useEffect(() => {
-  if (selectedStudent) {
-    refreshStudentAttendanceData();
-  }
-}, [studentAttendanceMonth]);
-
-// Refresh student leaves data when month changes
-useEffect(() => {
-  if (selectedStudent) {
-    refreshStudentLeavesData();
-  }
-}, [studentLeaveMonth]);
-
-const refreshStudentAttendanceData = async () => {
-  if (!selectedStudent) return;
-  
-  const [year, month] = studentAttendanceMonth.split("-");
-  let attendance: any[] = [];
-
-  try {
-    console.log("🔄 Refreshing student attendance data for:", studentAttendanceMonth);
-    
-    // Fetch all student_attendance records, then filter by email + month/year client-side
-    console.log("🔍 Fetching all student_attendance records for client-side filtering");
-    const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
-    let rawAttendance = attendanceResponse.data || [];
-
-    // Some backends may return an object instead of array
-    if (!Array.isArray(rawAttendance)) {
-      rawAttendance = Object.values(rawAttendance);
-    }
-
-    console.log("📊 Raw Student Attendance:", rawAttendance);
-    console.log("📊 Attendance data type:", typeof rawAttendance);
-    console.log("📊 Attendance length:", rawAttendance.length);
-
-    attendance = rawAttendance.filter((record: any) => {
-      const emailMatch =
-        record.student === selectedStudent.email ||
-        record.student_email === selectedStudent.email ||
-        record.email === selectedStudent.email ||
-        record.student_id === selectedStudent.email;
-
-      // Match by year-month using the date string (e.g. "2025-11-15")
-      const recordDate = record.date || record.attendance_date;
-      let monthMatch = true;
-      if (recordDate && typeof recordDate === 'string') {
-        const recMonth = recordDate.split('T')[0]?.slice(0, 7); // YYYY-MM
-        monthMatch = recMonth === studentAttendanceMonth;
-      }
-
-      return emailMatch && monthMatch;
-    });
-
-    console.log("✅ Updated student attendance (filtered by email + month):", attendance);
-
-    // Update state with new attendance data
-    setStudentExtra(prev => ({
-      ...prev,
-      attendance: attendance,
-    }));
-    
-  } catch (err) {
-    console.error("Error refreshing student attendance:", err);
-  }
-};
-
-const refreshStudentLeavesData = async () => {
-  if (!selectedStudent) return;
-  
-  const [year, month] = studentLeaveMonth.split("-");
-  let leaves: any[] = [];
-
-  try {
-    console.log("🔄 Refreshing student leaves data for:", studentLeaveMonth);
-    
-    // Try leaves endpoints with new month
     try {
-      console.log("🔍 Trying primary leaves endpoint:", `${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
-      const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
-      const rawLeaves = leavesResponse.data || [];
+      const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
+      let attendance: any[] = [];
+
+      // Try multiple attendance endpoints
+      const attendanceEndpoints = [
+        `${API_BASE}/attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/teacher-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/staff-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+      ];
+
+      for (let endpoint of attendanceEndpoints) {
+        try {
+          const response = await axios.get(endpoint);
+          const data = response.data || [];
+          
+          if (Array.isArray(data) && data.length > 0) {
+            // Filter by teacher email
+            const filteredAttendance = data.filter((record: any) => {
+              const matchesEmail = 
+                record.email === selectedTeacher.email ||
+                record.teacher_email === selectedTeacher.email ||
+                record.staff_email === selectedTeacher.email;
+              
+              return matchesEmail;
+            });
+            
+            if (filteredAttendance.length > 0) {
+              attendance = filteredAttendance;
+              break;
+            }
+          }
+        } catch (err) {
+          // Endpoint failed, continue to next
+        }
+      }
+
+      // Update teacher extra data
+      setTeacherExtra(prev => ({ ...prev, attendance }));
+    } catch (err) {
+      // Error refreshing attendance
+    }
+  };
+
+  // 🔥 FIXED: Refresh leaves data when month/year changes
+  const refreshLeavesData = async () => {
+    if (!selectedTeacher) return;
+    
+    try {
+      const [leaveYear, leaveMonthNum] = leaveMonth.split("-");
+      let leaves: any[] = [];
+
+      // Try multiple leaves endpoints
+      const leaveEndpoints = [
+        `${API_BASE}/leaves/?email=${selectedTeacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
+        `${API_BASE}/leaves/?applicant_email=${selectedTeacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
+        `${API_BASE}/leaves/?teacher_email=${selectedTeacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
+      ];
+
+      for (let endpoint of leaveEndpoints) {
+        try {
+          const response = await axios.get(endpoint);
+          const data = response.data || [];
+          
+          if (Array.isArray(data) && data.length > 0) {
+            // Filter by teacher email
+            const filteredLeaves = data.filter((leave: any) => {
+              const matchesEmail = 
+                leave.email === selectedTeacher.email ||
+                leave.applicant_email === selectedTeacher.email ||
+                leave.teacher_email === selectedTeacher.email;
+              
+              return matchesEmail;
+            });
+            
+            if (filteredLeaves.length > 0) {
+              leaves = filteredLeaves;
+              break;
+            }
+          }
+        } catch (err) {
+          // Endpoint failed, continue to next
+        }
+      }
+
+      // Update teacher extra data
+      setTeacherExtra(prev => ({ ...prev, leaves }));
+    } catch (err) {
+      // Error refreshing leaves
+    }
+  };
+
+  // Refresh data when month/year changes
+  useEffect(() => {
+    if (selectedTeacher) {
+      refreshAttendanceData();
+    }
+  }, [attendanceMonth]);
+
+  useEffect(() => {
+    if (selectedTeacher) {
+      refreshLeavesData();
+    }
+  }, [leaveMonth]);
+
+  // Refresh student attendance data when month changes
+  useEffect(() => {
+    if (selectedStudent) {
+      refreshStudentAttendanceData();
+    }
+  }, [studentAttendanceMonth]);
+
+  // Refresh student leaves data when month changes
+  useEffect(() => {
+    if (selectedStudent) {
+      refreshStudentLeavesData();
+    }
+  }, [studentLeaveMonth]);
+
+  const refreshStudentAttendanceData = async () => {
+    if (!selectedStudent) return;
+    
+    const [year, month] = studentAttendanceMonth.split("-");
+    let attendance: any[] = [];
+
+    try {
+      // Fetch all student_attendance records, then filter by email + month/year client-side
+      const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
+      let rawAttendance = attendanceResponse.data || [];
+
+      // Some backends may return an object instead of array
+      if (!Array.isArray(rawAttendance)) {
+        rawAttendance = Object.values(rawAttendance);
+      }
+
+      attendance = rawAttendance.filter((record: any) => {
+        const emailMatch =
+          record.student === selectedStudent.email ||
+          record.student_email === selectedStudent.email ||
+          record.email === selectedStudent.email ||
+          record.student_id === selectedStudent.email;
+
+        // Match by year-month using the date string (e.g. "2025-11-15")
+        const recordDate = record.date || record.attendance_date;
+        let monthMatch = true;
+        if (recordDate && typeof recordDate === 'string') {
+          const recMonth = recordDate.split('T')[0]?.slice(0, 7); // YYYY-MM
+          monthMatch = recMonth === studentAttendanceMonth;
+        }
+
+        return emailMatch && monthMatch;
+      });
+
+      // Update state with new attendance data
+      setStudentExtra(prev => ({
+        ...prev,
+        attendance: attendance,
+      }));
       
-      // Filter client-side
-      leaves = rawLeaves.filter((leave: any) => 
-        leave.applicant_email === selectedStudent.email ||
-        leave.email === selectedStudent.email ||
-        leave.student_email === selectedStudent.email
-      );
-      
-      console.log("✅ Updated student leaves:", leaves);
-    } catch (err: any) {
-      console.log("❌ Primary leaves failed, trying alternatives");
+    } catch (err) {
+      // Error refreshing student attendance
+    }
+  };
+
+  const refreshStudentLeavesData = async () => {
+    if (!selectedStudent) return;
+    
+    const [year, month] = studentLeaveMonth.split("-");
+    let leaves: any[] = [];
+
+    try {
+      // Try leaves endpoints with new month
       try {
-        const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}`);
+        const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
         const rawLeaves = leavesResponse.data || [];
         
+        // Filter client-side
         leaves = rawLeaves.filter((leave: any) => 
           leave.applicant_email === selectedStudent.email ||
           leave.email === selectedStudent.email ||
           leave.student_email === selectedStudent.email
         );
-      } catch (err2: any) {
-        console.log("❌ All leaves endpoints failed");
+      } catch (err: any) {
+        try {
+          const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}`);
+          const rawLeaves = leavesResponse.data || [];
+          
+          leaves = rawLeaves.filter((leave: any) => 
+            leave.applicant_email === selectedStudent.email ||
+            leave.email === selectedStudent.email ||
+            leave.student_email === selectedStudent.email
+          );
+        } catch (err2: any) {
+          // All leaves endpoints failed
+        }
       }
+
+      // Update state with new leaves data
+      setStudentExtra(prev => ({
+        ...prev,
+        leaves: leaves,
+      }));
+      
+    } catch (err) {
+      // Error refreshing student leaves
     }
+  };
 
-    // Update state with new leaves data
-    setStudentExtra(prev => ({
-      ...prev,
-      leaves: leaves,
-    }));
-    
-  } catch (err) {
-    console.error("Error refreshing student leaves:", err);
-  }
-};
-
-const fetchClasses = async (subjectId: number) => {
-  try {
-    const res = await axios.get(`${API_BASE}/classes?subject_id=${subjectId}`);
-    console.log('All Classes:', res.data);
-    setAllClasses(res.data); // Make sure this state exists
-  } catch (err) {
-    console.error('Error fetching classes:', err);
-  }
-};
+  const fetchClasses = async (subjectId: number) => {
+    try {
+      const res = await axios.get(`${API_BASE}/classes?subject_id=${subjectId}`);
+      setAllClasses(res.data); // Make sure this state exists
+    } catch (err) {
+      // Error fetching classes
+    }
+  };
 
   // Helper: resolve class info for a student using class_id and allClasses
   const getClassInfoForStudent = (student: any) => {
@@ -667,7 +927,6 @@ const fetchClasses = async (subjectId: number) => {
     return matchesClass && matchesSection;
   });
 
-
   // Fetch student details
   const fetchStudentDetails = async (student: any) => {
     setSelectedStudent(student);
@@ -684,10 +943,8 @@ const fetchClasses = async (subjectId: number) => {
 
       // Try leaves endpoints
       try {
-        console.log("🔍 Trying primary leaves endpoint:", `${API_BASE}/leaves/?applicant_email=${student.email}&year=${year}&month=${month}`);
         const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${student.email}&year=${year}&month=${month}`);
         const rawLeaves = leavesResponse.data || [];
-        console.log("📊 Raw leaves data from primary endpoint:", rawLeaves);
         
         // Always filter client-side to ensure we only get student's leaves
         leaves = rawLeaves.filter((leave: any) => {
@@ -696,21 +953,13 @@ const fetchClasses = async (subjectId: number) => {
                          leave.student_email === student.email ||
                          leave.student_id === student.email;
           
-          if (matches) {
-            console.log("✅ Matched leave record:", leave);
-          }
           return matches;
         });
         
-        console.log("🎯 Filtered leaves for student", student.email, ":", leaves);
-        
       } catch (err: any) {
-        console.log("❌ Leaves API failed, trying alternatives:", err?.response?.status);
         try {
-          console.log("🔍 Trying alternative leaves endpoint:", `${API_BASE}/leaves/?applicant_email=${student.email}`);
           const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${student.email}`);
           const rawLeaves = leavesResponse.data || [];
-          console.log("📊 Raw leaves data from alternative endpoint:", rawLeaves);
           
           // Filter client-side
           leaves = rawLeaves.filter((leave: any) => 
@@ -720,17 +969,11 @@ const fetchClasses = async (subjectId: number) => {
             leave.student_id === student.email
           );
           
-          console.log("🎯 Filtered leaves from alternative:", leaves);
-          
         } catch (err2: any) {
-          console.log("❌ Alternative leaves API also failed");
           // Try fetching all leaves and filter client-side
           try {
-            console.log("🔍 Trying all leaves endpoint for client-side filtering");
             const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
             const allLeaves = allLeavesResponse.data || [];
-            console.log("📊 Raw leaves data from all endpoint:", allLeaves);
-            console.log("👤 Looking for student email:", student.email);
             
             // Filter by applicant_email with detailed logging
             const filteredLeaves = allLeaves.filter((leave: any) => {
@@ -739,78 +982,35 @@ const fetchClasses = async (subjectId: number) => {
                              leave.student_email === student.email ||
                              leave.student_id === student.email;
               
-              if (matches) {
-                console.log("✅ Found matching leave:", leave);
-              }
               return matches;
             });
             
             if (filteredLeaves.length > 0) {
               leaves = filteredLeaves;
-              console.log("✅ Found leaves via client-side filtering:", filteredLeaves);
-            } else {
-              console.log("⚠️ No leaves found for student:", student.email);
-              // Show sample of available leaves for debugging
-              console.log("📝 Sample available leaves (first 3):", allLeaves.slice(0, 3));
             }
           } catch (err3: any) {
-            console.log("❌ All leaves endpoint also failed:", err3?.response?.status);
+            // All leaves endpoint also failed
           }
         }
       }
 
       // Try grades endpoints
       try {
-        console.log("🔍 Trying primary grades endpoint:", `${API_BASE}/grades/?student=${student.email}&year=${year}&month=${month}`);
-        console.log("👤 Student email being searched:", student.email);
-        console.log("📅 Year/Month being searched:", year, month);
-        
         const gradesResponse = await axios.get(`${API_BASE}/grades/?student=${student.email}&year=${year}&month=${month}`);
         const rawGrades = gradesResponse.data || [];
-        console.log("📊 Raw grades data from primary endpoint:");
-        console.log("  - Type:", typeof rawGrades);
-        console.log("  - Length:", rawGrades.length);
-        console.log("  - Data:", rawGrades);
-        
-        if (rawGrades.length > 0) {
-          console.log("🔍 Sample grades record structure:");
-          console.log("  - First record keys:", Object.keys(rawGrades[0] || {}));
-          console.log("  - First record:", rawGrades[0]);
-        }
         
         // Always filter client-side to ensure we only get student's grades
         grades = rawGrades.filter((record: any) => {
-          console.log("🔍 Checking grades record:", record);
-          
           const matches = record.student === student.email ||
                          record.student_email === student.email ||
                          record.email === student.email ||
                          record.student_id === student.email ||
                          record.studentid === student.email;
           
-          console.log("🎯 Matching check:");
-          console.log("  - record.student:", record.student, "==", student.email, ":", record.student === student.email);
-          console.log("  - record.student_email:", record.student_email, "==", student.email, ":", record.student_email === student.email);
-          console.log("  - record.email:", record.email, "==", student.email, ":", record.email === student.email);
-          console.log("  - Final match result:", matches);
-          
-          if (matches) {
-            console.log("✅ Matched grades record:", record);
-          }
           return matches;
         });
         
-        console.log("🎯 Filtered grades for student", student.email, ":", grades);
-        console.log("📈 Grades summary:");
-        console.log("  - Total records:", grades.length);
-        if (grades.length > 0) {
-          console.log("  - Subjects:", grades.map((g: any) => g.subject_name || g.subject || 'Unknown'));
-        }
-        
       } catch (err: any) {
-        console.log("❌ Grades API failed, trying alternatives:", err?.response?.status);
-        console.log("❌ Error details:", err);
-        
         const gradeEndpoints = [
           `${API_BASE}/grades/?student=${student.email}&year=${year}&month=${month}`,
           `${API_BASE}/grades/?student=${student.email}`,
@@ -822,10 +1022,8 @@ const fetchClasses = async (subjectId: number) => {
         
         for (let endpoint of gradeEndpoints) {
           try {
-            console.log("🔍 Trying grades endpoint:", endpoint);
             const gradesResponse = await axios.get(endpoint);
             const data = gradesResponse.data || [];
-            console.log("📊 Raw grades data from", endpoint, ":", data);
             
             if (Array.isArray(data) && data.length > 0) {
               // If we got all grades, filter by student email
@@ -836,9 +1034,6 @@ const fetchClasses = async (subjectId: number) => {
                                    grade.email === student.email ||
                                    grade.student_id === student.email;
                     
-                    if (matches) {
-                      console.log("✅ Matched grade record:", grade);
-                    }
                     return matches;
                   })
                 : data.filter((grade: any) => {
@@ -847,39 +1042,22 @@ const fetchClasses = async (subjectId: number) => {
                                    grade.email === student.email ||
                                    grade.student_id === student.email;
                     
-                    if (matches) {
-                      console.log("✅ Matched grade record:", grade);
-                    }
                     return matches;
                   });
               
               if (filteredGrades.length > 0) {
                 grades = filteredGrades;
-                console.log("✅ Found grades data from:", endpoint, "- Filtered:", filteredGrades);
                 break;
-              } else {
-                console.log("⚠️ Data found but no matching student records for:", endpoint);
-                console.log("🔍 Available student fields in sample:");
-                data.slice(0, 3).forEach((record: any, index: number) => {
-                  console.log(`  - Record ${index + 1}:`, {
-                    student: record.student,
-                    student_email: record.student_email,
-                    email: record.email,
-                    student_id: record.student_id
-                  });
-                });
               }
             }
           } catch (err: any) {
-            console.log("❌ Failed grades endpoint:", endpoint, "- Status:", err?.response?.status);
+            // Endpoint failed, continue to next
           }
         }
       }
 
       // Fetch attendance from student_attendance and filter by email + selected month
       try {
-        console.log("🔍 Fetching student_attendance for:", student.email, "month:", selectedMonth);
-
         const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
         let rawAttendance = attendanceResponse.data || [];
 
@@ -887,8 +1065,6 @@ const fetchClasses = async (subjectId: number) => {
         if (!Array.isArray(rawAttendance)) {
           rawAttendance = Object.values(rawAttendance);
         }
-
-        console.log("📊 Raw student_attendance data:", rawAttendance.length);
 
         attendance = rawAttendance.filter((record: any) => {
           const emailMatch =
@@ -907,16 +1083,11 @@ const fetchClasses = async (subjectId: number) => {
           return emailMatch && monthMatch;
         });
 
-        console.log("🎯 Filtered student_attendance for", student.email, ":", attendance.length);
-
       } catch (err: any) {
-        console.log("❌ student_attendance API failed:", err?.response?.status);
+        // student_attendance API failed
       }
 
-      console.log("📊 Final Student Data:");
-      console.log("  - Leaves:", leaves);
-      console.log("  - Grades:", grades);
-      console.log("  - Attendance:", attendance);
+
 
       setStudentExtra({
         leaves: leaves,
@@ -925,7 +1096,6 @@ const fetchClasses = async (subjectId: number) => {
         notices: [], // Initialize notices as empty array
       });
     } catch (err) {
-      console.error("Error fetching student details:", err);
       // Set empty data on error to prevent crashes
       setStudentExtra({
         leaves: [],
@@ -938,6 +1108,18 @@ const fetchClasses = async (subjectId: number) => {
     }
   };
 
+  // Function to get category display name
+  const getCategoryDisplayName = (category: string): string => {
+    switch(category) {
+      case 'nursery': return 'Nursery';
+      case 'primary': return 'Higher Primary';
+      case 'school': return 'School';
+      case 'highschool': return 'School';
+      case 'college': return 'College';
+      case 'all': return 'All Categories';
+      default: return category;
+    }
+  };
 
   return (
     <DashboardLayout role="principal">
@@ -1003,27 +1185,104 @@ const fetchClasses = async (subjectId: number) => {
 
           {/* Teachers Grid */}
           {view === "teachers" && !selectedTeacher && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {teachers.map((teacher, index) => (
-               // ✅ In your teachers grid - make sure onClick passes the full teacher object
-<div
-  key={`teacher-${teacher.teacher_id ?? teacher.email ?? teacher.id ?? index}`}
-  onClick={() => fetchTeacherDetails(teacher)} // Pass full teacher object
-  className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
->
-                  <div className="p-4 sm:p-6 text-center">
-                    <img
-                      src={teacher.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={teacher.fullname}
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-blue-100 shadow-md mx-auto"
-                    />
-                    <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-bold text-gray-800">{teacher.fullname}</h3>
-                    <p className="text-xs sm:text-sm text-blue-600 font-medium">{teacher.department_name}</p>
-                    <p className="text-xs text-gray-500 mt-1">{teacher.qualification}</p>
+            <>
+              {/* Category and Department Filters */}
+              <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex flex-wrap gap-4">
+                  {/* Category Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => {
+                        setCategoryFilter(e.target.value);
+                        setDepartmentFilter("all");
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px]"
+                    >
+                      {allCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {getCategoryDisplayName(cat)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Department Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <select
+                      value={departmentFilter}
+                      onChange={(e) => setDepartmentFilter(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px]"
+                      disabled={categoryFilter === "all" && departmentFilter === "all"}
+                    >
+                      <option value="all">All Departments</option>
+                      {uniqueDepartments.map((dept) => (
+                        <option key={dept as string} value={dept as string}>
+                          {dept as string}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))}
-            </div>
+                
+                <div className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{filteredTeachersByCategoryAndDepartment.length}</span> teachers
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {filteredTeachersByCategoryAndDepartment.map((teacher, index) => {
+                  const category = getTeacherCategory(teacher.teacher_id);
+                  const categoryColor = {
+                    "Nursery": "bg-pink-100 border-pink-300",
+                    "Higher Primary": "bg-green-100 border-green-300",
+                    "School": "bg-blue-100 border-blue-300",
+                    "College": "bg-purple-100 border-purple-300",
+                    "Other": "bg-gray-100 border-gray-300"
+                  }[category] || "bg-gray-100 border-gray-300";
+
+                  return (
+                    <div
+                      key={`teacher-${teacher.teacher_id ?? teacher.email ?? teacher.id ?? index}`}
+                      onClick={() => fetchTeacherDetails(teacher)}
+                      className={`bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border-2 ${categoryColor}`}
+                    >
+                      <div className="p-4 sm:p-6 text-center">
+                        <div className="relative">
+                          <img
+                            src={teacher.profile_picture || "https://i.pravatar.cc/150"}
+                            alt={teacher.fullname}
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white shadow-md mx-auto"
+                          />
+                          <div className="absolute -top-1 -right-1 bg-white rounded-full p-1 border">
+                            <span className="text-xs font-semibold px-1">
+                              {teacher.teacher_id?.charAt(0) || "?"}
+                            </span>
+                          </div>
+                        </div>
+                        <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-bold text-gray-800">{teacher.fullname}</h3>
+                        <p className="text-xs sm:text-sm text-blue-600 font-medium">{teacher.department_name}</p>
+                        <div className="mt-2">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                            category === "Nursery" ? "bg-pink-100 text-pink-800" :
+                            category === "Higher Primary" ? "bg-green-100 text-green-800" :
+                            category === "School" ? "bg-blue-100 text-blue-800" :
+                            category === "College" ? "bg-purple-100 text-purple-800" :
+                            "bg-gray-100 text-gray-800"
+                          }`}>
+                            {category}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{teacher.qualification}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">ID: {teacher.teacher_id}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
 
           {/* Teacher Details */}
@@ -1048,20 +1307,48 @@ const fetchClasses = async (subjectId: number) => {
                   <span>Back to Teachers</span>
                 </button>
                 <div className="flex flex-col md:flex-row gap-4 sm:gap-6 items-start">
-                  <img
-                    src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150"}
-                    alt={selectedTeacher.fullname}
-                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl border-4 border-white shadow-lg mx-auto md:mx-0"
-                  />
+                  <div className="relative">
+                    <img
+                      src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150"}
+                      alt={selectedTeacher.fullname}
+                      className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl border-4 border-white shadow-lg mx-auto md:mx-0"
+                    />
+                    <div className="absolute -top-2 -right-2 bg-white rounded-full p-2 border shadow-md">
+                      <span className="text-sm font-bold text-blue-600">
+                        {selectedTeacher.teacher_id?.charAt(0) || "?"}
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex-1 w-full">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center md:text-left">{selectedTeacher.fullname}</h2>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center md:text-left">{selectedTeacher.fullname}</h2>
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        getTeacherCategory(selectedTeacher.teacher_id) === "Nursery" ? "bg-pink-100 text-pink-800" :
+                        getTeacherCategory(selectedTeacher.teacher_id) === "Higher Primary" ? "bg-green-100 text-green-800" :
+                        getTeacherCategory(selectedTeacher.teacher_id) === "School" ? "bg-blue-100 text-blue-800" :
+                        getTeacherCategory(selectedTeacher.teacher_id) === "College" ? "bg-purple-100 text-purple-800" :
+                        "bg-gray-100 text-gray-800"
+                      }`}>
+                        {getTeacherCategory(selectedTeacher.teacher_id)}
+                      </span>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div><b>Teacher ID:</b> {selectedTeacher.teacher_id}</div>
                       <div><b>Department:</b> {selectedTeacher.department_name}</div>
                       <div><b>Qualification:</b> {selectedTeacher.qualification}</div>
                       <div><b>Experience:</b> {selectedTeacher.experience_years} years</div>
                       <div><b>Phone:</b> {selectedTeacher.phone}</div>
-                      <div><b>email:</b> {selectedTeacher.email}</div>
+                      <div><b>Email:</b> {selectedTeacher.email}</div>
+                    </div>
+                    
+                    {/* Assign Class Teacher Button */}
+                    <div className="mt-4">
+                      <button
+                        onClick={openAssignClassModal}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                      >
+                        🏫 Make Class Teacher
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1100,102 +1387,78 @@ const fetchClasses = async (subjectId: number) => {
               <div className="p-4 sm:p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   {/* Subjects */}
-                  {/* Subjects */}
-<div className="bg-gray-50 p-4 sm:p-6 rounded-xl">
-  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-    <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-      📚 Subjects Taught
-    </h3>
-    <button
-      onClick={showAllTimetableData}
-      className="px-2 py-1 sm:px-3 sm:py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm rounded-lg transition-colors"
-    >
-      🔍 Debug Data
-    </button>
-  </div>
-  <div className="space-y-2 sm:space-y-3">
-    {teacherExtra.subjects.map((sub: any) => (
-      <div 
-        key={sub.id} 
-        onClick={() => handleSubjectClick(sub)}
-        className={`bg-white p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-          selectedSubject?.id === sub.id 
-            ? "border-blue-500 ring-2 ring-blue-300 bg-blue-50" 
-            : "border-gray-200 hover:border-blue-300"
-        }`}
-      >
-        <div className="font-semibold text-gray-800 text-sm sm:text-base">{sub.subject_name}</div>
-        <div className="text-xs sm:text-sm text-gray-600">Code: {sub.subject_code}</div>
-        <div className="text-xs sm:text-sm text-gray-600">ID: {sub.id}</div>
-      </div>
-    ))}
-  </div>
-  
-  {/* Debug Info */}
-  <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded">
-    <p className="text-xs text-yellow-800">
-      <strong>Debug:</strong> Total Subjects: {teacherExtra.subjects.length} | 
-      Total Classes: {teacherExtra.classes.length}
-    </p>
-  </div>
-</div>
+                  <div className="bg-gray-50 p-4 sm:p-6 rounded-xl">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                      📚 Subjects Taught
+                    </h3>
+                    <div className="space-y-2 sm:space-y-3">
+                      {teacherExtra.subjects.map((sub: any) => (
+                        <div 
+                          key={sub.id} 
+                          onClick={() => handleSubjectClick(sub)}
+                          className={`bg-white p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                            selectedSubject?.id === sub.id 
+                              ? "border-blue-500 ring-2 ring-blue-300 bg-blue-50" 
+                              : "border-gray-200 hover:border-blue-300"
+                          }`}
+                        >
+                          <div className="font-semibold text-gray-800 text-sm sm:text-base">{sub.subject_name}</div>
+                          <div className="text-xs sm:text-sm text-gray-600">Code: {sub.subject_code}</div>
+                          <div className="text-xs sm:text-sm text-gray-600">ID: {sub.id}</div>
+                        </div>
+                      ))}
+                    </div>
+                    
 
-  {/* Timetable for Selected Subject */}
-  {selectedSubject && (
-    <div className="bg-gray-50 p-4 sm:p-6 rounded-xl lg:col-span-2">
-      <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">
-        🕒 Timetable for {selectedSubject.subject_name}
-      </h3>
-      
-      {/* Debug info - remove after it works */}
-      <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded">
-        <p className="text-xs sm:text-sm text-yellow-800">
-          <strong>Debug Info:</strong> Selected Subject ID: {selectedSubject.id} | 
-          Filtered Entries: {filteredTimetable.length}
-        </p>
-      </div>
-      
-      {filteredTimetable.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {filteredTimetable.map((entry: any, index: number) => {
-            const classInfo = allClasses.find((cls: any) => cls.id === entry.class_id);
-            const className = classInfo?.class_name || entry.class_name || "Unknown Class";
-            const section = classInfo?.sec || entry.sec || entry.section || "-";
-
-            return (
-              <div key={index} className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
-                <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">{className}</h4>
-                <div className="space-y-1 text-xs sm:text-sm text-gray-600">
-                  <div><strong>Section:</strong> {section}</div>
-                  <div><strong>Day:</strong> {entry.day_of_week}</div>
-                  <div><strong>Time:</strong> {entry.start_time} - {entry.end_time}</div>
-                  {entry.room_number && <div><strong>Room:</strong> {entry.room_number}</div>}
-                  {/* Debug info */}
-                  <div className="mt-2 text-xs text-gray-400">
-                    Subject ID: {entry.subject_id || entry.subject} | Entry ID: {entry.id}
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-6 sm:py-8">
-          <div className="text-3xl sm:text-4xl mb-2">📅</div>
-          <p className="text-gray-500 text-sm sm:text-base">No timetable entries found for this subject.</p>
-          <p className="text-xs sm:text-sm text-gray-400 mt-2">
-            Subject ID: {selectedSubject.id} | No matching entries in timetable
-          </p>
-        </div>
-      )}
-    </div>
-  )}
+
+                  {/* Timetable for Selected Subject */}
+                  {selectedSubject && (
+                    <div className="bg-gray-50 p-4 sm:p-6 rounded-xl lg:col-span-2">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">
+                        🕒 Timetable for {selectedSubject.subject_name}
+                      </h3>
+                      
+
+                      
+                      {filteredTimetable.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                          {filteredTimetable.map((entry: any, index: number) => {
+                            const classInfo = allClasses.find((cls: any) => cls.id === entry.class_id);
+                            const className = classInfo?.class_name || entry.class_name || "Unknown Class";
+                            const section = classInfo?.sec || entry.sec || entry.section || "-";
+
+                            return (
+                              <div key={index} className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+                                <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">{className}</h4>
+                                <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                                  <div><strong>Section:</strong> {section}</div>
+                                  <div><strong>Day:</strong> {entry.day_of_week}</div>
+                                  <div><strong>Time:</strong> {entry.start_time} - {entry.end_time}</div>
+                                  {entry.room_number && <div><strong>Room:</strong> {entry.room_number}</div>}
+
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 sm:py-8">
+                          <div className="text-3xl sm:text-4xl mb-2">📅</div>
+                          <p className="text-gray-500 text-sm sm:text-base">No timetable entries found for this subject.</p>
+                          <p className="text-xs sm:text-sm text-gray-400 mt-2">
+                            Subject ID: {selectedSubject.id} | No matching entries in timetable
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Attendance Summary */}
                   <div className="bg-gray-50 p-4 sm:p-6 rounded-xl">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-                        🗓️ Monthly Attendance
+                        🗓️ Monthly Attendance ({attendanceMonth})
                       </h3>
                       <input
                         type="month"
@@ -1242,7 +1505,7 @@ const fetchClasses = async (subjectId: number) => {
                   <div className="bg-gray-50 p-4 sm:p-6 rounded-xl">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-                        📝 Leave History
+                        📝 Leave History ({leaveMonth})
                       </h3>
                       <input
                         type="month"
@@ -1255,19 +1518,19 @@ const fetchClasses = async (subjectId: number) => {
                       <div className="flex justify-between items-center text-green-600 text-sm sm:text-base">
                         <span>Approved Leaves:</span>
                         <span className="font-semibold">
-                          {teacherExtra.leaves.filter((l: any) => l.status === "Approved").length}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Approved").length : 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-yellow-600 text-sm sm:text-base">
                         <span>Pending Leaves:</span>
                         <span className="font-semibold">
-                          {teacherExtra.leaves.filter((l: any) => l.status === "Pending").length}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Pending").length : 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-red-600 text-sm sm:text-base">
                         <span>Rejected Leaves:</span>
                         <span className="font-semibold">
-                          {teacherExtra.leaves.filter((l: any) => l.status === "Rejected").length}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Rejected").length : 0}
                         </span>
                       </div>
                     </div>
@@ -1276,7 +1539,6 @@ const fetchClasses = async (subjectId: number) => {
               </div>
             </div>
           )}
-          
 
           {/* Students Filters + Grid */}
           {view === "students" && !selectedStudent && (
@@ -1558,52 +1820,16 @@ const fetchClasses = async (subjectId: number) => {
                           />
                         </div>
                         {(() => {
-                          console.log("🔍 Student Extra Data:", studentExtra);
-                          console.log("📊 Raw Student Attendance:", studentExtra?.attendance);
-                          console.log("📊 Attendance data type:", typeof studentExtra?.attendance);
-                          console.log("📊 Attendance length:", studentExtra?.attendance?.length);
-                          
-                          if (studentExtra?.attendance && studentExtra.attendance.length > 0) {
-                            console.log("🔍 Sample attendance record structure:");
-                            console.log("  - First record keys:", Object.keys(studentExtra.attendance[0] || {}));
-                            console.log("  - First record:", studentExtra.attendance[0]);
-                            console.log("🔍 All attendance records:");
-                            studentExtra.attendance.forEach((attendance: any, index: number) => {
-                              console.log(`  - Attendance ${index + 1}:`, attendance);
-                            });
-                          }
-                          
                           const [year, month] = studentAttendanceMonth.split("-");
-                          console.log("📅 Split year/month for attendance - Year:", year, "Month:", month);
-                          console.log("📅 Student Attendance Month:", studentAttendanceMonth);
                           
                           const monthlyAttendance = (studentExtra?.attendance || []).filter((a: any) => {
-                            console.log("🔍 Checking attendance record:", a);
                             const hasDate = a.date && a.date.startsWith(`${year}-${month.padStart(2, "0")}`);
-                            console.log("  - Has date matching", `${year}-${month.padStart(2, "0")}:`, hasDate);
-                            console.log("  - Record date:", a.date);
-                            console.log("  - Expected prefix:", `${year}-${month.padStart(2, "0")}`);
                             return hasDate;
                           });
-
-                          console.log("🗓️ Monthly Attendance Filtered:", monthlyAttendance);
-                          console.log("📊 Attendance Filtering Summary:");
-                          console.log("  - Total raw records:", studentExtra?.attendance?.length || 0);
-                          console.log("  - Total filtered records:", monthlyAttendance.length);
-                          
-                          if (monthlyAttendance.length === 0 && studentExtra?.attendance?.length > 0) {
-                            console.log("⚠️ Attendance exists but none match the selected month!");
-                            console.log("🔍 Available attendance dates:");
-                            studentExtra.attendance.forEach((attendance: any, index: number) => {
-                              console.log(`  - Attendance ${index + 1} date:`, attendance.date);
-                            });
-                          }
 
                           const present = monthlyAttendance.filter((a: any) => a.status === "Present").length;
                           const absent = monthlyAttendance.filter((a: any) => a.status === "Absent").length;
                           const late = monthlyAttendance.filter((a: any) => a.status === "Late").length;
-                          
-                          console.log("✅ Student Attendance Counts - Present:", present, "Absent:", absent, "Late:", late);
                           
                           return (
                             <div className="space-y-2">
@@ -1642,26 +1868,8 @@ const fetchClasses = async (subjectId: number) => {
                       <div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
                         <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">📈 Grades</h4>
                         {(() => {
-                          console.log("🔍 Student Extra Data for Grades:", studentExtra);
-                          console.log("📊 Raw Student Grades:", studentExtra?.grades);
-                          console.log("📊 Grades data type:", typeof studentExtra?.grades);
-                          console.log("📊 Grades length:", studentExtra?.grades?.length);
-                          
-                          if (studentExtra?.grades && studentExtra.grades.length > 0) {
-                            console.log("🔍 Sample grades record structure:");
-                            console.log("  - First record keys:", Object.keys(studentExtra.grades[0] || {}));
-                            console.log("  - First record:", studentExtra.grades[0]);
-                            console.log("🔍 All grades records:");
-                            studentExtra.grades.forEach((grade: any, index: number) => {
-                              console.log(`  - Grade ${index + 1}:`, grade);
-                            });
-                          }
-                          
                           // Display ALL grades (no month filtering)
                           const allGrades = studentExtra.grades || [];
-                          
-                          console.log("📈 All Grades (No Filtering):", allGrades);
-                          console.log("📈 Total Grades Count:", allGrades.length);
                           
                           return allGrades.length > 0 ? (
                             <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
@@ -1718,8 +1926,7 @@ const fetchClasses = async (subjectId: number) => {
                             l.start_date && l.start_date.startsWith(`${year}-${month.padStart(2, "0")}`)
                           );
                           
-                          console.log("📅 Student Leave Month:", studentLeaveMonth);
-                          console.log("🗓️ Monthly Leaves Filtered:", monthlyLeaves);
+
                           
                           return monthlyLeaves.length > 0 ? (
                             <div className="space-y-2">
@@ -2032,6 +2239,140 @@ const fetchClasses = async (subjectId: number) => {
                       className="flex-1 px-3 py-2 sm:px-4 sm:py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors text-sm sm:text-base"
                     >
                       Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Assign Class Teacher Modal */}
+          {showAssignClassModal && selectedTeacher && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-t-2xl p-4 sm:p-6 text-white">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl sm:text-2xl font-bold">🏫 Assign Class Teacher</h2>
+                    <button
+                      onClick={() => {
+                        setShowAssignClassModal(false);
+                        setSelectedClassForAssignment(null);
+                        setAssignmentSuccess("");
+                        setError("");
+                      }}
+                      className="text-white/90 hover:text-white transition-colors"
+                    >
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-4 sm:p-6">
+                  <div className="mb-4 sm:mb-6">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">Teacher Information</h3>
+                    <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150"}
+                          alt={selectedTeacher.fullname}
+                          className="w-12 h-12 rounded-full border-2 border-white shadow-sm"
+                        />
+                        <div>
+                          <h4 className="font-semibold text-gray-800">{selectedTeacher.fullname}</h4>
+                          <p className="text-sm text-gray-600">{selectedTeacher.email}</p>
+                          <p className="text-xs text-gray-500">ID: {selectedTeacher.teacher_id}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 sm:mb-6">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3">Select Class to Assign</h3>
+                    
+                    {assignmentSuccess && (
+                      <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-800 rounded-lg">
+                        ✅ {assignmentSuccess}
+                      </div>
+                    )}
+                    
+                    {error && (
+                      <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-800 rounded-lg">
+                        ❌ {error}
+                      </div>
+                    )}
+
+                    {availableClasses.length === 0 ? (
+                      <div className="text-center py-6">
+                        <div className="text-3xl mb-2">📚</div>
+                        <p className="text-gray-500">Loading classes...</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-h-64 overflow-y-auto pr-2">
+                        {availableClasses.map((classItem: any) => (
+                          <div
+                            key={classItem.id}
+                            onClick={() => setSelectedClassForAssignment(classItem.id)}
+                            className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all ${
+                              selectedClassForAssignment === classItem.id
+                                ? "border-green-500 ring-2 ring-green-200 bg-green-50"
+                                : "border-gray-200 hover:border-green-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-semibold text-gray-800">
+                                  {classItem.class_name} - {classItem.sec}
+                                </h4>
+                                <p className="text-sm text-gray-600 mt-1">Class ID: {classItem.id}</p>
+                                {classItem.class_teacher && (
+                                  <p className="text-xs text-yellow-600 mt-1">
+                                    Current Teacher: {classItem.class_teacher}
+                                  </p>
+                                )}
+                              </div>
+                              {selectedClassForAssignment === classItem.id && (
+                                <span className="text-green-500">✓</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                    <button
+                      onClick={() => {
+                        setShowAssignClassModal(false);
+                        setSelectedClassForAssignment(null);
+                        setAssignmentSuccess("");
+                        setError("");
+                      }}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (selectedClassForAssignment) {
+                          assignClassTeacher(selectedClassForAssignment);
+                        } else {
+                          setError("Please select a class first");
+                        }
+                      }}
+                      disabled={!selectedClassForAssignment || assigningClass}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                      {assigningClass ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Assigning...
+                        </>
+                      ) : (
+                        "Assign as Class Teacher"
+                      )}
                     </button>
                   </div>
                 </div>

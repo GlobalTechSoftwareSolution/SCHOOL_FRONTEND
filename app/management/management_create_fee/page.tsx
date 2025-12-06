@@ -82,10 +82,8 @@ const ManagementFeeStructure = () => {
   // ================= FETCH CLASSES =================
   const fetchClasses = async () => {
     try {
-      console.log("🔍 [FETCH] Fetching classes...");
       const res = await fetch(CLASSES_API_URL);
       const data: SchoolClass[] = await res.json();
-      console.log("✅ [FETCH] Successfully fetched classes:", data);
       setClasses(data);
     } catch (err) {
       console.error("❌ [FETCH] Error fetching classes:", err);

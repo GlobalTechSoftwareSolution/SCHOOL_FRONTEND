@@ -220,13 +220,6 @@ export default function AdminDashboard() {
               color="purple"
               trend={stats.totalClasses > 0 ? "+" + Math.round(Math.random() * 3 + 1) : "0"}
             />
-            <StatCard
-              title="Present Today"
-              value={stats.presentToday}
-              icon="✅"
-              color="orange"
-              trend={`${stats.absentToday} absent`}
-            />
           </div>
 
           {/* Additional Stats Grid */}
@@ -244,14 +237,7 @@ export default function AdminDashboard() {
               icon="📊"
               color="green"
               trend="Generated"
-            />
-            <StatCard
-              title="Pending Approvals"
-              value={stats.pendingLeaves}
-              icon="⏳"
-              color="orange"
-              trend="Action needed"
-            />
+            />  
           </div>
 
           {/* Charts Section */}

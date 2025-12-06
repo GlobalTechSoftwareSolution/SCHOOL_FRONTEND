@@ -125,7 +125,6 @@ const ParentFeePayments = () => {
       const childrenWithProfiles = (currentParent.children_list || []).map((child: any) => {
         const studentData = students.find((s: any) => s.email === child.email);
         const profilePic = studentData?.profile_picture || "";
-        console.log("profile_picture:", profilePic, "for child:", child.fullname);
         return {
           ...child,
           profile_picture: profilePic

@@ -105,7 +105,6 @@ const StudentDocsPage = () => {
         },
       });
 
-      console.log("✅ Upload success:", res.data);
       alert(`✅ ${doc_type.toUpperCase()} uploaded successfully!`);
       await fetchDocuments();
 
