@@ -75,46 +75,36 @@ export default function Attendance() {
 
   /* ============================ 1) Teacher Attendance ============================ */
   const loadTeacherAttendance = async () => {
-    console.log("🔍 Loading teacher attendance for date:", selectedDate);
     setLoading(true);
     
     try {
       // Fetch attendance records for the selected date
       const res = await axios.get(`${API}/attendance/?date=${selectedDate}`);
-      console.log("📥 Teacher attendance response:", res.data);
       
       // Filter by user email
       const filtered = res.data.filter((a: any) => {
         const emailMatch = a.user_email === userEmail;
-        console.log(`🔍 Filtering record - Email match: ${emailMatch}`);
         return emailMatch;
       });
       
-      console.log("✅ Filtered teacher attendance records:", filtered.length);
       setAttendance(filtered);
     } catch (error) {
       console.error("❌ Error loading teacher attendance:", error);
       setAttendance([]);
     } finally {
       setLoading(false);
-      console.log("🏁 Teacher attendance loading completed");
     }
-  };
-
-  /* ============================ 2) Classes ============================ */
+  };  /* ============================ 2) Classes ============================ */
   const loadTeacherClasses = async () => {
-    console.log("🔍 Loading teacher classes...");
     setLoading(true);
     
     try {
       const timeRes = await axios.get(`${API}/timetable/`);
-      console.log("📥 Timetable response:", timeRes.data);
       
       const timetableEntries: TimetableEntry[] = timeRes.data || [];
       const teacherClasses = timetableEntries.filter(
         (t: TimetableEntry) => {
           const isMatch = t.teacher === userEmail;
-          console.log(`🔍 Timetable entry - Teacher: ${t.teacher}, Match: ${isMatch}`);
           return isMatch;
         }
       );
@@ -122,7 +112,6 @@ export default function Attendance() {
       const uniqueClassIds = [
         ...new Set(teacherClasses.map((cls: any) => cls.class_id)),
       ];
-      console.log("📋 Unique class IDs:", uniqueClassIds);
 
       const subjectsByClass = teacherClasses.reduce(
         (acc: Record<number, SubjectOption[]>, entry: TimetableEntry) => {
@@ -141,14 +130,11 @@ export default function Attendance() {
         },
         {} as Record<number, SubjectOption[]>
       );
-      console.log("📚 Subjects by class:", subjectsByClass);
 
       const classRes = await axios.get(`${API}/classes/`);
-      console.log("📥 Classes response:", classRes.data);
       
       const classes = classRes.data.filter((cls: any) => {
         const isIncluded = uniqueClassIds.includes(cls.id);
-        console.log(`🔍 Class ${cls.id} - Included: ${isIncluded}`);
         return isIncluded;
       });
 
@@ -157,138 +143,105 @@ export default function Attendance() {
 
       if (classes.length > 0) {
         const defaultClassId = classes[0].id;
-        console.log("🎯 Setting default class:", defaultClassId);
         setSelectedClass(defaultClassId);
         const defaultSubjects = subjectsByClass[defaultClassId];
         if (defaultSubjects?.length) {
-          console.log("🎯 Setting default subject:", defaultSubjects[0].id);
           setSelectedSubject(defaultSubjects[0].id);
         }
       }
       
-      console.log("✅ Teacher classes loaded:", classes.length);
     } catch (error) {
       console.error("❌ Error loading classes:", error);
     } finally {
       setLoading(false);
-      console.log("🏁 Teacher classes loading completed");
     }
-  };
-
-  /* ============================ 3) Students ============================ */
+  };  /* ============================ 3) Students ============================ */
   const loadStudents = async () => {
     if (!selectedClass) {
-      console.warn("⚠️ No class selected, skipping student load");
       return;
     }
     
-    console.log(`🔍 Loading students for class: ${selectedClass}`);
     setLoading(true);
     
     try {
       const classRes = await axios.get(`${API}/classes/`);
-      console.log("📥 Class details response:", classRes.data);
       
       setClassInfo(
         classRes.data.find((c: any) => {
           const isMatch = c.id === selectedClass;
-          console.log(`🔍 Checking class ${c.id} === ${selectedClass}, Match: ${isMatch}`);
           return isMatch;
         }) || null
       );
 
       const stuRes = await axios.get(`${API}/students/`);
-      console.log("📥 Students response:", stuRes.data);
       
       const filteredStudents = stuRes.data.filter((s: any) => {
         const isMatch = s.class_id === selectedClass;
-        console.log(`🔍 Student ${s.id} class ${s.class_id} === ${selectedClass}, Match: ${isMatch}`);
         return isMatch;
       });
       
-      console.log("✅ Filtered students:", filteredStudents.length);
       setStudents(filteredStudents);
     } catch (error) {
       console.error("❌ Error loading students:", error);
     } finally {
       setLoading(false);
-      console.log("🏁 Students loading completed");
     }
-  };
-
-  /* ============================ 4) Attendance ============================ */
+  };  /* ============================ 4) Attendance ============================ */
   const loadStudentAttendance = async () => {
     if (!selectedSubject) {
-      console.warn("⚠️ No subject selected, clearing attendance");
       setAttendance([]);
       setLoading(false);
       return;
     }
 
-    console.log(`🔍 Loading student attendance for subject: ${selectedSubject}`);
     setLoading(true);
     
     try {
       // Use student_attendance for student records
       const res = await axios.get(`${API}/student_attendance/`);
-      console.log("📥 Student attendance response:", res.data);
       
       const filtered = res.data.filter((a: any) => {
         if (a.date !== selectedDate) {
-          console.log(`⏭️ Skipping record with date ${a.date} !== ${selectedDate}`);
           return false;
         }
         if (selectedSubject && a.subject !== selectedSubject) {
-          console.log(`⏭️ Skipping record with subject ${a.subject} !== ${selectedSubject}`);
           return false;
         }
         // Filter by selected period if it exists in the record
         if (a.period && a.period !== selectedPeriod) {
-          console.log(`⏭️ Skipping record with period ${a.period} !== ${selectedPeriod}`);
           return false;
         }
 
         // Match by student email field from API
         const recordEmail = (a.student || a.student_email || a.user_email)?.toLowerCase();
         if (!recordEmail) {
-          console.log("⏭️ Skipping record with no email");
           return false;
         }
 
         const isStudentMatch = students.some((stu: StudentInfo) => {
           const stuEmail = stu.email?.toLowerCase();
           const isMatch = stuEmail === recordEmail;
-          console.log(`🔍 Student email ${stuEmail} === ${recordEmail}, Match: ${isMatch}`);
           return isMatch;
         });
         
-        console.log(`✅ Record filtered - Date: ${a.date}, Subject: ${a.subject}, Period: ${a.period}, Student match: ${isStudentMatch}`);
         return isStudentMatch;
       });
 
-      console.log("✅ Filtered student attendance records:", filtered.length);
       setAttendance(filtered);
     } catch (error) {
       console.error("❌ Error loading student attendance:", error);
     } finally {
       setLoading(false);
-      console.log("🏁 Student attendance loading completed");
     }
-  };
-
-  /* ============================ 5) Mark Attendance LOCALLY ============================ */
+  };  /* ============================ 5) Mark Attendance LOCALLY ============================ */
   const markAttendance = (email: string | null | undefined, status: string) => {
-    console.log(`📝 Marking attendance locally - Email: ${email}, Status: ${status}`);
-    
     if (!email || !selectedSubject) {
-      console.warn("⚠️ Cannot mark attendance without both email and selected subject");
       return;
     }
     
     const normalizedEmail = email.toLowerCase();
     setPendingAttendance((prev) => {
       const updated = { ...prev, [normalizedEmail]: status };
-      console.log("✅ Pending attendance updated:", updated);
       return updated;
     });
     
@@ -298,15 +251,10 @@ export default function Attendance() {
       delete newSubmitted[normalizedEmail];
       setSubmittedAttendance(newSubmitted);
     }
-  };
-
-  /* ============================ Mark Teacher Attendance ============================ */
+  };  /* ============================ Mark Teacher Attendance ============================ */
   const markTeacherAttendance = async () => {
-    console.log("📝 Marking teacher attendance...");
-    
     try {
       if (!userEmail) {
-        console.warn("⚠️ No teacher email found in localStorage");
         return;
       }
       
@@ -318,7 +266,6 @@ export default function Attendance() {
       );
       
       if (existingRecord) {
-        console.log("✅ Teacher attendance already marked for today");
         setTeacherAttendanceMarked(true);
         return;
       }
@@ -331,44 +278,32 @@ export default function Attendance() {
         check_in: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       
-      console.log("📦 Teacher attendance payload:", payload);
-      
       const res = await axios.post(`${API}/attendance/`, payload);
-      console.log("📥 Teacher attendance response:", res.data);
       
       setTeacherAttendanceMarked(true);
       await loadTeacherAttendance();
       
-      console.log("✅ Teacher attendance marked successfully");
     } catch (error) {
       console.error("❌ Error marking teacher attendance:", error);
       alert("Failed to mark attendance. Please try again.");
     }
-  };
-
-  /* ============================ 6) Submit Attendance to API ============================ */
+  };  /* ============================ 6) Submit Attendance to API ============================ */
   const submitAttendance = async () => {
-    console.log("📤 Submitting attendance to API...");
     
     try {
       if (!userEmail) {
-        console.warn("⚠️ No teacher email found in localStorage");
         return;
       }
       if (!selectedClass) {
-        console.warn("⚠️ No class selected");
         return;
       }
       if (!selectedSubject) {
-        console.warn("⚠️ No subject selected");
         return;
       }
 
       const emails = Object.keys(pendingAttendance);
-      console.log("📧 Emails to submit:", emails);
       
       if (emails.length === 0) {
-        console.warn("⚠️ No attendance records to submit");
         return;
       }
 
@@ -389,19 +324,15 @@ export default function Attendance() {
         student_name: students.find((stu) => stu.email?.toLowerCase() === email)?.fullname,
         period: selectedPeriod, // Add period to payload
       }));
-      
-      console.log("📦 Attendance payload:", payload);
 
       // Use bulk create endpoint for better performance
       const resp = await axios.post(`${API}/student_attendance/bulk_create/`, payload);
-      console.log("📥 Attendance submission response:", resp.data);
       
       setPendingAttendance({});
       setSubmittedAttendance(prev => ({ ...prev, ...payload.reduce((acc, curr) => ({ ...acc, [curr.student]: curr.status }), {}) }));
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
       await loadStudentAttendance();
-      console.log("✅ Attendance submitted successfully");
     } catch (err: any) {
       console.error("❌ Error submitting attendance:", err);
       if (err.response) {

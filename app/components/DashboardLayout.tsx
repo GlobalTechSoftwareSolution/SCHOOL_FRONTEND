@@ -85,6 +85,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Assignments", path: "/students/students_assignment" },
     { name: "Tasks", path: "/students/students_tasks" },
     { name: "Cariculum Activites", path: "/students/students_cariculum_activities" },
+    { name: "Online Test", path: "/students/students_online_test" },
     { name: "Calender", path: "/students/students_calender" },
     { name: "Notice", path: "/students/students_notice" },
     { name: "Programs", path: "/students/students_programs" },
@@ -391,18 +392,18 @@ export default function DashboardLayout({ children, role }: Props) {
           </button>
           <div className="flex items-center gap-3 ml-auto">
             <div className="flex items-center gap-2">
-              <Image
+              {/* <Image
                 src={profilePicture || "/default-avatar.png"}
                 alt="Profile"
                 width={36}
                 height={36}
                 unoptimized
                 className="rounded-full border-2 border-gray-200 object-cover w-9 h-9"
-              />
-              <div className="hidden sm:block">
+              /> */}
+              {/* <div className="hidden sm:block">
                 <p className="text-sm font-semibold">{userName ? userName : "User"}</p>
                 <p className="text-xs text-gray-500">{userRole ? userRole : role}</p>
-              </div>
+              </div> */}
             </div>
           </div>
         </header>

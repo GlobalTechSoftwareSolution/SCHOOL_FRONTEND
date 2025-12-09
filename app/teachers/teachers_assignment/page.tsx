@@ -136,7 +136,6 @@ const TeachersAssignmentsPage = () => {
       setStudentsData(allStudents);
 
     } catch (err) {
-      console.error("Error fetching teacher data:", err);
       showPopup('error', "Failed to load teacher information.");
     }
   };
@@ -167,7 +166,6 @@ const TeachersAssignmentsPage = () => {
         });
         setStudentSubmissions(submissionsByStudent);
       } catch (err) {
-        console.error("Error fetching submissions:", err);
         showPopup('error', "Failed to load submission data.");
       }
     };
@@ -176,7 +174,6 @@ const TeachersAssignmentsPage = () => {
   }, []);
 
   const fetchAssignments = async () => {
-    console.log("🚀 ========== START: fetchAssignments ==========");
     try {
       setLoading(true);
       setError("");
@@ -185,40 +182,20 @@ const TeachersAssignmentsPage = () => {
       const parsedUser = storedUser ? JSON.parse(storedUser) : null;
       const teacherEmail = parsedUser?.email;
 
-      console.log("👤 Teacher email from localStorage:", teacherEmail);
-
       if (!teacherEmail) {
-        console.error("❌ No teacher email found in local storage");
         setError("No teacher email found in local storage.");
         setLoading(false);
         return;
       }
 
-      console.log("🔍 Fetching assignments from API:", API_URL);
       const response = await axios.get(API_URL);
-      console.log(`📝 Total assignments fetched: ${response.data.length}`);
       
       const teacherAssignments = response.data.filter(
         (item: any) => item.assigned_by === teacherEmail
       );
 
-      console.log(`✅ Found ${teacherAssignments.length} assignments for teacher: ${teacherEmail}`);
-      console.log("📋 Assignments:", teacherAssignments.map((a: any) => ({
-        id: a.id,
-        title: a.title,
-        class_name: a.class_name,
-        section: a.section,
-        due_date: a.due_date
-      })));
-
       setAssignments(teacherAssignments);
-      console.log("✅ ========== END: fetchAssignments ==========");
     } catch (err) {
-      console.error("❌ Error fetching assignments:", err);
-      console.error("❌ Error details:", {
-        message: err instanceof Error ? err.message : 'Unknown error',
-        response: (err as any)?.response?.data
-      });
       setError("Failed to fetch assignments.");
     } finally {
       setLoading(false);
@@ -274,7 +251,6 @@ const TeachersAssignmentsPage = () => {
       setTeacherStudents(filtered);
       return filtered;
     } catch (err) {
-      console.error("Error fetching teacher students:", err);
       showPopup('error', "Failed to load students data.");
       return [];
     } finally {
@@ -372,13 +348,6 @@ const TeachersAssignmentsPage = () => {
     assignmentSection: string,
     assignmentId: number
   ) => {
-    console.log("🚀 ========== START: handleAssignmentCardClick ==========");
-    console.log("📋 Parameters:", {
-      cardType,
-      assignmentClassName,
-      assignmentSection,
-      assignmentId
-    });
     
     setViewMode(cardType);
     setLoadingStudents(true);
@@ -387,68 +356,22 @@ const TeachersAssignmentsPage = () => {
     
     try {
       // Find the assignment to get due date and title
-      console.log("🔍 Step 1: Finding assignment with ID:", assignmentId);
       const assignment = assignments.find(a => a.id === assignmentId);
       if (!assignment) {
-        console.error("❌ Assignment not found with ID:", assignmentId);
-        console.log("📝 Available assignments:", assignments.map(a => ({ id: a.id, title: a.title })));
         showPopup('error', "Assignment not found.");
         setLoadingStudents(false);
         return;
       }
       
-      console.log("✅ Assignment found:", {
-        id: assignment.id,
-        title: assignment.title,
-        class_name: assignment.class_name,
-        section: assignment.section,
-        due_date: assignment.due_date
-      });
-      
       setCurrentAssignmentTitle(assignment.title || `Assignment ${assignmentId}`);
       const assignmentDueDate = new Date(assignment.due_date);
       assignmentDueDate.setHours(23, 59, 59, 999); // Set to end of day for comparison
-      
-      console.log("📅 Assignment Details:", {
-        title: assignment.title,
-        class: assignmentClassName,
-        section: assignmentSection,
-        dueDate: assignmentDueDate.toISOString(),
-        dueDateFormatted: assignmentDueDate.toLocaleString()
-      });
 
       // Step 1: Fetch students from students API filtered by class_name and section
-      console.log("🔍 Step 2: Fetching all students from API...");
       const studentsResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`);
       const allStudents = studentsResponse.data || [];
-      
-      console.log(`👥 Total students fetched from API: ${allStudents.length}`);
-      if (allStudents.length > 0) {
-        console.log("📝 Sample student structure:", {
-          id: allStudents[0].id,
-          email: allStudents[0].email,
-          class_id: allStudents[0].class_id,
-          class_name: allStudents[0].class_name,
-          section: allStudents[0].section,
-          student_section: allStudents[0].student_section
-        });
-      }
-
-      // Check classesData
-      console.log("🔍 Checking classesData...");
-      console.log(`📚 Total classes in classesData: ${classesData.length}`);
-      if (classesData.length > 0) {
-        console.log("📝 Sample class structure:", {
-          id: classesData[0].id,
-          class_name: classesData[0].class_name,
-          sec: classesData[0].sec
-        });
-      }
 
       // Filter students by class_name and section
-      console.log("🔍 Step 3: Filtering students by class and section...");
-      console.log(`🎯 Looking for: class_name="${assignmentClassName}", section="${assignmentSection}"`);
-      
       const classSpecificStudents = allStudents.filter((student: any) => {
         // Find the student's class info from classesData
         const studentClass = classesData.find(cls => cls.id === student.class_id);
@@ -459,9 +382,6 @@ const TeachersAssignmentsPage = () => {
             student.class_name === assignmentClassName &&
             (student.section === assignmentSection || student.student_section === assignmentSection)
           );
-          if (directMatch) {
-            console.log(`✅ Direct match found for student: ${student.email}`);
-          }
           return directMatch;
         }
         
@@ -471,80 +391,27 @@ const TeachersAssignmentsPage = () => {
           studentClass.sec === assignmentSection
         );
         
-        if (classMatch) {
-          console.log(`✅ Class match found for student: ${student.email} (class_id: ${student.class_id})`);
-        }
-        
         return classMatch;
       });
       
-      console.log(`✅ Found ${classSpecificStudents.length} students in ${assignmentClassName} - ${assignmentSection}`);
-      console.log("👥 Class-specific students:", classSpecificStudents.map((s: any) => ({
-        id: s.id,
-        email: s.email,
-        name: s.fullname || s.name || s.full_name,
-        class_id: s.class_id
-      })));
-      
       if (classSpecificStudents.length === 0) {
-        console.error("❌ No students found for this class and section");
-        console.log("🔍 Debug: Checking all students for class_name match...");
-        const classNameMatches = allStudents.filter((s: any) => {
-          const studentClass = classesData.find(cls => cls.id === s.class_id);
-          return studentClass?.class_name === assignmentClassName;
-        });
-        console.log(`📊 Students with matching class_name: ${classNameMatches.length}`);
-        
         showPopup('error', `No students found for class ${assignmentClassName} section ${assignmentSection}.`);
         setLoadingStudents(false);
         return;
       }
 
       // Step 2: Fetch submissions from submitted_assignments API filtered by assignment_id
-      console.log("🔍 Step 4: Fetching submissions from API...");
       const submittedResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/submitted_assignments/`);
       const allSubmissions = submittedResponse.data || [];
-      
-      console.log(`📤 Total submissions fetched: ${allSubmissions.length}`);
-      if (allSubmissions.length > 0) {
-        console.log("📝 Sample submission structure:", {
-          id: allSubmissions[0].id,
-          assignment: allSubmissions[0].assignment,
-          assignment_id: allSubmissions[0].assignment_id,
-          student_email: allSubmissions[0].student_email,
-          student: allSubmissions[0].student,
-          submission_date: allSubmissions[0].submission_date,
-          submitted_at: allSubmissions[0].submitted_at,
-          is_late: allSubmissions[0].is_late
-        });
-      }
 
       // Filter submissions for THIS specific assignment
-      console.log(`🔍 Step 5: Filtering submissions for assignment ID: ${assignmentId}`);
       const assignmentSubmissions = allSubmissions.filter((submission: any) => {
         const submissionAssignmentId = submission.assignment || submission.assignment_id;
         const matches = submissionAssignmentId === assignmentId;
-        if (matches) {
-          console.log(`✅ Found submission for assignment ${assignmentId}:`, {
-            id: submission.id,
-            student_email: submission.student_email || submission.student,
-            submission_date: submission.submission_date || submission.submitted_at,
-            is_late: submission.is_late
-          });
-        }
         return matches;
       });
 
-      console.log(`📤 Found ${assignmentSubmissions.length} submissions for assignment ID ${assignmentId}`);
-      console.log("📋 Assignment submissions details:", assignmentSubmissions.map((s: any) => ({
-        id: s.id,
-        student_email: s.student_email || s.student,
-        submission_date: s.submission_date || s.submitted_at,
-        is_late: s.is_late
-      })));
-
       // Create a map of student email to their submission for this assignment
-      console.log("🔍 Step 6: Creating student submission map...");
       const studentSubmissionMap: Record<string, any> = {};
       assignmentSubmissions.forEach((submission: any) => {
         const studentEmail = submission.student_email || submission.student;
@@ -554,16 +421,9 @@ const TeachersAssignmentsPage = () => {
               new Date(submission.submission_date || submission.submitted_at) > 
               new Date(studentSubmissionMap[studentEmail].submission_date || studentSubmissionMap[studentEmail].submitted_at)) {
             studentSubmissionMap[studentEmail] = submission;
-            console.log(`📝 Mapped submission for student: ${studentEmail}`, {
-              submission_date: submission.submission_date || submission.submitted_at,
-              is_late: submission.is_late
-            });
           }
         }
       });
-      
-      console.log(`📊 Student submission map created with ${Object.keys(studentSubmissionMap).length} entries`);
-      console.log("📋 Student emails with submissions:", Object.keys(studentSubmissionMap));
 
       // Update student submissions state (preserve existing submissions and add for this assignment)
       setStudentSubmissions(prevSubmissions => {
@@ -589,38 +449,28 @@ const TeachersAssignmentsPage = () => {
       });
 
       // Step 3: Categorize students based on submission status
-      console.log("🔍 Step 7: Categorizing students by status:", cardType);
       let filteredStudentsList: any[] = [];
 
       switch (cardType) {
         case 'total':
           // Show all students for this specific class
           filteredStudentsList = classSpecificStudents;
-          console.log(`📊 Total students: ${filteredStudentsList.length}`);
           break;
 
         case 'pending':
           // Show students who haven't submitted THIS specific assignment
-          console.log("🔍 Filtering for PENDING students...");
           filteredStudentsList = classSpecificStudents.filter((student: Student) => {
             const studentEmail = student.email;
             const hasSubmission = !!studentSubmissionMap[studentEmail];
-            if (!hasSubmission) {
-              console.log(`⏳ Pending: ${studentEmail} (${student.fullname || student.name || student.full_name})`);
-            }
             return !hasSubmission;
           });
-          console.log(`⏳ Pending students: ${filteredStudentsList.length}`);
           break;        case 'completed':
           // Show students who submitted THIS assignment ON TIME (submission_date <= due_date)
-          console.log("🔍 Filtering for COMPLETED (on time) students...");
-          console.log(`📅 Due date for comparison: ${assignmentDueDate.toISOString()}`);
           filteredStudentsList = classSpecificStudents.filter((student: Student) => {
             const studentEmail = student.email;
             const submission = studentSubmissionMap[studentEmail];
             
             if (!submission) {
-              console.log(`❌ No submission for: ${studentEmail}`);
               return false;
             }
             
@@ -628,23 +478,11 @@ const TeachersAssignmentsPage = () => {
             const submissionDate = new Date(submission.submission_date || submission.submitted_at);
             const isOnTime = submissionDate <= assignmentDueDate && !submission.is_late;
             
-            console.log(`📝 Student: ${studentEmail}`, {
-              submission_date: submissionDate.toISOString(),
-              due_date: assignmentDueDate.toISOString(),
-              is_late_flag: submission.is_late,
-              isOnTime: isOnTime,
-              comparison: submissionDate <= assignmentDueDate ? "✅ On time" : "⚠️ Late"
-            });
-            
             return isOnTime;
           });
-          console.log(`✅ Completed (on time) students: ${filteredStudentsList.length}`);
           break;
         case 'overdue':
           // Show students who submitted THIS assignment AFTER the due date OR haven't submitted at all but due date passed
-          console.log("🔍 Filtering for OVERDUE students...");
-          console.log(`📅 Due date for comparison: ${assignmentDueDate.toISOString()}`);
-          
           // Get current date for checking if assignment is overdue
           const currentDate = new Date();
           const isAssignmentOverdue = assignmentDueDate < currentDate;
@@ -659,21 +497,12 @@ const TeachersAssignmentsPage = () => {
               
               if (!submission) {
                 // Student hasn't submitted at all and assignment is overdue
-                console.log(`⏳ Overdue (not submitted): ${studentEmail}`);
                 return true;
               }
               
               // Student submitted but check if it was late
               const submissionDate = new Date(submission.submission_date || submission.submitted_at);
               const isLate = submissionDate > assignmentDueDate || submission.is_late === true;
-              
-              console.log(`📝 Student: ${studentEmail}`, {
-                submission_date: submissionDate.toISOString(),
-                due_date: assignmentDueDate.toISOString(),
-                is_late_flag: submission.is_late,
-                isLate: isLate,
-                comparison: submissionDate > assignmentDueDate ? "⚠️ Late" : "✅ On time"
-              });
               
               return isLate;
             });
@@ -691,39 +520,16 @@ const TeachersAssignmentsPage = () => {
               const submissionDate = new Date(submission.submission_date || submission.submitted_at);
               const isLate = submissionDate > assignmentDueDate || submission.is_late === true;
               
-              console.log(`📝 Student: ${studentEmail}`, {
-                submission_date: submissionDate.toISOString(),
-                due_date: assignmentDueDate.toISOString(),
-                is_late_flag: submission.is_late,
-                isLate: isLate,
-                comparison: submissionDate > assignmentDueDate ? "⚠️ Late" : "✅ On time"
-              });
-              
               return isLate;
             });
           }
-          console.log(`⚠️ Overdue students: ${filteredStudentsList.length}`);
           break;      }
 
-      console.log(`✅ Final filtered students count: ${filteredStudentsList.length}`);
-      console.log("👥 Filtered students list:", filteredStudentsList.map(s => ({
-        id: s.id,
-        email: s.email,
-        name: s.fullname || s.name || s.full_name
-      })));
-      
       setFilteredStudents(filteredStudentsList);
-      console.log("✅ ========== END: handleAssignmentCardClick ==========");
     } catch (err) {
-      console.error("❌ Error fetching and filtering students:", err);
-      console.error("❌ Error details:", {
-        message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined
-      });
       showPopup('error', "Failed to fetch students data.");
     } finally {
       setLoadingStudents(false);
-      console.log("🏁 Loading state set to false");
     }
   };
 
@@ -767,7 +573,6 @@ const TeachersAssignmentsPage = () => {
       });
       fetchAssignments();
     } catch (err: any) {
-      console.error("Error adding assignment:", err.response?.data || err);
       const errorMessage = err.response?.data?.message || "Failed to add assignment. Please check the form data.";
       showPopup('error', errorMessage);
     } finally {

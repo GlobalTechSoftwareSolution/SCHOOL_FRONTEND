@@ -9,7 +9,6 @@ import Erpmodules from "@/app/components/Erpmodules";
 import Faqs from '@/app/components/Faqs'
 import Personalizedportals from  '@/app/components/Personalizedportals'
 import Featuresshowcase from '@/app/featuresshowcase/page'
-import Whatsappbutton from '@/app/components/Whatsappbutton'
 import Chatbot from "./components/Chatbot";
 import Footer from "@/app/components/Footer";
 
@@ -84,7 +83,6 @@ export default function Page() {
             <Featuresshowcase />
             <Faqs />
             <Chatbot />
-            {/* <Whatsappbutton /> */}
             <Footer />
           </motion.div>
         )}

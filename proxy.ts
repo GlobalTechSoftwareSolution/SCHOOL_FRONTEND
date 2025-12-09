@@ -16,7 +16,7 @@ const publicRoutes = [
   '/featuresshowcase'
 ];
 
-// Define API routes that should be excluded from middleware
+// Define API routes that should be excluded from proxy
 const apiRoutes = [
   '/api/'
 ];
@@ -43,21 +43,22 @@ function isApiRoute(pathname: string): boolean {
   return apiRoutes.some(route => pathname.startsWith(route));
 }
 
-export function middleware(request: NextRequest) {
+// Proxy function that handles authentication checks
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Log middleware execution
-  console.log('[MIDDLEWARE] Processing request for:', pathname);
+  // Log proxy execution
+  console.log('[PROXY] Processing request for:', pathname);
   
-  // Skip middleware for API routes
+  // Skip proxy for API routes
   if (isApiRoute(pathname)) {
-    console.log('[MIDDLEWARE] Skipping API route');
+    console.log('[PROXY] Skipping API route');
     return NextResponse.next();
   }
   
   // Allow public routes
   if (isPublicRoute(pathname)) {
-    console.log('[MIDDLEWARE] Allowing public route');
+    console.log('[PROXY] Allowing public route');
     return NextResponse.next();
   }
   
@@ -66,21 +67,21 @@ export function middleware(request: NextRequest) {
                 request.cookies.get('accessToken') || 
                 request.cookies.get('authToken');
   
-  console.log('[MIDDLEWARE] Token found:', !!token);
+  console.log('[PROXY] Token found:', !!token);
   
   // If no token and not a public route, redirect to login
   if (!token) {
-    console.log('[MIDDLEWARE] No token found, redirecting to login');
+    console.log('[PROXY] No token found, redirecting to login');
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
   
-  console.log('[MIDDLEWARE] Token found, allowing access');
+  console.log('[PROXY] Token found, allowing access');
   return NextResponse.next();
 }
 
-// Configure which routes the middleware should run on
+// Configure which routes the proxy should run on
 export const config = {
   matcher: [
     /*

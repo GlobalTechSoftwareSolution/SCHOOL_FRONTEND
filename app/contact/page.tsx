@@ -170,7 +170,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-blue-100">Call Us</h4>
-                    <p className="text-white font-medium">+91 9844282875</p>
+                    <p className="text-white font-medium">+91 8495862494</p>
                     <p className="text-blue-200 text-sm">Mon-Sat, 10AM-6PM </p>
                   </div>
                 </div>

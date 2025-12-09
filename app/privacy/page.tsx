@@ -392,10 +392,10 @@ export default function PrivacyPolicyPage() {
                 <p className="mb-2 text-black">
                 📞 Contact:{" "}
                 <a
-                    href="tel:+919844281875"
+                    href="tel:+918495862494"
                     className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200"
                 >
-                    +91 98442 81875
+                    +91 8495862494
                 </a>
                 </p>
               </div>

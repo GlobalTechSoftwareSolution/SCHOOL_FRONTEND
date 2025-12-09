@@ -68,7 +68,7 @@ const Footer = () => {
   ];
 
   const contactInfo = [
-    { icon: Phone, text: "+91 9844281875" },
+    { icon: Phone, text: "+91 8495862494" },
     { icon: Mail, text: "tech@globaltechsoftwaresolutions.com" },
     { icon: MapPin, text: "No 10, 4th Floor, Gaduniya Complex, Ramaiah Layout, Vidyaranyapura, Bangalore - 560097" },
   ];

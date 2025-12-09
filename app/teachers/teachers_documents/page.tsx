@@ -222,7 +222,6 @@ const TeacherDocumentsPage = () => {
         },
       });
 
-      console.log("✅ Upload success:", res.data);
       
       // Refresh documents after upload
       await fetchDocuments();

@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import WhatsappButton from '@/app/components/Whatsappbutton';
 import { Send, X, MessageCircle, User, Bot, AlertCircle } from "lucide-react";
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
+  const [showContactButtons, setShowContactButtons] = useState(false);
   const [messages, setMessages] = useState<
     { text: string; user: boolean; timestamp: Date }[]
   >([
@@ -60,7 +62,7 @@ export default function Chatbot() {
 
     try {
       const res = await fetch(
-        "https://school.globaltechsoftwaresolutions.cloud/chat",
+        `${process.env.NEXT_PUBLIC_CHAT_BOT_API}/chat`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -97,6 +99,27 @@ export default function Chatbot() {
 
   return (
     <div className="text-black">
+      {/* Contact Buttons that appear when arrow is clicked */}
+      {showContactButtons && <WhatsappButton />}
+      
+      {/* Arrow Button to toggle contact buttons */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setShowContactButtons(!showContactButtons)}
+        className="fixed right-9 bottom-32 z-[9998] bg-gray-800 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className={`h-6 w-6 text-white transition-transform duration-300 ${showContactButtons ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+        </svg>
+      </motion.button>
+      
       {/* Floating Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
@@ -104,12 +127,31 @@ export default function Chatbot() {
         onClick={() => setOpen(true)}
         className="fixed bottom-6 right-6 z-[9999] bg-gradient-to-r from-blue-600 to-purple-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:shadow-xl transition-all duration-300"
       >
-        <MessageCircle size={24} />
+        {/* ✅ PRO AI BOT ICON */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-7 w-7 text-white"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="4" y="8" width="16" height="12" rx="4" />
+          <circle cx="9" cy="14" r="1" />
+          <circle cx="15" cy="14" r="1" />
+          <path d="M12 2v4" />
+          <circle cx="12" cy="6" r="1" />
+        </svg>
+
+        {/* ✅ Notification Ping */}
         <span className="absolute -top-1 -right-1 flex h-5 w-5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-5 w-5 bg-purple-500"></span>
         </span>
       </motion.button>
+
 
       {/* Chat Window */}
       <AnimatePresence>
@@ -132,9 +174,31 @@ export default function Chatbot() {
                   className="hover:bg-white/20 p-1 rounded-full transition-colors"
                   title="Clear chat"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
+                 <svg
+  xmlns="http://www.w3.org/2000/svg"
+  className="h-4 w-4"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+>
+  {/* <!-- Bot Head --> */}
+  <rect x="3" y="8" width="18" height="12" rx="4" ry="4" />
+  
+  {/* <!-- Eyes --> */}
+  <circle cx="9" cy="13" r="1" />
+  <circle cx="15" cy="13" r="1" />
+
+  {/* <!-- Mouth --> */}
+  <path d="M9 17h6" />
+
+  {/* <!-- Antenna --> */}
+  <path d="M12 2v4" />
+  <circle cx="12" cy="6" r="1" />
+</svg>
+
                 </button>
                 <button 
                   onClick={() => setOpen(false)}
