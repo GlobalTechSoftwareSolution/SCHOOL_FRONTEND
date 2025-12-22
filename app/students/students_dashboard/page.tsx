@@ -1,30 +1,27 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
+import { isAuthenticated } from "@/app/utils/auth";
+import { useRouter } from "next/navigation";
 
 // Interfaces
 interface Attendance {
   id: number;
   student?: string;
   student_name?: string;
+  student_email?: string;
+  user_email?: string;
   date: string;
   status: string;
   subject_name?: string;
   class_name?: string;
   section?: string;
 }
-interface Assignment {
-  id: number;
-  title: string;
-  description: string;
-  due_date: string;
-  subject: string;
-  status: string;
-  created_by: string;
-}
 interface Mark {
   id: number;
+  student?: string;
+  student_id?: string | number;
   subject: string;
   marks_obtained: number;
   total_marks: number;
@@ -38,56 +35,72 @@ interface Notice {
   created_at: string;
   created_by: string;
   priority: "high" | "medium" | "low";
+  notice_to?: string;
 }
 interface Leave {
   id: number;
   status: string;
   start_date: string;
   end_date: string;
+  applicant_email?: string;
 }
 
+interface StudentInfo {
+  email?: string;
+  fullname?: string;
+  first_name?: string;
+  name?: string;
+  student_id?: string | number;
+}
+
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
+
 const StudentDashboard = () => {
+  const router = useRouter();
   const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [marks, setMarks] = useState<Mark[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
-  const [studentInfo, setStudentInfo] = useState<any>(null);
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api/";
+  // Check authentication on component mount
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/login?callbackUrl=/students/students_dashboard');
+      return;
+    }
+  }, [router]);
 
   // ✅ STEP 1: Fetch the student info from API by matching email
-  const fetchStudentInfo = async () => {
+  const fetchStudentInfo = useCallback(async () => {
     try {
       const storedUser = localStorage.getItem("userInfo");
       if (!storedUser) {
-        console.error("No user info found in localStorage");
         setLoading(false);
         return;
       }
 
-      const parsedUser = JSON.parse(storedUser);
+      const parsedUser: { email?: string } = JSON.parse(storedUser);
       const email = parsedUser.email;
 
-      const response = await axios.get(`${API_BASE}students/`);
-      const allStudents = response.data;
+      const response = await axios.get<StudentInfo[]>(`${API_BASE}students/`);
+      const allStudents: StudentInfo[] = Array.isArray(response.data)
+        ? response.data
+        : [response.data];
 
       // ✅ Match by email (case-insensitive)
       const matchedStudent = allStudents.find(
-        (student: any) =>
-          student.email?.toLowerCase() === email.toLowerCase()
+        (student) => student.email?.toLowerCase() === email?.toLowerCase()
       );
 
       if (matchedStudent) {
         setStudentInfo(matchedStudent);
-      } else {
-        console.warn("No matching student found for:", email);
       }
-    } catch (error) {
-      console.error("Error fetching student info:", error);
+    } catch {
+      // Silent error handling
     }
-  };
+  }, []);
 
   // ✅ STEP 2: Fetch dashboard data after student info is available
   useEffect(() => {
@@ -100,71 +113,74 @@ const StudentDashboard = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
         // Attendance (student specific)
-        const attendanceRes = await axios.get(`${API_BASE}student_attendance/`, { headers }).catch(err => {
-          console.warn("student_attendance API failed:", err.message);
+        const attendanceRes = await axios
+          .get<Attendance[]>(`${API_BASE}student_attendance/`, { headers })
+          .catch(() => {
           return { data: [] };
         });
-        const attendanceData = Array.isArray(attendanceRes.data)
+        const attendanceData: Attendance[] = Array.isArray(attendanceRes.data)
           ? attendanceRes.data
-          : [attendanceRes.data];
+          : [attendanceRes.data as Attendance];
         const emailLower = studentInfo.email?.toLowerCase();
-        const studentAttendance = attendanceData.filter((record: any) => {
+        const studentAttendance = attendanceData.filter((record) => {
           const recordEmail = (record.student || record.student_email || record.user_email)?.toLowerCase?.();
           return recordEmail && recordEmail === emailLower;
         });
         setAttendance(studentAttendance);
         // Marks
-        const marksRes = await axios.get(`${API_BASE}grades/`, { headers }).catch(err => {
-          console.warn("Grades API failed:", err.message);
+        const marksRes = await axios
+          .get<Mark[]>(`${API_BASE}grades/`, { headers })
+          .catch(() => {
           return { data: [] };
         });
-        const marksData = Array.isArray(marksRes.data)
+        const marksData: Mark[] = Array.isArray(marksRes.data)
           ? marksRes.data
-          : [marksRes.data];
+          : [marksRes.data as Mark];
         const studentMarks = marksData.filter(
-          (m: any) =>
+          (m: Mark) =>
             m.student?.toLowerCase?.() === studentInfo.email?.toLowerCase() ||
             m.student_id === studentInfo.student_id
         );
         setMarks(studentMarks);
 
         // Notices
-        const noticesRes = await axios.get(`${API_BASE}notices/`, { headers }).catch(err => {
-          console.warn("Notices API failed:", err.message);
+        const noticesRes = await axios
+          .get<Notice[]>(`${API_BASE}notices/`, { headers })
+          .catch(() => {
           return { data: [] };
         });
-        setNotices(noticesRes.data || []);
+        
+        // Filter notices for the specific student only
+        const allNotices: Notice[] = Array.isArray(noticesRes.data)
+          ? noticesRes.data
+          : [noticesRes.data as Notice];
+        const studentNotices = allNotices.filter((notice) => {
+          const noticeTo = (notice.notice_to || "").trim().toLowerCase();
+          const studentEmail = studentInfo.email?.toLowerCase();
+          return noticeTo === studentEmail;
+        });
+        
+        setNotices(studentNotices);
 
         // Leaves
-        const leavesRes = await axios.get(`${API_BASE}leaves/`, { headers }).catch(err => {
-          console.warn("Leaves API failed:", err.message);
+        const leavesRes = await axios
+          .get<Leave[]>(`${API_BASE}leaves/`, { headers })
+          .catch(() => {
           return { data: [] };
         });
         
-        console.log("🔍 Raw leaves API response:", leavesRes.data);
-        console.log("🔍 Student email for filtering:", studentInfo.email);
-        
-        const leavesData = Array.isArray(leavesRes.data)
+        const leavesData: Leave[] = Array.isArray(leavesRes.data)
           ? leavesRes.data
-          : [leavesRes.data];
-        
-        // Show first leave record structure for debugging
-        if (leavesData.length > 0) {
-          console.log("🔍 First leave record structure:", leavesData[0]);
-        }
+          : [leavesRes.data as Leave];
         
         // Filter leaves by student email using applicant_email field
-        const studentLeaves = leavesData.filter(
-          (leave: any) => {
-            console.log("🔍 Checking leave:", leave);
-            return leave.applicant_email?.toLowerCase?.() === studentInfo.email?.toLowerCase();
-          }
-        );
+        const studentLeaves = leavesData.filter((leave) => {
+          return leave.applicant_email?.toLowerCase?.() === studentInfo.email?.toLowerCase();
+        });
         
-        console.log("📅 Filtered student leaves:", studentLeaves);
         setLeaves(studentLeaves);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+      } catch {
+        // Silent error handling
       } finally {
         setLoading(false);
       }
@@ -176,7 +192,7 @@ const StudentDashboard = () => {
   // ✅ Initial load – get student info first
   useEffect(() => {
     fetchStudentInfo();
-  }, []);
+  }, [fetchStudentInfo]);
 
   // Attendance calculations
   const totalDays = attendance.length;
@@ -186,10 +202,6 @@ const StudentDashboard = () => {
   const absentDays = totalDays - presentDays;
   const attendancePercentage =
     totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
-
-  const pendingAssignments = assignments.filter(
-    (a) => a.status?.toLowerCase() === "pending" || !a.status
-  ).length;
 
   const validMarks = marks.filter((m) => m.percentage !== undefined);
   const averageMarks =
@@ -224,12 +236,6 @@ const StudentDashboard = () => {
     }
   };
   // ✅ Add this below your notice color helper
-  const pendingAssignmentsList = assignments.filter(
-    (assignment: any) =>
-      assignment.status?.toLowerCase() === "pending" ||
-      assignment.submission_status?.toLowerCase() === "pending"
-  );
-
 
   // ✅ Loading screen
   if (loading) {
@@ -253,13 +259,10 @@ const StudentDashboard = () => {
           {/* Welcome Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Welcome back, {studentInfo?.fullname || "Student"}!  </h1>
+              Welcome back, {studentInfo?.fullname || studentInfo?.first_name || studentInfo?.name || "Student"}!
+            </h1>
             <p className="text-gray-600 text-lg">
-              Here's your academic overview
-            </p>
-            {/* Debug student info - remove this later */}
-            <p className="text-sm text-gray-500 mt-2">
-              Logged in as: {studentInfo?.email}
+              Welcome to your Student Dashboard
             </p>
           </div>
 

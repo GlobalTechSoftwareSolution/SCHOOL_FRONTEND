@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
-import { Users, UserCheck, UserX, Calendar, AlertCircle, RefreshCw, Download } from "lucide-react";
+import { Users, UserCheck, UserX, AlertCircle, RefreshCw, Download } from "lucide-react";
 import jsPDF from 'jspdf';
 
 interface AttendanceRecord {
@@ -17,7 +17,7 @@ interface AttendanceRecord {
   check_in: string;
   check_out: string | null;
   sec: string;
-  status: "Present" | "Absent" | "Late" | string;
+  status: "Present" | "Absent" | string;
   role: string;
   marked_by_role: string;
   marked_by_email?: string;
@@ -26,13 +26,7 @@ interface AttendanceRecord {
   department_name?: string;
 }
 
-interface ClassData {
-  id: number;
-  class_name: string;
-  section: string;
-}
-
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 const PrincipalAttendanceReport = () => {
   const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);
@@ -47,7 +41,8 @@ const PrincipalAttendanceReport = () => {
   const [activeTab, setActiveTab] = useState<"all" | "present" | "absent" | "students">("all");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [classes, setClasses] = useState<ClassData[]>([]);
+  // Commented out unused state
+  // const [classes, setClasses] = useState<ClassData[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedSection, setSelectedSection] = useState<string>("");
 
@@ -57,7 +52,6 @@ const PrincipalAttendanceReport = () => {
       switch (status) {
         case "Present": return "bg-green-100 text-green-800 border-green-200";
         case "Absent": return "bg-red-100 text-red-800 border-red-200";
-        case "Late": return "bg-yellow-100 text-yellow-800 border-yellow-200";
         default: return "bg-gray-100 text-gray-800 border-gray-200";
       }
     };
@@ -66,7 +60,6 @@ const PrincipalAttendanceReport = () => {
       switch (status) {
         case "Present": return "✅";
         case "Absent": return "❌";
-        case "Late": return "⏰";
         default: return "📝";
       }
     };
@@ -118,9 +111,11 @@ const PrincipalAttendanceReport = () => {
                 </p>
               </div>
               <div>
-                <span className="text-gray-500">Class/Sec:</span>
+                <span className="text-gray-500">{record.role === 'student' ? 'Class/Sec:' : 'Department:'}</span>
                 <p className="font-medium text-gray-900">
-                  {record.class_name || 'N/A'} / {record.sec || 'N/A'}
+                  {record.role === 'student' 
+                    ? `${record.class_name || 'N/A'} / ${record.sec || 'N/A'}`
+                    : (record.department_name || 'N/A')}
                 </p>
               </div>
             </div>
@@ -208,19 +203,27 @@ const PrincipalAttendanceReport = () => {
         // Create a map of teacher emails to their details (fullname and department)
         const teacherMap = new Map<string, { fullname: string; department_name: string; email: string }>();
         if (Array.isArray(teachersRes.data)) {
-          teachersRes.data.forEach((teacher: any) => {
-            const teacherEmail = teacher.email || teacher.user_details?.email;
+          teachersRes.data.forEach((teacher: Record<string, unknown>) => {
+            const teacherObj = teacher as { 
+              email?: string; 
+              user_details?: { email?: string; fullname?: string }; 
+              fullname?: string; 
+              name?: string; 
+              department_name?: string; 
+              department?: string 
+            };
+            const teacherEmail = teacherObj.email || teacherObj.user_details?.email;
             if (!teacherEmail) return;
 
             teacherMap.set(teacherEmail, {
               fullname:
-                teacher.fullname ||
-                teacher.name ||
-                teacher.user_details?.fullname ||
+                teacherObj.fullname ||
+                teacherObj.name ||
+                teacherObj.user_details?.fullname ||
                 "",
               department_name:
-                teacher.department_name ||
-                teacher.department ||
+                teacherObj.department_name ||
+                teacherObj.department ||
                 "",
               email: teacherEmail,
             });
@@ -229,37 +232,75 @@ const PrincipalAttendanceReport = () => {
         console.log("📚 Teacher map created with", teacherMap.size, "entries");
 
         // Merge teacher details into attendance records
-        const attendanceData = attendanceRes.data.map((record: any) => {
+        const attendanceData = attendanceRes.data.map((record: Record<string, unknown>) => {
           // Try to match by email or student_email
-          const emailToMatch = record.email || record.student_email || record.user_email;
+          const recordTyped = record as {
+            id?: number;
+            email?: string;
+            student_email?: string;
+            user_email?: string;
+            fullname?: string;
+            student_name?: string;
+            name?: string;
+            user_details?: { fullname?: string };
+            department_name?: string;
+            department?: string;
+            class_name?: string;
+            date?: string;
+            check_in?: string;
+            check_out?: string | null;
+            sec?: string;
+            status?: string;
+            role?: string;
+            marked_by_role?: string;
+            marked_by_email?: string;
+            reason?: string;
+            remarks?: string;
+          };
+          
+          const emailToMatch = recordTyped.email || recordTyped.student_email || recordTyped.user_email;
           const teacherInfo = emailToMatch ? teacherMap.get(emailToMatch) : undefined;
 
           const mergedFullname =
             teacherInfo?.fullname ||
-            record.fullname ||
-            record.student_name ||
-            record.name ||
-            record.user_details?.fullname ||
+            recordTyped.fullname ||
+            recordTyped.student_name ||
+            recordTyped.name ||
+            recordTyped.user_details?.fullname ||
             "";
 
           const mergedDepartment =
             teacherInfo?.department_name ||
-            record.department_name ||
-            record.department ||
-            record.class_name ||
+            recordTyped.department_name ||
+            recordTyped.department ||
+            recordTyped.class_name ||
             "";
 
           const mergedEmail =
             teacherInfo?.email ||
-            record.email ||
-            record.student_email ||
-            record.user_email ||
+            recordTyped.email ||
+            recordTyped.student_email ||
+            recordTyped.user_email ||
             "";
 
-          const mergedRecord = {
-            ...record,
-            fullname: mergedFullname,
+          const recordObj = record as unknown as AttendanceRecord;
+          const mergedRecord: AttendanceRecord = {
+            id: recordObj.id || 0,
+            student_email: recordObj.student_email || mergedEmail,
             email: mergedEmail,
+            student_name: mergedFullname,
+            fullname: mergedFullname,
+            class_name: mergedDepartment,
+            date: recordObj.date || "",
+            check_in: recordObj.check_in || "",
+            check_out: recordObj.check_out || null,
+            sec: recordObj.sec || "",
+            status: recordObj.status || "",
+            role: recordObj.role || "",
+            marked_by_role: recordObj.marked_by_role || "",
+            marked_by_email: recordObj.marked_by_email || "",
+            reason: recordObj.reason || "",
+            remarks: recordObj.remarks || "",
             department_name: mergedDepartment,
           };
           
@@ -290,9 +331,9 @@ const PrincipalAttendanceReport = () => {
         console.error("❌ Unexpected API response format:", attendanceRes.data);
         setError("Received invalid data format from server");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Error fetching attendance:", error);
-      setError(error.response?.data?.message || "Failed to fetch attendance data");
+      setError((error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to fetch attendance data");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -336,9 +377,9 @@ const PrincipalAttendanceReport = () => {
         console.error("❌ Unexpected API response format:", res.data);
         setError("Received invalid data format from server");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Error fetching student attendance:", error);
-      setError(error.response?.data?.message || "Failed to fetch student attendance data");
+      setError((error as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to fetch student attendance data");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -356,10 +397,10 @@ const PrincipalAttendanceReport = () => {
       console.log("📥 Classes response:", res.data);
       
       if (Array.isArray(res.data)) {
-        setClasses(res.data);
+        // setClasses(res.data); // Commented out unused state
         console.log("✅ Classes set with", res.data.length, "records");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Error fetching classes:", error);
     }
   };
@@ -401,7 +442,6 @@ const PrincipalAttendanceReport = () => {
       const pdfData = filteredData.length > 0 ? filteredData : allAttendance;
       const pdfPresent = pdfData.filter(s => s.status === "Present");
       const pdfAbsent = pdfData.filter(s => s.status === "Absent");
-      const pdfLate = pdfData.filter(s => s.status === "Late");
       
       // Colors for professional design
       const colors = {
@@ -537,7 +577,6 @@ const PrincipalAttendanceReport = () => {
       const totalRecords = pdfData.length;
       const totalPresent = pdfPresent.length;
       const totalAbsent = pdfAbsent.length;
-      const totalLate = pdfLate.length;
       const overallPercentage = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
       
       // Statistics cards
@@ -545,7 +584,6 @@ const PrincipalAttendanceReport = () => {
       addStatCard('Total Records', totalRecords.toString(), colors.primary, margin, yPosition, cardWidth);
       addStatCard('Present', totalPresent.toString(), colors.success, margin + cardWidth + 5, yPosition, cardWidth);
       addStatCard('Absent', totalAbsent.toString(), colors.danger, margin + (cardWidth * 2) + 10, yPosition, cardWidth);
-      addStatCard('Late', totalLate.toString(), colors.warning, margin + (cardWidth * 3) + 15, yPosition, cardWidth);
       
       yPosition += 35;
       
@@ -580,7 +618,7 @@ const PrincipalAttendanceReport = () => {
       yPosition += 50;
 
       // Class-wise Breakdown
-      const classBreakdown = pdfData.reduce((acc: any, student) => {
+      const classBreakdown = pdfData.reduce((acc: Record<string, { present: number; absent: number; total: number }>, student) => {
         const className = student.class_name || 'Unknown Class';
         if (!acc[className]) {
           acc[className] = { present: 0, absent: 0, total: 0 };
@@ -690,14 +728,13 @@ const PrincipalAttendanceReport = () => {
         `• Overall attendance rate: ${overallPercentage}%`,
         `• Present: ${totalPresent} (${totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0}%)`,
         `• Absent: ${totalAbsent} (${totalRecords > 0 ? Math.round((totalAbsent / totalRecords) * 100) : 0}%)`,
-        `• Late arrivals: ${totalLate} (${totalRecords > 0 ? Math.round((totalLate / totalRecords) * 100) : 0}%)`,
         `• Report period: ${months[selectedMonth - 1]} ${selectedYear}`,
         `• Data filter: ${filterType.charAt(0).toUpperCase() + filterType.slice(1)} view`,
         activeTab === 'students' && selectedClass ? `• Class filter: ${selectedClass}${selectedSection ? ` - ${selectedSection}` : ''}` : '',
         `• Report generated on: ${new Date().toLocaleDateString()}`
       ].filter(line => line);
       
-      conclusions.forEach((line, index) => {
+      conclusions.forEach((line) => {
         if (yPosition > pageHeight - 20) {
           pdf.addPage();
           yPosition = 20;
@@ -772,7 +809,6 @@ const PrincipalAttendanceReport = () => {
     totalRecords: filteredData.length,
     present: filteredData.filter(item => item.status === "Present").length,
     absent: filteredData.filter(item => item.status === "Absent").length,
-    late: filteredData.filter(item => item.status === "Late").length,
     presentPercentage: filteredData.length > 0 ? 
       Math.round((filteredData.filter(item => item.status === "Present").length / filteredData.length) * 100) : 0
   };
@@ -855,7 +891,7 @@ const PrincipalAttendanceReport = () => {
     }
     
     setFilteredData(filtered);
-  }, [allAttendance, studentAttendance, presentStudents, absentStudents, filterType, activeTab, selectedMonth, selectedYear, selectedClass, selectedSection]);
+  }, [allAttendance, studentAttendance, presentStudents, absentStudents, filterType, activeTab, selectedMonth, selectedYear, selectedClass, selectedSection, displayData]);
 
   // ✅ Loading state
   if (loading) {
@@ -958,12 +994,6 @@ const PrincipalAttendanceReport = () => {
               color="red" 
               icon={<UserX className="h-4 w-4 sm:h-5 sm:w-5" />}
             />
-            <StatsCard 
-              title="Late" 
-              value={stats.late} 
-              color="yellow" 
-              icon={<Calendar className="h-4 w-4 sm:h-5 sm:w-5" />}
-            />
           </div>
 
           {/* Tab Navigation */}
@@ -1010,7 +1040,7 @@ const PrincipalAttendanceReport = () => {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                ✅ Present ({presentStudents.length})
+                ✅ Present
               </button>
               <button
                 onClick={() => {
@@ -1024,7 +1054,7 @@ const PrincipalAttendanceReport = () => {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                ❌ Absent ({absentStudents.length})
+                ❌ Absent 
               </button>
             </div>
 
@@ -1234,10 +1264,6 @@ const PrincipalAttendanceReport = () => {
                     <div className="flex items-center gap-1 sm:gap-2">
                       <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
                       <span>Absent: {stats.absent}</span>
-                    </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <div className="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-500 rounded-full"></div>
-                      <span>Late: {stats.late}</span>
                     </div>
                   </div>
                 </div>

@@ -7,11 +7,9 @@ import {
   BookOpen,
   Search,
   Calendar,
-  BarChart2,
   Users,
   Laptop,
   ClipboardList,
-  CheckCircle,
 } from "lucide-react";
 
 const Library = () => {

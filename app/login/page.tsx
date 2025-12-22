@@ -1,10 +1,11 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Eye, EyeOff, User, Lock, Mail, School, Sparkles, BookOpen, GraduationCap } from 'lucide-react';
 
 function LoginPageContent() {
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
@@ -12,22 +13,75 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [dialog, setDialog] = useState({ open: false, title: '', message: '' });
+  const isComponentMounted = useRef(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl');
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
+  
   // Helper: show dialog
   const showDialog = (title: string, message: string) => {
     setDialog({ open: true, title, message });
   };
+  
+  // Helper function to handle redirects
+  const handleRedirect = useCallback(() => {    
+    // Redirect based on verified role or callback URL
+    if (callbackUrl && callbackUrl.startsWith('/')) {
+      router.push(callbackUrl);
+    } else {
+      // Get user role from token or stored data
+      let userRole = '';
+      try {
+        const userInfo = localStorage.getItem('userInfo');
+        if (userInfo) {
+          const parsed = JSON.parse(userInfo);
+          userRole = (parsed.role || '').toLowerCase();
+        }
+      } catch (e) {
+        console.error('Error parsing user info:', e);
+        // Fallback to role state
+        userRole = role.toLowerCase();
+      }      
+      const redirectPaths: Record<string, string> = {
+        'admin': '/admin',
+        'teacher': '/teachers', 
+        'student': '/students',
+        'management': '/management',
+        'principal': '/principal',
+        'parent': '/parents'
+      };
 
+      // Ensure we have a valid redirect path with fallback
+      const redirectPath = redirectPaths[userRole] || '/students';
+      console.log('[LOGIN REDIRECT] Redirecting to:', redirectPath, 'for role:', userRole);
+      router.push(redirectPath);
+    }
+  }, [callbackUrl, role, router]);
+
+  useEffect(() => {
+    isComponentMounted.current = true;
+    
+    // Check if user is already logged in
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+    if (token && isComponentMounted.current) {
+      handleRedirect(token);
+    }
+    
+    // Set isMounted state for rendering
+    setTimeout(() => {
+      if (isComponentMounted.current) {
+        setIsMounted(true);
+      }
+    }, 0);
+    
+    // Cleanup function
+    return () => {
+      isComponentMounted.current = false;
+    };
+  }, [handleRedirect]);
   // Helper function to handle successful login
-  const handleSuccessfulLogin = async (userData: any, tokenData: any) => {
+  const handleSuccessfulLogin = async (userData: {email?: string, role?: string, is_active?: boolean, is_approved?: boolean, name?: string, fullname?: string, first_name?: string}) => {    
     // Validate that user has the expected role or is approved
     if (!userData.role) {
       userData.role = role;
@@ -54,26 +108,25 @@ function LoginPageContent() {
     }
 
     // Store user info
- const userInfo = {
-  email: userData.email,
-  role: userData.role,
-  is_active: userData.is_active,
-  is_approved: userData.is_approved,
-  name: email.split('@')[0]   // fallback username
-};
-
+    const userInfo = {
+      email: userData.email,
+      role: userData.role,
+      is_active: userData.is_active,
+      is_approved: userData.is_approved,
+      name: (userData.name || userData.fullname || userData.first_name || (userData.email ? userData.email.split('@')[0] : email.split('@')[0]))  // better name extraction
+    };
 
     localStorage.setItem('userData', JSON.stringify(userData));
     localStorage.setItem('userInfo', JSON.stringify(userInfo));
-    localStorage.setItem('userRole', userData.role);
-    localStorage.setItem('userEmail', userData.email || email);
+    localStorage.setItem('userRole', userData.role || '');
+    localStorage.setItem('userEmail', userData.email || email || '');
 
     setLoading(false);
 
     // Redirect based on verified role
-    const userRole = userInfo.role.toLowerCase();
+    const userRole = (userInfo.role || '').toLowerCase();
 
-    const redirectPaths = {
+    const redirectPaths: Record<string, string> = {
       'admin': '/admin',
       'teacher': '/teachers', 
       'student': '/students',
@@ -82,11 +135,13 @@ function LoginPageContent() {
       'parent': '/parents'
     };
 
-    const redirectPath = redirectPaths[userRole as keyof typeof redirectPaths] || '/students';    
+    // Ensure we have a valid redirect path with fallback
+    const redirectPath = redirectPaths[userRole] || '/students';
+    console.log('[LOGIN] Redirecting to:', redirectPath, 'for role:', userRole);
     router.push(redirectPath);
   };
-
   const login = async () => {
+    
     if (!email || !password) {
       showDialog("Invalid Input", "Please fill in all fields");
       return;
@@ -98,7 +153,7 @@ function LoginPageContent() {
       // STEP 1: Get JWT token and user data from token endpoint
       const formattedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 
-      const tokenRes = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/token/', {
+      const tokenRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/token/`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -130,21 +185,20 @@ function LoginPageContent() {
       localStorage.setItem('authToken', tokenData.access);
 
       // ✅ Directly handle login with token data (no extra /login call)
-   const userData = {
-  email: tokenData.email,
-  role: tokenData.role,
-  is_active: tokenData.is_active,
-  is_approved: tokenData.is_approved
-};
+      const userData = {
+        email: tokenData.email,
+        role: tokenData.role,
+        is_active: tokenData.is_active,
+        is_approved: tokenData.is_approved
+      };
 
-
-      await handleSuccessfulLogin(userData, tokenData);
+      await handleSuccessfulLogin(userData);
     } catch (error) {
+      console.error('[LOGIN PAGE] Network error during login:', error);
       setLoading(false);
       showDialog("Network Error", "Please check your internet connection and try again.");
     }
   };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       login();
@@ -152,21 +206,21 @@ function LoginPageContent() {
   };
 
   // Debug function to check storage
-  const checkStorage = () => {
-    // Storage check logic here (logging removed for production)
-  };
+  // const checkStorage = () => {
+  //   // Storage check logic here (logging removed for production)
+  // };
 
   // Clear storage for testing
-  const clearStorage = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('userInfo');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('refreshToken');
-    showDialog("Storage Cleared", "Storage cleared for testing.");
-  };
+  // const clearStorage = () => {
+  //   localStorage.removeItem('accessToken');
+  //   localStorage.removeItem('authToken');
+  //   localStorage.removeItem('userData');
+  //   localStorage.removeItem('userInfo');
+  //   localStorage.removeItem('userRole');
+  //   localStorage.removeItem('userEmail');
+  //   localStorage.removeItem('refreshToken');
+  //   showDialog("Storage Cleared", "Storage cleared for testing.");
+  // };
 
 
   if (!isMounted) {
@@ -257,12 +311,12 @@ function LoginPageContent() {
                   onChange={e => setRole(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 border border-gray-400 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-800 focus:border-transparent bg-white/90 backdrop-blur-sm transition-all duration-200 appearance-none cursor-pointer text-gray-900"
                 >
-                  <option value="student">🎓 Student</option>
-                  <option value="teacher">👨‍🏫 Teacher</option>
-                  <option value="admin">⚡ Admin</option>
-                  <option value="management">🏢 Management</option>
-                  <option value="principal">👨‍💼 Principal</option>
-                  <option value="parent">👨‍👩‍👧 Parent</option>
+                  <option value="Student">🎓 Student</option>
+                  <option value="Teacher">👨‍🏫 Teacher</option>
+                  <option value="Admin">⚡ Admin</option>
+                  <option value="Management">🏢 Management</option>
+                  <option value="Principal">👨‍💼 Principal</option>
+                  <option value="Parent">👨‍👩‍👧 Parent</option>
                 </select>
                 <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-900 pointer-events-none">▼</div>
               </div>

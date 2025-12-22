@@ -13,21 +13,38 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  Filter,
-  Download,
-  User,
   Star,
-  Bookmark,
-  Eye
+  Bookmark
 } from "lucide-react";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/";
+interface Program {
+  id: number;
+  title?: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  location?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  students_enrolled?: string;
+  capacity?: string;
+  coordinator?: string;
+  coordinator_email?: string;
+  duration?: string;
+  requirements?: string;
+  benefits?: string;
+}
+
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
 const ParentProgramsPage = () => {
-  const [programs, setPrograms] = useState<any[]>([]);
+  // Commented out unused state
+  // const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedProgram, setSelectedProgram] = useState<any>(null);
   const [expandedProgram, setExpandedProgram] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -39,7 +56,7 @@ const ParentProgramsPage = () => {
       const response = await axios.get(`${API_URL}programs/`);
       setPrograms(response.data);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching programs:", err);
       setError("Failed to load programs. Please try again later.");
     } finally {
@@ -64,7 +81,7 @@ const ParentProgramsPage = () => {
     ).length;
     
     const totalEnrollment = programs.reduce((sum, program) => 
-      sum + (parseInt(program.students_enrolled) || 0), 0
+      sum + (parseInt(program.students_enrolled || '0') || 0), 0
     );
 
     return {
@@ -93,18 +110,18 @@ const ParentProgramsPage = () => {
     let matchesStatus = true;
     if (statusFilter === "active") {
       matchesStatus = program.status === "Active" || 
-        (program.start_date && new Date(program.start_date) <= new Date() && 
-         program.end_date && new Date(program.end_date) >= new Date());
+        (!!program.start_date && new Date(program.start_date) <= new Date() && 
+         !!program.end_date && new Date(program.end_date) >= new Date());
     } else if (statusFilter === "upcoming") {
-      matchesStatus = program.start_date && new Date(program.start_date) > new Date();
+      matchesStatus = !!program.start_date && new Date(program.start_date) > new Date();
     } else if (statusFilter === "completed") {
-      matchesStatus = program.end_date && new Date(program.end_date) < new Date();
+      matchesStatus = !!program.end_date && new Date(program.end_date) < new Date();
     }
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const getProgramStatus = (program: any) => {
+  const getProgramStatus = (program: Program) => {
     if (program.status === "Active") return "active";
     if (program.start_date && new Date(program.start_date) > new Date()) return "upcoming";
     if (program.end_date && new Date(program.end_date) < new Date()) return "completed";
@@ -210,30 +227,6 @@ const ParentProgramsPage = () => {
               </div>
             </div>
           </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Upcoming</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.upcomingPrograms}</p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-xl">
-                <Clock className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Enrollment</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{stats.totalEnrollment}</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <Users className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Filters and Search */}
@@ -320,7 +313,7 @@ const ParentProgramsPage = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 flex-1">
                         <div className="mt-1">
-                          {getCategoryIcon(program.category)}
+                          {getCategoryIcon(program.category || '')}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -468,6 +461,21 @@ const ParentProgramsPage = () => {
                               )}
                             </div>
                           </div>
+
+                            <div>
+                            <h4 className="font-medium text-gray-900 mb-3">Coordinator Information</h4>
+                            <div className="space-y-3 text-sm">
+                              {/* <div className="flex justify-between">
+                                <span className="text-gray-600">Coordinator Name:</span>
+                                <span className="text-gray-900 font-medium">{program.coordinator || "Not specified"}</span>
+                              </div> */}
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Coordinator Email:</span>
+                                <span className="text-gray-900 font-medium">{program.coordinator_email || "Not specified"}</span>
+                              </div>  
+                            </div>
+                          </div>
+
                         </div>
 
                         {/* Full Description */}

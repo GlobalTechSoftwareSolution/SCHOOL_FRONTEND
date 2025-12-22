@@ -11,7 +11,6 @@ import {
   BookOpen,
   Users,
   GraduationCap,
-  Settings,
 } from "lucide-react";
 
 const Navbar = () => {
@@ -302,4 +301,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
- 

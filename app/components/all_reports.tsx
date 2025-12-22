@@ -1,31 +1,48 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import {
   FiUser,
-  FiBookOpen,
-  FiFileText,
   FiPlus,
   FiCalendar,
   FiMail,
   FiType,
-  FiBarChart2,
   FiClock,
   FiEye,
   FiX
 } from "react-icons/fi";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/reports/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/reports/`;
+
+interface Report {
+  id: number;
+  title: string;
+  description: string;
+  report_type: string;
+  student_email?: string;
+  teacher_email?: string;
+  created_by_email?: string;
+  created_at: string;
+}
+
+interface NewReport {
+  title: string;
+  description: string;
+  report_type: string;
+  student_email: string;
+  teacher_email: string;
+  created_by_email: string;
+}
 
 const All_reports = () => {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [filterType, setFilterType] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [newReport, setNewReport] = useState({
+  const [newReport, setNewReport] = useState<NewReport>({
     title: "",
     description: "",
     report_type: "",
@@ -35,12 +52,12 @@ const All_reports = () => {
   });
 
   // Get auth token
-  const getAuthToken = () => {
+  const getAuthToken = useCallback(() => {
     return localStorage.getItem("authToken") || localStorage.getItem("token") || "";
-  };
+  }, []);
 
   // Get axios config with auth
-  const getAxiosConfig = () => {
+  const getAxiosConfig = useCallback(() => {
     const token = getAuthToken();
     return {
       headers: {
@@ -48,24 +65,24 @@ const All_reports = () => {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
     };
-  };
+  }, [getAuthToken]);
 
   // Fetch all reports
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(API_URL, getAxiosConfig());
+      const response = await axios.get<Report[]>(API_URL, getAxiosConfig());
       setReports(response.data);
     } catch (error) {
       console.error("Error fetching reports:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAxiosConfig]);
 
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [fetchReports]);
 
   // Add new report
   const handleAddReport = async (e: React.FormEvent) => {
@@ -84,7 +101,7 @@ const All_reports = () => {
       };
       
       
-      const response = await axios.post(API_URL, reportData, getAxiosConfig());
+      await axios.post(API_URL, reportData, getAxiosConfig());
       
       setShowAddForm(false);
       setNewReport({
@@ -97,36 +114,41 @@ const All_reports = () => {
       });
       fetchReports();
       alert("Report created successfully!");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("❌ Error adding report:", error);
-      console.error("Full response data:", error.response?.data);
-      console.error("Response status:", error.response?.status);
       
       // Extract detailed error messages
       let errorMessage = "Error creating report.";
-      const data = error.response?.data;
       
-      if (data) {
-        if (data.report_type && Array.isArray(data.report_type)) {
-          errorMessage = `Invalid report type: ${data.report_type.join(", ")}`;
-        } else if (data.detail) {
-          errorMessage = data.detail;
-        } else if (data.message) {
-          errorMessage = data.message;
-        } else {
-          // Try to extract any error messages from the response
-          const errors = Object.entries(data)
-            .map(([key, value]: [string, any]) => {
-              if (Array.isArray(value)) {
-                return `${key}: ${value.join(", ")}`;
-              }
-              return `${key}: ${value}`;
-            })
-            .join("; ");
-          if (errors) {
-            errorMessage = errors;
+      if (axios.isAxiosError(error)) {
+        console.error("Full response data:", error.response?.data);
+        console.error("Response status:", error.response?.status);
+        const data = error.response?.data;
+        
+        if (data) {
+          if (data.report_type && Array.isArray(data.report_type)) {
+            errorMessage = `Invalid report type: ${data.report_type.join(", ")}`;
+          } else if (data.detail) {
+            errorMessage = data.detail;
+          } else if (data.message) {
+            errorMessage = data.message;
+          } else {
+            // Try to extract any error messages from the response
+            const errors = Object.entries(data)
+              .map(([key, value]) => {
+                if (Array.isArray(value)) {
+                  return `${key}: ${value.join(", ")}`;
+                }
+                return `${key}: ${String(value)}`;
+              })
+              .join("; ");
+            if (errors) {
+              errorMessage = errors;
+            }
           }
         }
+      } else {
+        errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       }
       
       alert(`Error: ${errorMessage}`);
@@ -147,7 +169,7 @@ const All_reports = () => {
 
   // Report color
   const getReportTypeColor = (type: string) => {
-    const colors: any = {
+    const colors: Record<string, string> = {
       Academic: "bg-blue-100 text-blue-800 border-blue-200",
       Behavior: "bg-orange-100 text-orange-800 border-orange-200",
       Finance: "bg-green-100 text-green-800 border-green-200",
@@ -159,7 +181,7 @@ const All_reports = () => {
 
   // Report icon
   const getReportTypeIcon = (type: string) => {
-    const icons: any = {
+    const icons: Record<string, string> = {
       General: "📄",
       Academic: "📚",
       Behavior: "👥",

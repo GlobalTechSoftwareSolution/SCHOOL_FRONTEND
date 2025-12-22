@@ -3,8 +3,24 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { motion, AnimatePresence } from "framer-motion";
+// Removed framer-motion import as animations are simplified
 import DashboardLayout from "@/app/components/DashboardLayout";
+
+const STUDENT_API = `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`;
+const CLASS_API = `${process.env.NEXT_PUBLIC_API_BASE_URL}/classes/`;
+const TIMETABLE_API = `${process.env.NEXT_PUBLIC_API_BASE_URL}/timetable/`;
+
+// Color palette for subjects - simplified to single colors
+const subjectColors = [
+  "bg-blue-100",
+  "bg-green-100",
+  "bg-yellow-100",
+  "bg-red-100",
+  "bg-purple-100",
+  "bg-pink-100",
+  "bg-indigo-100",
+  "bg-gray-100"
+];
 
 interface Timetable {
   id: number;
@@ -50,24 +66,6 @@ const Student_Timetable = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("calendar");
-  const [currentWeek, setCurrentWeek] = useState<Date[]>([]);
-  const [hoveredClass, setHoveredClass] = useState<string | null>(null);
-
-  const STUDENT_API = "https://school.globaltechsoftwaresolutions.cloud/api/students/";
-  const CLASS_API = "https://school.globaltechsoftwaresolutions.cloud/api/classes/";
-  const TIMETABLE_API = "https://school.globaltechsoftwaresolutions.cloud/api/timetable/";
-
-  // Color palette for subjects
-  const subjectColors = [
-    "from-purple-500 to-pink-500",
-    "from-blue-500 to-cyan-500",
-    "from-green-500 to-emerald-500",
-    "from-orange-500 to-red-500",
-    "from-indigo-500 to-purple-600",
-    "from-teal-500 to-blue-600",
-    "from-yellow-500 to-orange-500",
-    "from-red-500 to-pink-600"
-  ];
 
   // Get user info from localStorage safely
   const getLocalUserInfo = useCallback(() => {
@@ -80,18 +78,7 @@ const Student_Timetable = () => {
     }
   }, []);
 
-  // Calculate current week dates
-  const calculateCurrentWeek = useCallback((date: Date) => {
-    const startOfWeek = new Date(date);
-    startOfWeek.setDate(date.getDate() - date.getDay());
-    const week = [];
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(startOfWeek);
-      day.setDate(startOfWeek.getDate() + i);
-      week.push(day);
-    }
-    return week;
-  }, []);
+
 
   // Fetch student and class information
   useEffect(() => {
@@ -112,7 +99,7 @@ const Student_Timetable = () => {
         const studentRes = await axios.get(STUDENT_API);
         const allStudents = studentRes.data || [];
         const matchedStudent = allStudents.find(
-          (s: any) => s.email?.toLowerCase() === email.toLowerCase()
+          (s: Student) => s.email?.toLowerCase() === email.toLowerCase()
         );
 
         if (!matchedStudent) {
@@ -123,13 +110,13 @@ const Student_Timetable = () => {
         // Fetch class information
         const classRes = await axios.get(CLASS_API);
         const matchedClass = classRes.data.find(
-          (cls: any) => cls.id === matchedStudent.class_id
+          (cls: ClassInfo) => cls.id === matchedStudent.class_id
         );
         setClassInfo(matchedClass || null);
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("❌ Error loading student data:", err);
-        setError(err.message || "Failed to load student information");
+        setError(err instanceof Error ? err.message : "Failed to load student information");
       } finally {
         setLoading(false);
       }
@@ -147,19 +134,18 @@ const Student_Timetable = () => {
         const res = await axios.get(TIMETABLE_API);
         const data = res.data || [];
         const filtered = data.filter(
-          (t: any) => t.class_id?.toString() === student.class_id?.toString()
+          (t: Timetable) => t.class_id?.toString() === student.class_id?.toString()
         );
-        
+
         // Sort by day and time
         const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-        const sortedTimetable = filtered.sort((a: any, b: any) => {
+        const sortedTimetable = filtered.sort((a: Timetable, b: Timetable) => {
           const dayCompare = dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week);
           if (dayCompare !== 0) return dayCompare;
           return a.start_time.localeCompare(b.start_time);
         });
 
         // Add colors to subjects
-        const subjects = [...new Set(sortedTimetable.map((t: Timetable) => t.subject_name))];
         const timetableWithColors = sortedTimetable.map((item: Timetable, index: number) => ({
           ...item,
           subject_color: subjectColors[index % subjectColors.length]
@@ -176,10 +162,7 @@ const Student_Timetable = () => {
     fetchTimetable();
   }, [student]);
 
-  // Initialize current week
-  useEffect(() => {
-    setCurrentWeek(calculateCurrentWeek(new Date()));
-  }, [calculateCurrentWeek]);
+
 
   // ✅ Handle date selection (timezone-safe)
   const handleDateClick = useCallback(
@@ -244,66 +227,45 @@ const Student_Timetable = () => {
   ];
 
   // Card Components for Responsive Design
-  const ClassCard = ({ classItem, index }: { classItem: Timetable; index: number }) => (
-    <motion.div
+  const ClassCard = ({ classItem }: { classItem: Timetable; index: number }) => (
+    <div
       key={classItem.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{ scale: 1.02 }}
-      onHoverStart={() => setHoveredClass(classItem.id.toString())}
-      onHoverEnd={() => setHoveredClass(null)}
-      className={`p-4 bg-gradient-to-r ${classItem.subject_color} text-white rounded-xl shadow-lg border border-white/20 cursor-pointer transform transition-all duration-300 ${
-        hoveredClass === classItem.id.toString() ? 'shadow-2xl' : 'shadow-md'
-      }`}
+      className={`p-4 ${classItem.subject_color} rounded-lg border border-gray-200`}
     >
-      <div className="font-bold text-base sm:text-lg mb-2">
+      <div className="font-bold text-base mb-2">
         {classItem.subject_name}
       </div>
-      <div className="text-sm opacity-90 mb-1">
+      <div className="text-sm mb-1">
         ⏰ {formatTime(classItem.start_time)} - {formatTime(classItem.end_time)}
       </div>
-      <div className="text-xs opacity-80">
+      <div className="text-xs text-gray-600">
         👨‍🏫 {classItem.teacher_name} • 🚪 {classItem.room_number}
       </div>
-    </motion.div>
+    </div>
   );
 
   const DayScheduleCard = ({ day, classes }: { day: string; classes: Timetable[] }) => (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.01 }}
-      className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
-    >
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 sm:px-6 py-3 sm:py-4">
-        <h3 className="font-bold text-base sm:text-lg text-center">{day}</h3>
+    <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+      <div className="bg-blue-500 text-white px-4 py-3">
+        <h3 className="font-bold text-base text-center">{day}</h3>
       </div>
-      <div className="p-3 sm:p-4 space-y-3">
+      <div className="p-3 space-y-3">
         {classes.map((classItem: Timetable, index: number) => (
           <ClassCard key={classItem.id} classItem={classItem} index={index} />
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 
   if (loading) {
     return (
       <DashboardLayout role="students">
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
           <div className="text-center">
-            <motion.div
-              animate={{ rotate: 360, scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-400 border-t-transparent rounded-full mx-auto mb-3 sm:mb-4"
-            />
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-gray-600 text-sm sm:text-lg font-light"
-            >
-              Loading your academic universe...
-            </motion.p>
+            <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-400 border-t-transparent rounded-full mx-auto mb-3 sm:mb-4" style={{animation: 'spin 1s linear infinite'}}></div>
+            <p className="text-gray-600 text-sm sm:text-lg">
+              Loading your timetable...
+            </p>
           </div>
         </div>
       </DashboardLayout>
@@ -313,25 +275,17 @@ const Student_Timetable = () => {
   if (error) {
     return (
       <DashboardLayout role="students">
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
           <div className="text-center max-w-md">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="text-6xl sm:text-8xl mb-4 sm:mb-6"
-            >
-              🌌
-            </motion.div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Orbit Disconnected</h2>
-            <p className="text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base">{error}</p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <div className="text-4xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-3">Error Loading Timetable</h2>
+            <p className="text-gray-600 mb-6 text-sm">{error}</p>
+            <button
               onClick={() => window.location.reload()}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-xl font-medium transition-all shadow-lg hover:shadow-xl text-sm sm:text-base"
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium text-sm"
             >
-              Reconnect
-            </motion.button>
+              Retry
+            </button>
           </div>
         </div>
       </DashboardLayout>
@@ -340,16 +294,12 @@ const Student_Timetable = () => {
 
   return (
     <DashboardLayout role="students">
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
           
-          {/* Header Section with Glass Morphism */}
-          <motion.div
-            initial={{ opacity: 0, y: -30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8 sm:mb-12"
-          >
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-xl border border-white/20 p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+          {/* Header Section */}
+          <div className="text-center mb-8 sm:mb-12">
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
               {classInfo && (
                 <div className="space-y-2 sm:space-y-3">
                   <p className="text-lg sm:text-xl lg:text-2xl text-gray-700 font-medium">
@@ -371,68 +321,51 @@ const Student_Timetable = () => {
 
             {/* Current Period Alert */}
             {currentPeriod && (
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-lg max-w-md mx-auto"
-              >
+              <div className="bg-green-500 text-white rounded-lg p-3 sm:p-4 shadow max-w-md mx-auto">
                 <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full animate-ping"></div>
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"></div>
                   <span className="font-semibold text-sm sm:text-base">Live: {currentPeriod.subject_name}</span>
                   <span className="text-xs sm:text-sm">({formatTime(currentPeriod.start_time)} - {formatTime(currentPeriod.end_time)})</span>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </motion.div>
+          </div>
 
-          {/* Navigation Tabs with Glass Effect */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white/80 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-lg border border-white/20 mb-6 sm:mb-8"
-          >
+          {/* Navigation Tabs */}
+          <div className="bg-white rounded-lg shadow border border-gray-200 mb-6 sm:mb-8">
             <div className="flex overflow-x-auto scrollbar-hide">
               {viewTabs.map((tab) => (
-                <motion.button
+                <button
                   key={tab.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                   onClick={() => setViewMode(tab.id as ViewMode)}
-                  className={`flex-1 min-w-0 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 font-semibold transition-all duration-300 text-xs sm:text-sm ${
+                  className={`flex-1 min-w-0 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 font-semibold text-xs sm:text-sm ${
                     viewMode === tab.id
-                      ? 'text-white bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                      ? 'text-white bg-blue-500'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
                   <span className="hidden sm:inline">{tab.label}</span>
                   <span className="sm:hidden text-base">{tab.icon}</span>
-                </motion.button>
+                </button>
               ))}
             </div>
-          </motion.div>
+          </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={viewMode}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -30 }}
-              transition={{ duration: 0.5, type: "spring" }}
-            >
+          <div>
               {/* Calendar View */}
               {viewMode === "calendar" && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                   {/* Calendar */}
-                  <div className="lg:col-span-2 bg-white/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-xl border border-white/20 p-4 sm:p-6 lg:p-8">
+                  <div className="lg:col-span-2 bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 lg:p-8">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                      <span className="text-2xl sm:text-3xl">🌌</span>
+                      <span className="text-2xl sm:text-3xl">📅</span>
                       Academic Calendar
                     </h2>
                     <div className="flex justify-center">
                       <Calendar
                         onClickDay={handleDateClick}
                         value={selectedDate}
-                        className="rounded-xl sm:rounded-2xl border-0 w-full max-w-[280px] sm:max-w-[320px] md:max-w-[400px] lg:max-w-full react-calendar-advanced shadow-inner bg-white/50"
+                        className="rounded-lg border-0 w-full max-w-[280px] sm:max-w-[320px] md:max-w-[400px] lg:max-w-full react-calendar-advanced shadow-inner bg-white"
                       />
                     </div>
                   </div>
@@ -440,7 +373,7 @@ const Student_Timetable = () => {
                   {/* Side Panel */}
                   <div className="space-y-4 sm:space-y-6">
                     {/* Selected Date Details */}
-                    <div className="bg-white/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-xl border border-white/20 p-4 sm:p-6">
+                    <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">
                         {selectedDate.toLocaleDateString('en-US', { 
                           weekday: 'long', 
@@ -453,7 +386,7 @@ const Student_Timetable = () => {
                       {/* Classes */}
                       <div className="mb-3 sm:mb-4">
                         <h4 className="font-semibold text-gray-700 mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
-                          🚀 Mission Schedule
+                          📚 Schedule
                         </h4>
                         {filteredTimetable.length > 0 ? (
                           <div className="space-y-2 sm:space-y-3">
@@ -463,7 +396,7 @@ const Student_Timetable = () => {
                           </div>
                         ) : (
                           <p className="text-gray-500 text-xs sm:text-sm text-center py-3 sm:py-4">
-                            No missions scheduled for this date
+                            No classes scheduled for this date
                           </p>
                         )}
                       </div>
@@ -474,14 +407,14 @@ const Student_Timetable = () => {
 
               {/* Visual Timetable View */}
               {viewMode === "timetable" && (
-                <div className="bg-white/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-xl border border-white/20 p-4 sm:p-6 lg:p-8">
+                <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 lg:p-8">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2 sm:gap-3">
                       <span className="text-2xl sm:text-3xl">🕐</span>
-                      Visual Schedule Matrix
+                      Weekly Schedule
                     </h2>
-                    <div className="text-xs sm:text-sm text-gray-600 bg-white/50 px-3 sm:px-4 py-1 sm:py-2 rounded-full">
-                      {timetable.length} scheduled missions
+                    <div className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-3 sm:px-4 py-1 sm:py-2 rounded-full">
+                      {timetable.length} classes scheduled
                     </div>
                   </div>
 
@@ -493,40 +426,38 @@ const Student_Timetable = () => {
                     </div>
                   ) : (
                     <div className="text-center py-8 sm:py-12 lg:py-16">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="text-6xl sm:text-8xl mb-4 sm:mb-6"
-                      >
-                        🚀
-                      </motion.div>
-                      <h3 className="text-lg sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Mission Control Quiet</h3>
+                      <div className="text-4xl mb-4">📚</div>
+                      <h3 className="text-lg sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">No Schedule Available</h3>
                       <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">
-                        Your class schedule is being prepared. Check back soon for your mission briefings.
+                        Your class schedule is being prepared. Check back soon.
                       </p>
                     </div>
                   )}
                 </div>
               )}
-            </motion.div>
-          </AnimatePresence>
+          </div>
         </div>
       </div>
 
       <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
         .react-calendar-advanced {
-          background: transparent;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.5rem;
         }
         .react-calendar-advanced .react-calendar__tile--active {
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          background: #3b82f6;
           color: white;
-          border-radius: 8px;
-          box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+          border-radius: 0.25rem;
         }
         .react-calendar-advanced .react-calendar__tile--now {
-          background: linear-gradient(135deg, #fef3c7, #f59e0b);
+          background: #f59e0b;
           color: #1f2937;
-          border-radius: 8px;
+          border-radius: 0.25rem;
           font-weight: bold;
         }
         .react-calendar-advanced .react-calendar__navigation button {
@@ -534,14 +465,12 @@ const Student_Timetable = () => {
           font-weight: 600;
         }
         .react-calendar-advanced .react-calendar__tile {
-          border-radius: 6px;
-          transition: all 0.3s ease;
+          border-radius: 0.25rem;
           padding: 0.5em;
           font-size: 0.875rem;
         }
         .react-calendar-advanced .react-calendar__tile:hover {
           background: #e5e7eb;
-          transform: scale(1.05);
         }
 
         /* Mobile First Responsive Calendar */

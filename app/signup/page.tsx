@@ -8,7 +8,6 @@ import {
   User,
   Mail,
   Lock,
-  Phone,
   BookOpen,
   GraduationCap,
   School,

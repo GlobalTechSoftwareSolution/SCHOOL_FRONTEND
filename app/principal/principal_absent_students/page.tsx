@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 import { 
@@ -7,112 +7,150 @@ import {
   Users, 
   TrendingDown, 
   Filter,
-  Download,
-  RefreshCw
+  Download
 } from "lucide-react";
 
-interface Absentee {
-  id?: number;
-  name: string;
-  date: string;
-  class?: string;
-  section?: string;
-}
-
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 const AbsentStudentsReport = () => {
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [filteredAbsentees, setFilteredAbsentees] = useState<Absentee[]>([]);
-  const [filterType, setFilterType] = useState("day");
+  interface Student {
+    id?: number;
+    email?: string;
+    fullname?: string;
+    name?: string;
+    class_name?: string;
+    class?: string;
+    sec?: string;
+    section?: string;
+  }
+
+  interface AttendanceRecord {
+    id?: number;
+    student_email?: string;
+    student?: string;
+    status?: string;
+  }
+
+  interface AbsentStudent {
+    id?: number;
+    student_name: string;
+    date: string;
+    class_name?: string;
+    sec?: string;
+    student_email?: string;
+    status?: string;
+    remarks?: string;
+  }
+
+  const [attendance, setAttendance] = useState<AbsentStudent[]>([]);
+  const [filteredAbsentees, setFilteredAbsentees] = useState<AbsentStudent[]>([]);
+  // Commented out unused state
+  // const [filterType, setFilterType] = useState("day");
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // Commented out unused state
+  // const [refreshing, setRefreshing] = useState(false);
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
 
   // ✅ Get date range based on filter
-  const getDateRange = (type: string) => {
-    const today = new Date();
-    let startDate = new Date();
+  // Commented out unused function
+  // const getDateRange = (type: string) => {
+  //   const today = new Date();
+  //   let startDate = new Date();
+  //
+  //   switch (type) {
+  //     case "week":
+  //       startDate.setDate(today.getDate() - 6);
+  //       break;
+  //     case "month":
+  //       startDate.setMonth(today.getMonth() - 1);
+  //       break;
+  //     case "year":
+  //       startDate.setFullYear(today.getFullYear() - 1);
+  //       break;
+  //     default:
+  //       startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  //   }
+  //
+  //   return { startDate, endDate: today };
+  // };
 
-    switch (type) {
-      case "week":
-        startDate.setDate(today.getDate() - 6);
-        break;
-      case "month":
-        startDate.setMonth(today.getMonth() - 1);
-        break;
-      case "year":
-        startDate.setFullYear(today.getFullYear() - 1);
-        break;
-      default:
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    }
-
-    return { startDate, endDate: today };
-  };
-
-  // ✅ Filter absentees based on selected year/month
-  const filterAbsentees = (data: any[]) => {
-    return data.filter((item: any) => {
-      if (!item.date) return false;
-
-      const recordDate = new Date(item.date);
-
-      // Treat multiple possible representations of "absent"
-      const status = (item.status || "").toString().toLowerCase();
-      const isExplicitAbsent = status === "absent";
-      const isFlagAbsent = item.is_absent === true || item.is_present === false;
-      const isAbsent = isExplicitAbsent || isFlagAbsent;
-
-      if (!isAbsent) return false;
-
+  // ✅ Filter absentees based on selected year/month and class/section
+  const filterAbsentees = useCallback((data: AbsentStudent[]) => {
+    return data.filter(() => {
+      // For absent students, we're already filtering by today's date in fetchAttendance
+      // But we still need to apply class/section/year/month filters if needed
+      
       const matchesYear = selectedYear
-        ? recordDate.getFullYear().toString() === selectedYear
+        ? new Date().getFullYear().toString() === selectedYear
         : true;
 
       const matchesMonth =
         selectedMonth !== ""
-          ? recordDate.getMonth() === Number(selectedMonth)
+          ? new Date().getMonth() === Number(selectedMonth)
           : true;
 
       return matchesYear && matchesMonth;
     });
-  };
+  }, [selectedYear, selectedMonth]);
 
   useEffect(() => {
     if (attendance.length > 0) {
       const filtered = filterAbsentees(attendance);
       setFilteredAbsentees(filtered);
     }
-  }, [attendance, selectedYear, selectedMonth]);
+  }, [attendance, selectedYear, selectedMonth, filterAbsentees]);
 
-  // ✅ Fetch Student Attendance (only source of absentees)
-  const fetchAttendance = async () => {
-    setRefreshing(true);
+  // ✅ Fetch Students and Attendance to calculate absentees
+  const fetchAttendance = useCallback(async () => {
+    // setRefreshing(true); // Commented out unused state
     try {
-      const res = await axios.get(`${API_BASE}/student_attendance/`);
-      const data = Array.isArray(res.data) ? res.data : [];
+      // Fetch all students
+      const studentsRes = await axios.get(`${API_BASE}/students/`);
+      const studentsData = Array.isArray(studentsRes.data) ? studentsRes.data : [];
+      
+      // Fetch today's attendance records
+      const today = new Date().toISOString().split('T')[0];
+      const attendanceRes = await axios.get(`${API_BASE}/student_attendance/?date=${today}`);
+      const attendanceData = Array.isArray(attendanceRes.data) ? attendanceRes.data : [];
 
-      // Normalize records so class_name and sec are consistently available
-      const normalized = data.map((item: any) => ({
-        ...item,
-        class_name: item.class_name || item.class || "",
-        sec: item.sec || item.section || "",
-      }));
+      // Create a set of present student emails for quick lookup
+      const presentStudentEmails = new Set(
+        attendanceData
+          .filter((record: AttendanceRecord) => record.status?.toLowerCase() === 'present')
+          .map((record: AttendanceRecord) => (record.student_email || record.student || '').toLowerCase())
+      );
 
-      setAttendance(normalized);
-    } catch (error) {
-      console.error("Error fetching student attendance:", error);
+      // Calculate absent students: all students minus present students
+      const absentStudents = studentsData
+        .filter((student: Student) => {
+          const studentEmail = (student.email || '').toLowerCase();
+          return studentEmail && !presentStudentEmails.has(studentEmail);
+        })
+        .map((student: Student) => ({
+          id: student.id,
+          student_name: student.fullname || student.name || 'Unknown Student',
+          date: today,
+          class_name: student.class_name || student.class || '',
+          sec: student.sec || student.section || '',
+          student_email: student.email || '',
+          status: 'Absent',
+          remarks: 'Absent today'
+        }));
+
+      setAttendance(absentStudents);
+    } catch {
+      // Error handling for student attendance fetch
+      console.error("Error fetching attendance data");
     } finally {
       setLoading(false);
-      setRefreshing(false);
+      // setRefreshing(false); // Commented out unused state
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAttendance();
-  }, []);
+  }, [fetchAttendance]);
 
   // ✅ Apply filter whenever attendance or filterType changes
   useEffect(() => {
@@ -120,17 +158,17 @@ const AbsentStudentsReport = () => {
       const filtered = filterAbsentees(attendance);
       setFilteredAbsentees(filtered);
     }
-  }, [attendance, selectedYear, selectedMonth]);
+  }, [attendance, selectedYear, selectedMonth, filterAbsentees]);
 
   // ✅ Export to CSV
   const exportToCSV = () => {
     const headers = ["Date", "Student Name", "Class", "Section", "Reason"];
-    const csvData = filteredAbsentees.map((att: any) => [
+    const csvData = filteredAbsentees.map((att: AbsentStudent) => [
       att.date,
       att.student_name || "N/A",
       att.class_name || "-",
-      att.section || "-",
-      att.reason || "—"
+      att.sec || "-",
+      att.remarks || "—"
     ]);
 
     const csvContent = [
@@ -142,7 +180,7 @@ const AbsentStudentsReport = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `absent-students-${filterType}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `absent-students-daily-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -170,7 +208,7 @@ const AbsentStudentsReport = () => {
               <TrendingDown className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
               Absent Students Report
             </h1>
-            <p className="text-gray-600 text-sm sm:text-base">Monitor and track student attendance patterns</p>
+            <p className="text-gray-600 text-sm sm:text-base">View students who are absent today</p>
           </div>
           
           <div className="flex gap-3 w-full sm:w-auto">
@@ -202,7 +240,7 @@ const AbsentStudentsReport = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Current Filter</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 capitalize">{filterType}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 capitalize">Daily</p>
               </div>
               <div className="p-2 sm:p-3 bg-purple-50 rounded-lg">
                 <Filter className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
@@ -355,13 +393,13 @@ const AbsentStudentsReport = () => {
                 Absent Students ({filteredAbsentees.length})
               </h2>
               <div className="text-sm text-gray-600">
-                Filtered by: <span className="font-semibold text-blue-600 capitalize">{filterType}</span>
+                Filtered by: <span className="font-semibold text-blue-600 capitalize">Daily</span>
               </div>
             </div>
 
             {/* Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredAbsentees.map((att: any, idx: number) => (
+              {filteredAbsentees.map((att: AbsentStudent, idx: number) => (
                 <div 
                   key={att.id || idx}
                   className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
@@ -388,9 +426,9 @@ const AbsentStudentsReport = () => {
 
                   {/* Reason */}
                   <div className="border-t border-gray-100 pt-3">
-                    <p className="text-xs text-gray-600 mb-1">Reason:</p>
+                    <p className="text-xs text-gray-600 mb-1">Status:</p>
                     <p className="text-sm text-gray-800 line-clamp-2">
-                      {att.remarks || "No reason provided"}
+                      Absent today
                     </p>
                   </div>
                 </div>
@@ -414,7 +452,7 @@ const AbsentStudentsReport = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredAbsentees.slice(0, 5).map((att: any, idx: number) => (
+                    {filteredAbsentees.slice(0, 5).map((att: AbsentStudent, idx: number) => (
                       <tr 
                         key={att.id || idx} 
                         className="hover:bg-gray-50 transition-colors duration-150"

@@ -11,6 +11,7 @@ import {
   Bell,
   GalleryVerticalEnd,
 } from "lucide-react";
+import Image from "next/image";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 
@@ -101,9 +102,11 @@ const Gallery = () => {
             >
               {/* FIXED IMAGE BOX (like your screenshot) */}
               <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4 flex justify-center">
-                <img
+                <Image
                   src={feature.image}
                   alt={feature.title}
+                  width={500}
+                  height={300}
                   className="max-h-48 w-auto object-contain"
                 />
               </div>

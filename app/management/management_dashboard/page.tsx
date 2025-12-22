@@ -7,61 +7,175 @@ import {
   Users, 
   UserCheck, 
   Clock, 
-  Calendar,
-  BarChart3
+  Calendar
 } from "lucide-react";
+import Link from "next/link";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+// Define TypeScript interfaces
+interface FeeStructure {
+  id?: string;
+  department?: string;
+  class_name?: string;
+  category?: string;
+  amount?: string;
+  total_amount?: string;
+  fee_amount?: string;
+  fee_type?: string;
+  type?: string;
+  fee_structure?: string;
+}
 
+interface FeePayment {
+  id?: string;
+  fee_structure_id?: string;
+  fee_id?: string;
+  amount_paid?: string;
+  amount?: string;
+  status?: string;
+  payment_status?: string;
+  student_name?: string;
+  student_fullname?: string;
+  payment_date?: string;
+  paid_at?: string;
+  created_at?: string;
+  remaining_amount?: number;
+  total_amount?: number;
+}
+
+interface ActivityData {
+  id?: string;
+  type?: string;
+  title?: string;
+  description?: string;
+  message?: string;
+  created_at?: string;
+  timestamp?: string;
+  date?: string;
+  status?: string;
+  student_name?: string;
+  student_fullname?: string;
+  class_name?: string;
+  class?: string;
+  subject?: string;
+  subject_name?: string;
+  grade?: string;
+  marks?: string;
+  related_user?: string;
+  priority?: string;
+}
+
+interface Notice {
+  id?: string;
+  title?: string;
+  subject?: string;
+  message?: string;
+  description?: string;
+  content?: string;
+  posted_date?: string;
+  created_at?: string;
+  date?: string;
+  priority?: string;
+  target_audience?: string;
+  category?: string;
+  valid_until?: string;
+  attachment_url?: string;
+  posted_by?: string;
+}
+
+interface Student {
+  id?: string;
+  fullname?: string;
+  name?: string;
+  created_at?: string;
+  admission_date?: string;
+  class_name?: string;
+  class?: string;
+}
+
+interface Teacher {
+  id?: string;
+  name?: string;
+  fullname?: string;
+}
+
+interface Class {
+  id?: string;
+  name?: string;
+  class_name?: string;
+}
+
+interface AttendanceRecord {
+  id?: string;
+  status?: string;
+  created_at?: string;
+  timestamp?: string;
+  date?: string;
+}
+
+interface GradeReport {
+  id?: string;
+  percentage?: string;
+  marks_obtained?: string;
+  total_marks?: string;
+}
+
+interface DepartmentFee {
+  department: string;
+  totalFees: number;
+  paidFees: number;
+  pendingFees: number;
+  feeCount: number;
+  averageFee: number;
+  feeTypes: string[];
+}
+
+interface Activity {
+  id: number;
+  type: string;
+  message: string;
+  time: string;
+  icon: string;
+  fullData?: ActivityData;
+}
+
+interface Overview {
+  totalStudents: number;
+  totalTeachers: number;
+  totalClasses: number;
+  totalRevenue: number;
+  pendingFees: number;
+  attendanceRate: number;
+  passPercentage: number;
+}
+
+interface QuickStats {
+  pendingFees: number;
+  newAdmissions: number;
+  pendingApprovals: number;
+  totalNotices: number;
+}
+
+interface ChartData {
+  revenue: number[];
+  students: number[];
+  expenses: number[];
+}
+
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 const ManagementDashboard = () => {
   const [dashboardData, setDashboardData] = useState<{
-    overview?: {
-      totalStudents: number;
-      totalTeachers: number;
-      totalClasses: number;
-      totalRevenue: number;
-      pendingFees: number;
-      attendanceRate: number;
-      passPercentage: number;
-    };
-    departmentFees?: {
-      [key: string]: {
-        department: string;
-        totalFees: number;
-        paidFees: number;
-        pendingFees: number;
-        feeCount: number;
-        averageFee: number;
-        feeTypes: string[];
-      };
-    };
-    recentActivities?: Array<{
-      id: number;
-      type: string;
-      message: string;
-      time: string;
-      icon: string;
-      fullData?: any; // Store complete data for each activity
-    }>;
-    quickStats?: {
-      pendingFees: number;
-      newAdmissions: number;
-      pendingApprovals: number;
-      totalNotices: number;
-    };
-    chartData?: {
-      revenue: number[];
-      students: number[];
-      expenses: number[];
-    };
+    overview?: Overview;
+    departmentFees?: Record<string, DepartmentFee>;
+    recentActivities?: Activity[];
+    quickStats?: QuickStats;
+    chartData?: ChartData;
   }>({});
   const [loading, setLoading] = useState(true);
-  const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
-  const [selectedNotice, setSelectedNotice] = useState<any>(null);
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
-  const [notices, setNotices] = useState<any[]>([]);
-
+  const [notices, setNotices] = useState<Notice[]>([]);
   // Format amounts in Indian Rupees
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -88,18 +202,17 @@ const ManagementDashboard = () => {
       try {
         // Fetch only available APIs with error handling for each
         const apiCalls = [
-          axios.get(`${API_BASE}/students/`).catch(err => { console.log('Students API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/teachers/`).catch(err => { console.log('Teachers API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/fee_payments/`).catch(err => { console.log('Fee Payments API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/fee_structures/`).catch(err => { console.log('Fee Structures API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/activities/`).catch(err => { console.log('Activities API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/attendance/`).catch(err => { console.log('Attendance API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/classes/`).catch(err => { console.log('Classes API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/grades/`).catch(err => { console.log('Grades API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/reports/`).catch(err => { console.log('Reports API not available'); return { data: [] }; }),
-          axios.get(`${API_BASE}/notices/`).catch(err => { console.log('Notices API not available'); return { data: [] }; })
+          axios.get<Student[]>(`${API_BASE}/students/`).catch(() => { console.log('Students API not available'); return { data: [] }; }),
+          axios.get<Teacher[]>(`${API_BASE}/teachers/`).catch(() => { console.log('Teachers API not available'); return { data: [] }; }),
+          axios.get<FeePayment[]>(`${API_BASE}/fee_payments/`).catch(() => { console.log('Fee Payments API not available'); return { data: [] }; }),
+          axios.get<FeeStructure[]>(`${API_BASE}/fee_structures/`).catch(() => { console.log('Fee Structures API not available'); return { data: [] }; }),
+          axios.get<ActivityData[]>(`${API_BASE}/activities/`).catch(() => { console.log('Activities API not available'); return { data: [] }; }),
+          axios.get<AttendanceRecord[]>(`${API_BASE}/attendance/`).catch(() => { console.log('Attendance API not available'); return { data: [] }; }),
+          axios.get<Class[]>(`${API_BASE}/classes/`).catch(() => { console.log('Classes API not available'); return { data: [] }; }),
+          axios.get<GradeReport[]>(`${API_BASE}/grades/`).catch(() => { console.log('Grades API not available'); return { data: [] }; }),
+          axios.get<GradeReport[]>(`${API_BASE}/reports/`).catch(() => { console.log('Reports API not available'); return { data: [] }; }),
+          axios.get<Notice[]>(`${API_BASE}/notices/`).catch(() => { console.log('Notices API not available'); return { data: [] }; })
         ];
-
         const [
           studentsRes, 
           teachersRes, 
@@ -113,17 +226,16 @@ const ManagementDashboard = () => {
           noticesRes
         ] = await Promise.all(apiCalls);
 
-        const students = studentsRes.data || [];
-        const teachers = teachersRes.data || [];
-        const feePayments = feePaymentsRes.data || [];
-        const feeStructures = feeStructuresRes.data || [];
-        const activities = activitiesRes.data || [];
-        const attendance = attendanceRes.data || [];
-        const classes = classesRes.data || [];
-        const grades = gradesRes.data || [];
-        const reports = reportsRes.data || [];
-        const noticesData = noticesRes.data || [];
-        
+        const students: Student[] = studentsRes.data || [];
+        const teachers: Teacher[] = teachersRes.data || [];
+        const feePayments: FeePayment[] = feePaymentsRes.data || [];
+        const feeStructures: FeeStructure[] = feeStructuresRes.data || [];
+        const activities: ActivityData[] = activitiesRes.data || [];
+        const attendance: AttendanceRecord[] = attendanceRes.data || [];
+        const classes: Class[] = classesRes.data || [];
+        const grades: GradeReport[] = gradesRes.data || [];
+        const reports: GradeReport[] = reportsRes.data || [];
+        const noticesData: Notice[] = noticesRes.data || [];        
         // Set notices in state for use in render
         setNotices(noticesData);
 
@@ -133,7 +245,7 @@ const ManagementDashboard = () => {
         const totalClasses = classes.length;
         
         // Calculate department-wise fee statistics
-        const departmentFees = feeStructures.reduce((acc: any, fee: any) => {
+        const departmentFees = feeStructures.reduce((acc: Record<string, DepartmentFee>, fee: FeeStructure) => {
           const department = fee.department || fee.class_name || fee.category || 'General';
           if (!acc[department]) {
             acc[department] = {
@@ -146,41 +258,38 @@ const ManagementDashboard = () => {
               feeTypes: []
             };
           }
-          const amount = parseFloat(fee.amount) || parseFloat(fee.total_amount) || parseFloat(fee.fee_amount) || 0;
+          const amount = parseFloat(fee.amount || "0") || parseFloat(fee.total_amount || "0") || parseFloat(fee.fee_amount || "0") || 0;
           acc[department].totalFees += amount;
           acc[department].feeCount += 1;
           acc[department].feeTypes.push(fee.fee_type || fee.type || 'General');
           return acc;
-        }, {});
-
+        }, {} as Record<string, DepartmentFee>);
         // Match fee structures with fee payments based on ID to calculate paid amounts
-        feePayments.forEach((payment: any) => {
+        feePayments.forEach((payment: FeePayment) => {
           const paymentId = payment.id || payment.fee_structure_id || payment.fee_id;
           if (paymentId) {
             // Find matching fee structure
-            const matchingFee = feeStructures.find((fee: any) => 
+            const matchingFee = feeStructures.find((fee: FeeStructure) => 
               fee.id === paymentId || fee.fee_structure_id === paymentId
             );
             
             if (matchingFee) {
               const department = matchingFee.department || matchingFee.class_name || matchingFee.category || 'General';
               if (departmentFees[department]) {
-                const paidAmount = parseFloat(payment.amount_paid) || parseFloat(payment.amount) || 0;
+                const paidAmount = parseFloat(payment.amount_paid || "0") || parseFloat(payment.amount || "0") || 0;
                 departmentFees[department].paidFees += paidAmount;
               }
             }
           }
-        });
-
-        // Calculate pending fees and average for each department
+        });        // Calculate pending fees and average for each department
         Object.keys(departmentFees).forEach(dept => {
           departmentFees[dept].pendingFees = departmentFees[dept].totalFees - departmentFees[dept].paidFees;
           departmentFees[dept].averageFee = departmentFees[dept].totalFees / departmentFees[dept].feeCount;
         });
         
         // Merge fee structures into payments to compute accurate totals and pending amounts
-        const mergedPayments = feePayments.map((pay: any) => {
-          const structure = feeStructures.find((s: any) => s.id === pay.fee_structure);
+        const mergedPayments = feePayments.map((pay: FeePayment) => {
+          const structure = feeStructures.find((s: FeeStructure) => s.id === pay.fee_structure);
 
           const totalRaw = structure?.amount ?? "0";
           const total = Number(totalRaw) || 0;
@@ -194,33 +303,31 @@ const ManagementDashboard = () => {
             ...pay,
             total_amount: total,
             remaining_amount: remaining,
-          };
-        });
-
-        // Calculate revenue from merged payments (only Paid / Completed)
-        const paidPayments = mergedPayments.filter((payment: any) => payment.status === "Paid" || payment.payment_status === "Completed");
+          } as FeePayment;
+        });        // Calculate revenue from merged payments (only Paid / Completed)
+        const paidPayments = mergedPayments.filter((payment: FeePayment) => payment.status === "Paid" || payment.payment_status === "Completed");
         const totalRevenue = paidPayments.reduce(
-          (sum: number, payment: any) => sum + (Number(payment.amount_paid ?? payment.amount ?? 0) || 0),
+          (sum: number, payment: FeePayment) => sum + (Number(payment.amount_paid ?? payment.amount ?? "0") || 0),
           0
         );
 
         // Calculate pending fees from merged payments (remaining > 0)
-        const pendingPayments = mergedPayments.filter((payment: any) => payment.remaining_amount > 0);
+        const pendingPayments = mergedPayments.filter((payment: FeePayment) => (payment.remaining_amount || 0) > 0);
         const pendingFees = pendingPayments.reduce(
-          (sum: number, payment: any) => sum + (Number(payment.remaining_amount) || 0),
+          (sum: number, payment: FeePayment) => sum + (Number(payment.remaining_amount) || 0),
           0
         );
         
         // Calculate attendance rate
-        const presentAttendance = attendance.filter((record: any) => record.status === "Present").length;
+        const presentAttendance = attendance.filter((record: AttendanceRecord) => record.status === "Present").length;
         const attendanceRate = attendance.length > 0 ? Math.round((presentAttendance / attendance.length) * 100) : 0;
         
         // Calculate pass percentage from grades/reports
         const allGrades = [...grades, ...reports];
-        const passingGrades = allGrades.filter((report: any) => {
-          const percentage = parseFloat(report.percentage) || 0;
-          const marks = parseFloat(report.marks_obtained) || 0;
-          const totalMarks = parseFloat(report.total_marks) || 1;
+        const passingGrades = allGrades.filter((report: GradeReport) => {
+          const percentage = parseFloat(report.percentage || "0") || 0;
+          const marks = parseFloat(report.marks_obtained || "0") || 0;
+          const totalMarks = parseFloat(report.total_marks || "1") || 1;
           const actualPercentage = totalMarks > 0 ? (marks / totalMarks) * 100 : 0;
           return percentage >= 40 || actualPercentage >= 40; // Assuming 40% is passing grade
         }).length;
@@ -228,10 +335,10 @@ const ManagementDashboard = () => {
         const passPercentage = totalGrades > 0 ? Math.round((passingGrades / totalGrades) * 100) : 0;
 
         // Process activities from API
-        let recentActivities = activities.map((activity: any, index: number) => {
+        let recentActivities = activities.map((activity: ActivityData, index: number) => {
           // Determine icon based on activity type
           let icon = '📋'; // Default icon
-          let type = activity.type || 'general';
+          const type = activity.type || 'general';
           
           switch (type.toLowerCase()) {
             case 'fee_payment':
@@ -310,29 +417,29 @@ const ManagementDashboard = () => {
         if (recentActivities.length < 3) {
           const generatedActivities = [
             // Recent fee payments
-            ...paidPayments.slice(-2).map((payment: any, index: number) => ({
+            ...paidPayments.slice(-2).map((payment: FeePayment, index: number) => ({
               id: `gen_fee_${index}`,
               type: 'fee_payment',
-              message: `${payment.student_name || payment.student_fullname || 'Student'} paid fees ${formatCurrency(parseFloat(payment.amount_paid) || parseFloat(payment.amount) || parseFloat(payment.total_amount) || 0)}`,
-              time: payment.payment_date || payment.paid_at ? `${Math.floor((Date.now() - new Date(payment.payment_date || payment.paid_at).getTime()) / (1000 * 60 * 60))} hours ago` : 'Recently',
+              message: `${payment.student_name || payment.student_fullname || 'Student'} paid fees ${formatCurrency(parseFloat(payment.amount_paid || "0") || parseFloat(payment.amount || "0") || parseFloat(String(payment.total_amount) || "0") || 0)}`,
+              time: payment.payment_date || payment.paid_at ? `${Math.floor((Date.now() - new Date(payment.payment_date || payment.paid_at || "").getTime()) / (1000 * 60 * 60))} hours ago` : 'Recently',
               icon: '💰',
               fullData: payment
             })),
             // Recent admissions
-            ...students.slice(-1).map((student: any, index: number) => ({
+            ...students.slice(-1).map((student: Student, index: number) => ({
               id: `gen_student_${index}`,
               type: 'new_admission',
               message: `New student admission: ${student.fullname || student.name || 'New Student'}`,
-              time: student.created_at || student.admission_date ? `${Math.floor((Date.now() - new Date(student.created_at || student.admission_date).getTime()) / (1000 * 60 * 60 * 24))} days ago` : 'Recently',
+              time: student.created_at || student.admission_date ? `${Math.floor((Date.now() - new Date(student.created_at || student.admission_date || "").getTime()) / (1000 * 60 * 60 * 24))} days ago` : 'Recently',
               icon: '🎓',
               fullData: student
             })),
             // Recent notices
-            ...noticesData.slice(-1).map((notice: any, index: number) => ({
+            ...noticesData.slice(-1).map((notice: Notice, index: number) => ({
               id: `gen_notice_${index}`,
               type: 'notice',
               message: `New notice: ${notice.title || notice.message || 'School Notice'}`,
-              time: notice.posted_date || notice.created_at ? `${Math.floor((Date.now() - new Date(notice.posted_date || notice.created_at).getTime()) / (1000 * 60 * 60 * 24))} days ago` : 'Recently',
+              time: notice.posted_date || notice.created_at ? `${Math.floor((Date.now() - new Date(notice.posted_date || notice.created_at || "").getTime()) / (1000 * 60 * 60 * 24))} days ago` : 'Recently',
               icon: '📢',
               fullData: notice
             }))
@@ -343,28 +450,28 @@ const ManagementDashboard = () => {
         }
 
         // Calculate quick stats
-        const quickStats = {
+        const quickStats: QuickStats = {
           pendingFees: pendingPayments.length,
-          newAdmissions: students.filter((student: any) => {
-            const createdAt = new Date(student.created_at || student.admission_date);
+          newAdmissions: students.filter((student: Student) => {
+            const createdAt = new Date(student.created_at || student.admission_date || "");
             const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
             return createdAt > thirtyDaysAgo;
           }).length,
-          pendingApprovals: feePayments.filter((payment: any) => payment.status === "Pending" || payment.payment_status === "Pending").length,
+          pendingApprovals: feePayments.filter((payment: FeePayment) => payment.status === "Pending" || payment.payment_status === "Pending").length,
           totalNotices: noticesData.length
         };
 
         // Generate chart data based on real trends
-        const chartData = {
+        const chartData: ChartData = {
           revenue: Array.from({length: 12}, (_, i) => {
-            const monthPayments = mergedPayments.filter((payment: any) => {
-              const paymentDate = new Date(payment.payment_date || payment.paid_at || payment.created_at);
+            const monthPayments = mergedPayments.filter((payment: FeePayment) => {
+              const paymentDate = new Date(payment.payment_date || payment.paid_at || payment.created_at || "");
               const paymentMonth = paymentDate.getMonth();
               return paymentMonth === i && (payment.status === "Paid" || payment.payment_status === "Completed");
             });
             return (
               monthPayments.reduce(
-                (sum: number, payment: any) => sum + (Number(payment.amount_paid ?? payment.amount ?? 0) || 0),
+                (sum: number, payment: FeePayment) => sum + (Number(payment.amount_paid ?? payment.amount ?? "0") || 0),
                 0
               ) / 1000
             ); // Convert to thousands
@@ -440,7 +547,7 @@ const ManagementDashboard = () => {
     );
   }
 
-  const { overview, departmentFees, recentActivities, quickStats, chartData } = dashboardData;
+  const { overview, recentActivities, quickStats } = dashboardData;
 
   // Default values to handle undefined cases
   const safeOverview = overview || {
@@ -452,8 +559,6 @@ const ManagementDashboard = () => {
     attendanceRate: 0,
     passPercentage: 0
   };
-
-  const safeDepartmentFees = departmentFees || {};
 
   const safeQuickStats = quickStats || {
     pendingFees: 0,
@@ -556,24 +661,6 @@ const ManagementDashboard = () => {
                       <p className="text-sm text-gray-600">Pending Fees</p>
                     </div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-xl flex items-center gap-3 hover:bg-green-100 transition-colors">
-                    <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-green-600">{safeQuickStats.newAdmissions}</p>
-                      <p className="text-sm text-gray-600">New Admissions</p>
-                    </div>
-                  </div>
-                  <div className="bg-orange-50 p-4 rounded-xl flex items-center gap-3 hover:bg-orange-100 transition-colors">
-                    <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
-                      <BarChart3 className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-orange-600">{safeQuickStats.pendingApprovals}</p>
-                      <p className="text-sm text-gray-600">Pending Approvals</p>
-                    </div>
-                  </div>
                   <div className="bg-blue-50 p-4 rounded-xl flex items-center gap-3 hover:bg-blue-100 transition-colors">
                     <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
                       <Calendar className="w-6 h-6 text-white" />
@@ -585,31 +672,6 @@ const ManagementDashboard = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Performance Metrics */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Performance Metrics</h2>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-medium text-gray-700">Attendance Rate</h4>
-                      <span className="text-lg font-bold text-gray-800">{safeOverview.attendanceRate}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style={{ width: `${safeOverview.attendanceRate}%` }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-medium text-gray-700">Pass Percentage</h4>
-                      <span className="text-lg font-bold text-gray-800">{safeOverview.passPercentage}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: `${safeOverview.passPercentage}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="space-y-8">
@@ -617,10 +679,12 @@ const ManagementDashboard = () => {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-800">Recent Activities</h2>
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">View All</button>
+                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    <Link href="/management/management_activites">View All</Link>
+                  </button>
                 </div>
                 <div className="space-y-4">
-                  {safeRecentActivities.map((activity: any) => (
+                  {safeRecentActivities.map((activity: Activity) => (
                     <div 
                       key={activity.id} 
                       className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer hover:shadow-md"
@@ -654,7 +718,7 @@ const ManagementDashboard = () => {
                 </div>
                 {notices.length > 0 ? (
                   <div className="space-y-4">
-                    {notices.slice(0, 4).map((notice: any, index: number) => (
+                    {notices.slice(0, 4).map((notice: Notice, index: number) => (
                       <div 
                         key={index}
                         onClick={() => {
@@ -705,9 +769,9 @@ const ManagementDashboard = () => {
                     ))}
                     {notices.length > 4 && (
                       <div className="text-center pt-2">
-                        <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        <Link href="/management/management_notice" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                           View all {notices.length} notices →
-                        </button>
+                        </Link>
                       </div>
                     )}
                   </div>

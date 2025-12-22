@@ -3,16 +3,50 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
+
+interface Student {
+  id?: number;
+  email: string;
+  fullname?: string;
+  class_id: number;
+  section?: string;
+  parent?: string;
+}
+
+interface ClassInfo {
+  id: number;
+  class_name: string;
+  sec?: string;
+  class_teacher?: string;
+}
+
+interface Notice {
+  id: number;
+  title: string;
+  message: string;
+  email?: string;
+  notice_to_email?: string;
+  posted_date: string;
+  category?: string;
+  priority?: string;
+  important?: boolean;
+}
+
+interface Tab {
+  id: string;
+  label: string;
+  icon: string;
+}
 
 export default function ParentNoticesPage() {
   const [loading, setLoading] = useState<boolean>(false);
-  const [children, setChildren] = useState<any[]>([]);
-  const [classInfo, setClassInfo] = useState<any | null>(null);
-  const [notices, setNotices] = useState<any[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-  const [studentBaseNotices, setStudentBaseNotices] = useState<any[]>([]);
-  const [filteredNotices, setFilteredNotices] = useState<any[]>([]);
+  const [children, setChildren] = useState<Student[]>([]);
+  const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [studentBaseNotices, setStudentBaseNotices] = useState<Notice[]>([]);
+  const [filteredNotices, setFilteredNotices] = useState<Notice[]>([]);
   const [activeTab, setActiveTab] = useState<string>("all");
 
   let parentEmail = null;
@@ -33,7 +67,7 @@ export default function ParentNoticesPage() {
   }
 
   // Helper to normalize email strings (remove extra labels, spaces, etc.)
-  const normalizeEmail = (value: any) => {
+  const normalizeEmail = (value: string | null | undefined) => {
     if (!value) return "";
     const str = String(value).trim();
     // Remove anything after first space or "(" (e.g. "student@example.com (Student)")
@@ -48,8 +82,8 @@ export default function ParentNoticesPage() {
   const loadChildren = async () => {
     setLoading(true);
     try {
-      const stuRes = await axios.get(`${API}/students/`);
-      const myKids = stuRes.data.filter((s: any) =>
+      const stuRes = await axios.get<Student[]>(`${API}/students/`);
+      const myKids = stuRes.data.filter((s: Student) =>
         normalizeEmail(s.parent) === normalizeEmail(parentEmail)
       );
 
@@ -67,13 +101,13 @@ export default function ParentNoticesPage() {
       // Fetch class info
       const class_id = myKids[0].class_id;
 
-      const classRes = await axios.get(`${API}/classes/`);
-      const info = classRes.data.find((c: any) => c.id === class_id);
+      const classRes = await axios.get<ClassInfo[]>(`${API}/classes/`);
+      const info = classRes.data.find((c: ClassInfo) => c.id === class_id);
 
-      setClassInfo(info);
+      setClassInfo(info || null);
 
       // Load notices
-      loadNotices(myKids);
+      loadNotices();
 
     } catch (err) {
       console.error("❌ Error loading children:", err);
@@ -84,9 +118,9 @@ export default function ParentNoticesPage() {
   // ======================================================
   // 2️⃣ Load Notices (all) - we'll filter per student when selected
   // ======================================================
-  const loadNotices = async (kids: any) => {
+  const loadNotices = async () => {
     try {
-      const noticeRes = await axios.get(`${API}/notices/`);
+      const noticeRes = await axios.get<Notice[]>(`${API}/notices/`);
       const allNotices = Array.isArray(noticeRes.data) ? noticeRes.data : [];
 
       // Keep all notices; per-student filtering happens in handleStudentSelect
@@ -101,12 +135,12 @@ export default function ParentNoticesPage() {
   // ======================================================
   // Filter notices by selected student
   // ======================================================
-  const handleStudentSelect = (student: any) => {
+  const handleStudentSelect = (student: Student) => {
     setSelectedStudent(student);
     if (student) {
       const studentEmail = normalizeEmail(student.email);
       // Backend stores the target student email in `email`
-      const base = (notices || []).filter((n: any) => {
+      const base = (notices || []).filter((n: Notice) => {
         const targetEmail = normalizeEmail(n.email);
         return targetEmail && targetEmail === studentEmail;
       });
@@ -134,7 +168,7 @@ export default function ParentNoticesPage() {
     }
 
     if (type === "important") {
-      const importantNotices = base.filter((n: any) =>
+      const importantNotices = base.filter((n: Notice) =>
         n.important === true ||
         n.title?.toLowerCase().includes("important") ||
         n.title?.toLowerCase().includes("urgent")
@@ -145,7 +179,7 @@ export default function ParentNoticesPage() {
     }
 
     if (type === "academic") {
-      const academicNotices = base.filter((n: any) =>
+      const academicNotices = base.filter((n: Notice) =>
         n.category === "Academic" ||
         n.title?.toLowerCase().includes("exam") ||
         n.title?.toLowerCase().includes("result") ||
@@ -156,7 +190,7 @@ export default function ParentNoticesPage() {
     }
 
     if (type === "general") {
-      const generalNotices = base.filter((n: any) =>
+      const generalNotices = base.filter((n: Notice) =>
         n.category === "General" ||
         (!n.category && n.priority !== "High")
       );
@@ -168,7 +202,7 @@ export default function ParentNoticesPage() {
   // ======================================================
   // Get notice priority badge
   // ======================================================
-  const getPriorityBadge = (notice: any) => {
+  const getPriorityBadge = (notice: Notice) => {
     if (notice.priority === "High" || notice.title?.toLowerCase().includes("urgent")) {
       return { label: "Urgent", class: "bg-red-100 text-red-800 border-red-200" };
     }
@@ -183,6 +217,7 @@ export default function ParentNoticesPage() {
   // ======================================================
   useEffect(() => {
     loadChildren();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ======================================================
@@ -194,15 +229,15 @@ export default function ParentNoticesPage() {
         <div className="max-w-7xl mx-auto space-y-8">
           {/* HEADER SECTION */}
           <div className="text-center lg:text-left">
-            <h1 className="text-4xl font-bold text-gray-900 mb-5"> Your Childers  Notices</h1>
-            <p className="text-gray-600 text-lg">Stay updated with your children's school notices and announcements</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-5"> Your Children&apos;s Notices</h1>
+            <p className="text-gray-600 text-lg">Stay updated with your children&apos;s school notices and announcements</p>
           </div>
 
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading your children's information...</p>
+                <p className="text-gray-600">Loading your children&apos;s information...</p>
               </div>
             </div>
           ) : (
@@ -289,7 +324,7 @@ export default function ParentNoticesPage() {
       { id: "important", label: "Important", icon: "⚠️" },
       { id: "academic", label: "Academic", icon: "📚" },
       { id: "general", label: "General", icon: "💬" }
-    ].map((tab: any) => (
+    ].map((tab: Tab) => (
       <button
         key={tab.id}
         onClick={() => filterNoticesByType(tab.id)}
@@ -325,7 +360,7 @@ export default function ParentNoticesPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {filteredNotices.map((notice: any) => {
+                        {filteredNotices.map((notice: Notice) => {
                           const priorityBadge = getPriorityBadge(notice);
                           return (
                             <div
@@ -389,7 +424,7 @@ export default function ParentNoticesPage() {
                   <div className="text-6xl mb-4">👨‍👩‍👧‍👦</div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">No Children Found</h3>
                   <p className="text-gray-600 mb-6">
-                    We couldn't find any children associated with your parent account.
+                    We couldn&apos;t find any children associated with your parent account.
                   </p>
                   <div className="flex justify-center gap-4">
                     <button 

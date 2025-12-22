@@ -8,22 +8,56 @@ import {
   Clock,
   BarChart3,
   UserCheck,
-  FileText,
-  Plus,
   Calendar,
-  Award,
-  TrendingUp,
   CheckCircle,
-  AlertCircle,
   ChevronRight,
-  Bell,
-  Download,
-  Eye
+  FileText
 } from "lucide-react";
 
 type ClassInfo = {
   class_name: string;
   section: string;
+  subject?: string;
+  start_time?: string;
+  room_number?: string;
+};
+
+type TimetableEntry = {
+  teacher?: string;
+  class_name?: string;
+  section?: string;
+  day_of_week?: string;
+  subject_name?: string;
+  start_time?: string;
+  end_time?: string;
+  room_number?: string;
+  duration?: string;
+};
+
+type GradeRecord = {
+  teacher?: string;
+  percentage?: number;
+  status?: string;
+};
+
+type LeaveRecord = {
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+  applicant?: string;
+  reason?: string;
+  email?: string;
+};
+
+type TeacherAttendanceRecord = {
+  email?: string;
+  status?: string;
+};
+
+type StudentRecord = {
+  email?: string;
+  class_name?: string;
+  section?: string;
 };
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
@@ -31,12 +65,11 @@ const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 const TeachersDashboard = () => {
   const [teacherEmail, setTeacherEmail] = useState<string | null>(null);
   const [teacherName, setTeacherName] = useState<string>("");
-  const [todayTimetable, setTodayTimetable] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [avgGrades, setAvgGrades] = useState<number>(0);
-  const [recentLeaves, setRecentLeaves] = useState<any[]>([]);
-  const [upcomingClasses, setUpcomingClasses] = useState<any[]>([]);
-  const [studentStats, setStudentStats] = useState({ total: 0, present: 0 });
+  const [todayTimetable, setTodayTimetable] = useState<TimetableEntry[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [recentLeaves, setRecentLeaves] = useState<LeaveRecord[]>([]);
+  const [upcomingClasses, setUpcomingClasses] = useState<TimetableEntry[]>([]);
+  const [teacherAttendancePercentage, setTeacherAttendancePercentage] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [activeStats, setActiveStats] = useState(0);
 
@@ -66,51 +99,47 @@ const TeachersDashboard = () => {
       setLoading(true);
       try {
         // Fetch all dashboard data with proper error handling
-        const [timetableRes, gradesRes, leavesRes, attendanceRes, studentsRes] = await Promise.all([
-          axios.get(`${API_BASE}timetable/`).catch(err => {
+        const [timetableRes, leavesRes, teacherAttendanceRes] = await Promise.all([
+          axios.get<TimetableEntry[]>(`${API_BASE}timetable/`).catch(err => {
             console.warn("Timetable API failed:", err.message);
             return { data: [] };
           }),
-          axios.get(`${API_BASE}grades/`).catch(err => {
+          axios.get<GradeRecord[]>(`${API_BASE}grades/`).catch(err => {
             console.warn("Grades API failed:", err.message);
             return { data: [] };
           }),
-          axios.get(`${API_BASE}leaves/`).catch(err => {
+          axios.get<LeaveRecord[]>(`${API_BASE}leaves/`).catch(err => {
             console.warn("Leaves API failed:", err.message);
             return { data: [] };
           }),
-          // Use student_attendance for student records
-          axios.get(`${API_BASE}student_attendance/`).catch(err => {
-            console.warn("student_attendance API failed:", err.message);
+          // Use teacher_attendance for teacher records
+          axios.get<TeacherAttendanceRecord[]>(`${API_BASE}teacher_attendance/`).catch(err => {
+            console.warn("teacher_attendance API failed:", err.message);
             return { data: [] };
           }),
-          axios.get(`${API_BASE}students/`).catch(err => {
+          axios.get<StudentRecord[]>(`${API_BASE}students/`).catch(err => {
             console.warn("Students API failed:", err.message);
             return { data: [] };
           })
         ]);
 
         // Filter teacher's timetable by email
-        const timetable = timetableRes.data.filter(
-          (t: any) => t.teacher === teacherEmail
-        );
+        const timetable = timetableRes.data.filter((t) => t.teacher === teacherEmail);
 
         // Get today's weekday name
         const today = new Date().toLocaleString("en-US", { weekday: "long" });
-        const todaySchedule = timetable.filter(
-          (t: any) => t.day_of_week === today
-        );
+        const todaySchedule = timetable.filter((t) => t.day_of_week === today);
 
         // Get upcoming classes (next 2 days)
         const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const todayIndex = new Date().getDay();
         const upcomingDays = [days[(todayIndex + 1) % 7], days[(todayIndex + 2) % 7]];
-        const upcomingSchedule = timetable.filter((t: any) => 
-          upcomingDays.includes(t.day_of_week)
-        ).slice(0, 3);
+        const upcomingSchedule = timetable
+          .filter((t) => t.day_of_week && upcomingDays.includes(t.day_of_week))
+          .slice(0, 3);
 
         // Create a unique class list
-        const uniqueClasses = timetable.reduce((acc: any[], curr: any) => {
+        const uniqueClasses = timetable.reduce((acc: ClassInfo[], curr) => {
           if (
             !acc.find(
               (a) =>
@@ -118,8 +147,8 @@ const TeachersDashboard = () => {
             )
           ) {
             acc.push({ 
-              class_name: curr.class_name, 
-              section: curr.section,
+              class_name: curr.class_name || "", 
+              section: curr.section || "",
               subject: curr.subject_name,
               start_time: curr.start_time,
               room_number: curr.room_number
@@ -128,55 +157,37 @@ const TeachersDashboard = () => {
           return acc;
         }, []);
 
-        // Compute average grades for teacher
-        const teacherGrades = gradesRes.data.filter(
-          (g: any) => g.teacher === teacherEmail
-        );
-        const avg =
-          teacherGrades.length > 0
-            ? teacherGrades.reduce((a: number, b: any) => a + b.percentage, 0) /
-              teacherGrades.length
-            : 0;
-
         // Get recent approved leaves
         const recent = leavesRes.data
-          .filter((l: any) => l.status === "Approved")
+          .filter((l) => l.status === "Approved")
           .slice(0, 4);
 
-        // Calculate student stats from student_attendance for this teacher
-        const teacherAttendance = attendanceRes.data.filter(
-          (a: any) => a.teacher === teacherEmail
+        // Calculate teacher attendance from teacher_attendance for this teacher
+        const teacherAttendanceRecords = teacherAttendanceRes.data.filter(
+          (a) => a.email === teacherEmail
         );
-        const present = teacherAttendance.filter((a: any) => a.status === "Present").length;
-        
-        // Get total students from teacher's classes
-        const teacherStudents = studentsRes.data.filter(
-  (s: { class_name: string; section: string }) =>
-    uniqueClasses.some(
-      (c: ClassInfo) => c.class_name === s.class_name && c.section === s.section
-    )
-);
+        const totalAttendanceDays = teacherAttendanceRecords.length;
+        const presentDays = teacherAttendanceRecords.filter((a) => a.status === "Present").length;
+        const attendancePercentage = totalAttendanceDays > 0 
+          ? Math.round((presentDays / totalAttendanceDays) * 100) 
+          : 0;
 
         setTodayTimetable(todaySchedule);
         setUpcomingClasses(upcomingSchedule);
         setClasses(uniqueClasses);
-        setAvgGrades(avg);
         setRecentLeaves(recent);
-        setStudentStats({
-          total: teacherStudents.length,
-          present: present
-        });
-      } catch (error: any) {
+        setTeacherAttendancePercentage(attendancePercentage);
+      } catch (error: unknown) {
         console.error("Error loading teacher dashboard:", error);
-        console.error("Error details:", error.response?.data || error.message);
+        const axiosError = error as { response?: { data?: unknown; statusText?: string }; message?: string };
+        console.error("Error details:", axiosError.response?.data || axiosError.message);
         
         // Set empty states when API fails
         setTodayTimetable([]);
         setUpcomingClasses([]);
         setClasses([]);
-        setAvgGrades(0);
         setRecentLeaves([]);
-        setStudentStats({ total: 0, present: 0 });
+        setTeacherAttendancePercentage(0);
       } finally {
         setLoading(false);
       }
@@ -194,25 +205,18 @@ const TeachersDashboard = () => {
       description: "Total classes you teach"
     },
     {
-      label: "Avg Student Marks",
-      value: `${avgGrades.toFixed(1)}%`,
-      icon: BarChart3,
-      color: "green",
-      description: "Average performance"
-    },
-    {
-      label: "Today's Classes",
+      label: "Today&apos;s Classes",
       value: todayTimetable.length,
       icon: Clock,
       color: "orange",
       description: "Scheduled for today"
     },
     {
-      label: "Student Attendance",
-      value: `${studentStats.total > 0 ? Math.round((studentStats.present / studentStats.total) * 100) : 0}%`,
+      label: "Teacher Attendance",
+      value: `${teacherAttendancePercentage}%`,
       icon: UserCheck,
       color: "purple",
-      description: "Overall attendance rate"
+      description: "Your attendance percentage"
     }
   ];
 
@@ -247,22 +251,13 @@ const TeachersDashboard = () => {
                 Welcome back, {teacherName.split(" ")[0] || "Teacher"}! 👋
               </h1>
               <p className="text-gray-600 mt-2">
-                Here's your overview for {new Date().toLocaleDateString('en-US', { 
+                Here&apos;s your overview for {new Date().toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   year: 'numeric', 
                   month: 'long', 
                   day: 'numeric' 
                 })}
               </p>
-            </div>
-            <div className="mt-4 sm:mt-0 flex items-center gap-3">
-              <button className="p-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
-                <Bell className="h-5 w-5 text-gray-600" />
-              </button>
-              <button className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-medium">
-                <Download className="h-4 w-4" />
-                Export
-              </button>
             </div>
           </div>
         </div>
@@ -297,12 +292,12 @@ const TeachersDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Today's Schedule & Upcoming */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Today's Timetable */}
+            {/* Today&apos;s Timetable */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                   <Clock className="h-6 w-6 text-blue-600" />
-                  Today's Schedule
+                  Today&apos;s Schedule
                 </h2>
                 <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                   {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
@@ -470,31 +465,6 @@ const TeachersDashboard = () => {
                     </a>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Performance Summary */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                <TrendingUp className="h-6 w-6 text-green-600" />
-                Performance Summary
-              </h2>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Average Grades</span>
-                  <span className="font-semibold text-green-600">{avgGrades.toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Student Attendance</span>
-                  <span className="font-semibold text-blue-600">
-                    {studentStats.total > 0 ? Math.round((studentStats.present / studentStats.total) * 100) : 0}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Classes This Week</span>
-                  <span className="font-semibold text-orange-600">{todayTimetable.length}</span>
-                </div>
               </div>
             </div>
           </div>

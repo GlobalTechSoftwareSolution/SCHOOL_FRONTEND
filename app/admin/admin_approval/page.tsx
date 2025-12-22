@@ -21,7 +21,7 @@ const Approvalpage: React.FC = () => {
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ||
-    "https://school.globaltechsoftwaresolutions.cloud/";
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -31,7 +31,7 @@ const Approvalpage: React.FC = () => {
       const token = localStorage.getItem("accessToken");
       if (!token) throw new Error("Missing authentication token");
 
-      const response = await fetch(`${apiBase}api/users/`, {
+      const response = await fetch(`${apiBase}/users/`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -56,7 +56,7 @@ const Approvalpage: React.FC = () => {
   const handleApprove = async (email: string) => {
     try {
       const token = localStorage.getItem("accessToken");
-      const response = await fetch(`${apiBase}api/users/${encodeURIComponent(email)}/`, {
+      const response = await fetch(`${apiBase}/users/${encodeURIComponent(email)}/`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -81,7 +81,7 @@ const Approvalpage: React.FC = () => {
 
       if (!token) throw new Error("Missing authentication token");
 
-      const response = await fetch(`${apiBase}api/users/${encodeURIComponent(email)}/`, {
+      const response = await fetch(`${apiBase}/users/${encodeURIComponent(email)}/`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -94,7 +94,7 @@ const Approvalpage: React.FC = () => {
         await response.text();
         alert(`Failed to reject user (${response.status}).`);
       }
-    } catch (err) {
+    } catch {
       alert("Error rejecting user. Check console for details.");
     }
   };

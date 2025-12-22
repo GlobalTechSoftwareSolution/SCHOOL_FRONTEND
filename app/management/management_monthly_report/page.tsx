@@ -3,73 +3,74 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 const ManagementMonthlyReport = () => {
   const [view, setView] = useState<"teachers" | "students" | "principals" | null>(null);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [filteredTeachers, setFilteredTeachers] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [principals, setPrincipals] = useState<any[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [selectedPrincipal, setSelectedPrincipal] = useState<any>(null);
-const [selectedSubject, setSelectedSubject] = useState<any>(null);
-const [filteredTimetable, setFilteredTimetable] = useState<any[]>([]);
-const [allClasses, setAllClasses] = useState<any[]>([]);
-const [attendanceMonth, setAttendanceMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-});
-const [leaveMonth, setLeaveMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-});
-const [studentExtra, setStudentExtra] = useState<{ 
-  leaves: any[]; 
-  grades: any[]; 
-  attendance: any[];
-  notices: any[];
-}>({
-  leaves: [],
-  grades: [],
-  attendance: [],
-  notices: [],
-});
-const [selectedLeave, setSelectedLeave] = useState<any>(null);
-const [showLeaveDetails, setShowLeaveDetails] = useState(false);
-const [selectedGrade, setSelectedGrade] = useState<any>(null);
-const [showGradeDetails, setShowGradeDetails] = useState(false);
-const [studentAttendanceMonth, setStudentAttendanceMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-});
-const [studentLeaveMonth, setStudentLeaveMonth] = useState(() => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-});
-const [teacherExtra, setTeacherExtra] = useState<{
-  leaves: any[];
-  classes: any[];
-  reports: any[];
-  subjects: any[];
-  attendance: any[];
-}>({
-  leaves: [],
-  classes: [],
-  reports: [],
-  subjects: [],
-  attendance: [],
-});
+  const [selectedSubject, setSelectedSubject] = useState<any>(null);
+  const [filteredTimetable, setFilteredTimetable] = useState<any[]>([]);
+  const [allClasses, setAllClasses] = useState<any[]>([]);
+  const [attendanceMonth, setAttendanceMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [leaveMonth, setLeaveMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [studentExtra, setStudentExtra] = useState<{ 
+    leaves: any[]; 
+    grades: any[]; 
+    attendance: any[];
+    notices: any[];
+  }>({
+    leaves: [],
+    grades: [],
+    attendance: [],
+    notices: [],
+  });
+  const [selectedLeave, setSelectedLeave] = useState<any>(null);
+  const [showLeaveDetails, setShowLeaveDetails] = useState(false);
+  const [selectedGrade, setSelectedGrade] = useState<any>(null);
+  const [showGradeDetails, setShowGradeDetails] = useState(false);
+  const [studentAttendanceMonth, setStudentAttendanceMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [studentLeaveMonth, setStudentLeaveMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [teacherExtra, setTeacherExtra] = useState<{
+    leaves: any[];
+    classes: any[];
+    reports: any[];
+    subjects: any[];
+    attendance: any[];
+  }>({
+    leaves: [],
+    classes: [],
+    reports: [],
+    subjects: [],
+    attendance: [],
+  });
 
-const [principalExtra, setPrincipalExtra] = useState<{
-  leaves: any[];
-  attendance: any[];
-  reports: any[];
-}>({
-  leaves: [],
-  attendance: [],
-  reports: [],
-});
+  const [principalExtra, setPrincipalExtra] = useState<{
+    leaves: any[];
+    attendance: any[];
+    reports: any[];
+  }>({
+    leaves: [],
+    attendance: [],
+    reports: [],
+  });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -82,51 +83,124 @@ const [principalExtra, setPrincipalExtra] = useState<{
   const [studentClassFilter, setStudentClassFilter] = useState<string>("all");
   const [studentSectionFilter, setStudentSectionFilter] = useState<string>("all");
 
-// ✅ Updated handleSubjectClick with debugging
-const handleSubjectClick = (subject: any) => {
-  setSelectedSubject(subject);
-  
-  console.log("🔍 Clicked Subject:", subject);
-  console.log("📅 All Classes:", teacherExtra.classes);
-  
-  // Show sample entry to understand the data structure
-  if (teacherExtra.classes.length > 0) {
-    console.log("📊 Sample timetable entry:", teacherExtra.classes[0]);
-  }
-  
-  // Filter timetable for this specific subject - check multiple possible field names
-  const subjectTimetable = teacherExtra.classes.filter((entry: any) => {
-    const possibleFields = [
-      entry.subject_id,
-      entry.subjectId, 
-      entry.subject,
-      entry.subject_name,
-      entry.subject_code,
-      entry.subject_name_id
-    ];
-    
-    console.log("🎯 Comparing - Subject ID:", subject.id, "Entry fields:", possibleFields);
-    
-    return possibleFields.some(field => field === subject.id) ||
-           possibleFields.some(field => field === subject.subject_name) ||
-           possibleFields.some(field => field === subject.subject_code);
-  });
-  
-  console.log("✅ Filtered Timetable:", subjectTimetable);
-  setFilteredTimetable(subjectTimetable);
-};
+  // Teacher filter options
+  const [teacherCategoryFilter, setTeacherCategoryFilter] = useState<string>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
 
-// ✅ Add debug function to show all available data
-const showAllTimetableData = () => {
-  console.log("🔍 All Teacher Extra Data:", teacherExtra);
-  console.log("📚 All Subjects:", teacherExtra.subjects);
-  console.log("🏫 All Classes:", teacherExtra.classes);
-  
-  // Show sample entries to understand the data structure
-  if (teacherExtra.classes.length > 0) {
-    console.log("📊 Sample Class Entry:", teacherExtra.classes[0]);
-  }
-};
+  // Categories for filtering
+  const teacherCategories = [
+    { id: "all", name: "All Categories" },
+    { id: "S", name: "School (S)" },
+    { id: "L", name: "College (L)" }
+  ];
+
+  // Department filter options based on category
+  const getDepartmentOptions = () => {
+    if (teacherCategoryFilter === "S") {
+      return [
+        { id: "all", name: "All Departments" },
+        { id: "Kannada", name: "Kannada" },
+        { id: "English", name: "English" },
+        { id: "Hindi", name: "Hindi" },
+        { id: "Mathematics", name: "Mathematics" },
+        { id: "Science", name: "Science" },
+        { id: "Social Studies", name: "Social Studies" }
+      ];
+    } else if (teacherCategoryFilter === "L") {
+      return [
+        { id: "all", name: "All Departments" },
+        { id: "Politics", name: "Politics" },
+        { id: "Business", name: "Business" },
+        { id: "Economics", name: "Economics" },
+        { id: "Accountancy", name: "Accountancy" },
+        { id: "Physics", name: "Physics" },
+        { id: "HEBA", name: "HEBA" },
+        { id: "PCMCs", name: "PCMCs" },
+        { id: "PCME", name: "PCME" },
+        { id: "PCMCS", name: "PCMCs" },
+        { id: "History", name: "History" },
+        { id: "Commerce", name: "Commerce" },
+        { id: "Biology", name: "Biology" },
+      ];
+    }
+    return [{ id: "all", name: "All Departments" }];
+  };
+
+  // ✅ Updated handleSubjectClick with debugging
+  const handleSubjectClick = (subject: any) => {
+    setSelectedSubject(subject);
+    
+    
+    // Show sample entry to understand the data structure
+    if (teacherExtra.classes.length > 0) {
+    }
+    
+    // Filter timetable for this specific subject - check multiple possible field names
+    const subjectTimetable = teacherExtra.classes.filter((entry: any) => {
+      const possibleFields = [
+        entry.subject_id,
+        entry.subjectId, 
+        entry.subject,
+        entry.subject_name,
+        entry.subject_code,
+        entry.subject_name_id
+      ];
+      
+      
+      return possibleFields.some(field => field === subject.id) ||
+             possibleFields.some(field => field === subject.subject_name) ||
+             possibleFields.some(field => field === subject.subject_code);
+    });
+    
+    setFilteredTimetable(subjectTimetable);
+  };
+
+  // ✅ Add debug function to show all available data
+  const showAllTimetableData = () => {
+    console.log("🔍 All Teacher Extra Data:", teacherExtra);
+    console.log("📚 All Subjects:", teacherExtra.subjects);
+    console.log("🏫 All Classes:", teacherExtra.classes);
+    
+    // Show sample entries to understand the data structure
+    if (teacherExtra.classes.length > 0) {
+      console.log("📊 Sample Class Entry:", teacherExtra.classes[0]);
+    }
+  };
+
+  // Filter teachers based on category and department
+  const filterTeachers = () => {
+    let filtered = teachers;
+
+    // Filter by category (S or L from teacher_id)
+    if (teacherCategoryFilter !== "all") {
+      filtered = filtered.filter(teacher => {
+        const teacherId = teacher.teacher_id || "";
+        if (teacherCategoryFilter === "S") {
+          return teacherId.startsWith("S") || teacherId.startsWith("T"); // Assuming school teachers start with S or T
+        } else if (teacherCategoryFilter === "L") {
+          return teacherId.startsWith("L") || teacherId.includes("LEC"); // Assuming college teachers start with L or contain LEC
+        }
+        return true;
+      });
+    }
+
+    // Filter by department
+    if (departmentFilter !== "all") {
+      filtered = filtered.filter(teacher => {
+        const dept = teacher.department_name?.toLowerCase() || "";
+        return dept.includes(departmentFilter.toLowerCase());
+      });
+    }
+
+    setFilteredTeachers(filtered);
+  };
+
+  // Apply filters when category or department changes
+  useEffect(() => {
+    if (teachers.length > 0) {
+      filterTeachers();
+    }
+  }, [teacherCategoryFilter, departmentFilter, teachers]);
 
   // Refresh data based on current view
   const refreshData = async () => {
@@ -215,7 +289,9 @@ const showAllTimetableData = () => {
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/teachers/`);
-      setTeachers(res.data);
+      const teachersData = res.data || [];
+      setTeachers(teachersData);
+      setFilteredTeachers(teachersData); // Initialize filtered teachers with all teachers
     } catch (err) {
       console.error("Error fetching teachers:", err);
     } finally {
@@ -254,376 +330,479 @@ const showAllTimetableData = () => {
     }
   };
 
-  
-// ✅ Try different timetable API endpoints
-const fetchTeacherDetails = async (teacher: any) => {
-  setSelectedTeacher(teacher);
-  setLoading(true);
+  // ✅ Try different timetable API endpoints
+  const fetchTeacherDetails = async (teacher: any) => {
+    setSelectedTeacher(teacher);
+    setLoading(true);
 
-  try {
-    // Use teacher's subject list from the teacher object
-    const subjects = teacher.subject_list || [];
-    const teacherSubjectIds = subjects.map((subject: any) => subject.id);
-    
-    console.log("🔍 Teacher Subjects:", subjects);
-    console.log("🎯 Teacher Subject IDs:", teacherSubjectIds);
+    try {
+      // Use teacher's subject list from the teacher object
+      const subjects = teacher.subject_list || [];
+      const teacherSubjectIds = subjects.map((subject: any) => subject.id);
+      
+      console.log("🔍 Teacher Subjects:", subjects);
+      console.log("🎯 Teacher Subject IDs:", teacherSubjectIds);
 
-    // Try multiple timetable endpoints with different parameters
-    const endpoints = [
-      `${API_BASE}/timetable/`,
-      `${API_BASE}/timetable/?teacher_email=${teacher.email}`,
-      `${API_BASE}/timetable/?teacher_id=${teacher.teacher_id}`,
-      `${API_BASE}/timetable/?email=${teacher.email}`,
-      `${API_BASE}/timetable/?teacher=${teacher.teacher_id}`,
-      `${API_BASE}/class-timetable/`,
-      `${API_BASE}/class-timetable/?teacher_email=${teacher.email}`,
-    ];
-
-    let allTimetableEntries: any[] = [];
-
-    for (let endpoint of endpoints) {
-      try {
-        console.log("🔍 Trying endpoint:", endpoint);
-        const response = await axios.get(endpoint);
-        const data = response.data || [];
-        console.log("📊 Data from", endpoint, ":", data);
-        
-        if (Array.isArray(data) && data.length > 0) {
-          allTimetableEntries = data;
-          console.log("✅ Found data from:", endpoint);
-          break;
-        }
-      } catch (err: any) {
-        console.log("❌ Failed for endpoint:", endpoint, err?.response?.status || err);
-      }
-    }
-
-    // If still no data, try to fetch all timetable entries and filter
-    if (allTimetableEntries.length === 0) {
-      try {
-        console.log("🔍 Trying to fetch all timetable entries...");
-        const allResponse = await axios.get(`${API_BASE}/timetable/`);
-        const allData = allResponse.data || [];
-        console.log("📊 All timetable data:", allData);
-        
-        if (Array.isArray(allData)) {
-          // Filter by teacher email or teacher ID
-          allTimetableEntries = allData.filter((entry: any) => 
-            entry.teacher_email === teacher.email || 
-            entry.teacher_id === teacher.teacher_id ||
-            entry.teacher === teacher.teacher_id
-          );
-          console.log("🎯 Filtered by teacher:", allTimetableEntries);
-        }
-      } catch (err) {
-        console.log("❌ Failed to fetch all timetable:", err);
-      }
-    }
-
-    // Final filtering by subject IDs - check multiple possible field names
-    const classes = allTimetableEntries.filter((entry: any) => {
-      const possibleFields = [
-        entry.subject_id,
-        entry.subjectId, 
-        entry.subject,
-        entry.subject_name,
-        entry.subject_code,
-        entry.subject_name_id
+      // Try multiple timetable endpoints with different parameters
+      const endpoints = [
+        `${API_BASE}/timetable/`,
+        `${API_BASE}/timetable/?teacher_email=${teacher.email}`,
+        `${API_BASE}/timetable/?teacher_id=${teacher.teacher_id}`,
+        `${API_BASE}/timetable/?email=${teacher.email}`,
+        `${API_BASE}/timetable/?teacher=${teacher.teacher_id}`,
+        `${API_BASE}/class-timetable/`,
+        `${API_BASE}/class-timetable/?teacher_email=${teacher.email}`,
       ];
-      
-      const matches = possibleFields.some(field => 
-        teacherSubjectIds.includes(field)
-      );
-      
-      if (matches) {
-        console.log("✅ Matched entry:", entry);
-      }
-      return matches;
-    });
 
-    console.log("🎯 Final filtered classes:", classes);
+      let allTimetableEntries: any[] = [];
 
-    // Fetch leaves and attendance for the specific teacher
-    let leaves: any[] = [];
-    let attendance: any[] = [];
-
-    try {
-      // Fetch leaves with month/year filter
-      const [leaveYear, leaveMonthNum] = leaveMonth.split("-");
-      const leavesResponse = await axios.get(
-        `${API_BASE}/leaves/?email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`
-      );
-      leaves = leavesResponse.data || [];
-    } catch (err) {
-      console.log("❌ Failed to fetch leaves:", err);
-    }
-
-    // Try multiple attendance endpoints for teachers with month/year filter
-    const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
-    const attendanceEndpoints = [
-      `${API_BASE}/attendance/?teacher_email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/attendance/?teacher=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/teacher-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/staff-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-    ];
-
-    for (let endpoint of attendanceEndpoints) {
-      try {
-        console.log("🔍 Trying attendance endpoint:", endpoint);
-        const attendanceResponse = await axios.get(endpoint);
-        const data = attendanceResponse.data || [];
-        console.log("📊 Attendance data from", endpoint, ":", data);
-        
-        if (Array.isArray(data) && data.length > 0) {
-          // Check if this is teacher data (should have teacher fields, not student fields)
-          const hasTeacherData = data.some((record: any) => 
-            record.teacher_email || record.teacher_name || !record.student_email
-          );
+      for (let endpoint of endpoints) {
+        try {
+          console.log("🔍 Trying endpoint:", endpoint);
+          const response = await axios.get(endpoint);
+          const data = response.data || [];
+          console.log("📊 Data from", endpoint, ":", data);
           
-          if (hasTeacherData) {
-            // Filter to only this teacher's records (email + role)
-            attendance = data.filter((record: any) => {
-              const roleMatch = String(record.role || "").toLowerCase() === "teacher";
-              const emailMatch =
-                record.teacher_email === teacher.email ||
-                record.email === teacher.email ||
-                record.user_email === teacher.email;
-              return roleMatch && emailMatch;
-            });
-            console.log("✅ Found teacher attendance data from:", endpoint);
+          if (Array.isArray(data) && data.length > 0) {
+            allTimetableEntries = data;
+            console.log("✅ Found data from:", endpoint);
             break;
-          } else {
-            console.log("⚠️ This endpoint returns student data, not teacher data");
           }
+        } catch (err: any) {
+          console.log("❌ Failed for endpoint:", endpoint, err?.response?.status || err);
         }
-      } catch (err: any) {
-        console.log("❌ Failed for attendance endpoint:", endpoint, err?.response?.status || err);
       }
-    }
 
-    console.log("📝 Final Teacher Leaves:", leaves);
-    console.log("📊 Final Teacher Attendance:", attendance);
-
-    setTeacherExtra({
-      leaves: leaves,
-      subjects: subjects,
-      classes: classes,
-      reports: [],
-      attendance: attendance,
-    });
-  } catch (err) {
-    console.error("❌ Error in fetchTeacherDetails:", err);
-    setTeacherExtra({
-      leaves: [],
-      subjects: teacher.subject_list || [],
-      classes: [],
-      reports: [],
-      attendance: [],
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
-// Refresh attendance data when month/year changes
-const refreshAttendanceData = async () => {
-  if (!selectedTeacher) return;
-  
-  try {
-    const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
-    const attendanceEndpoints = [
-      `${API_BASE}/attendance/?teacher_email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/attendance/?teacher=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/teacher-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-      `${API_BASE}/staff-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
-    ];
-
-    let attendance: any[] = [];
-    for (let endpoint of attendanceEndpoints) {
-      try {
-        const response = await axios.get(endpoint);
-        const data = response.data || [];
-        
-        if (Array.isArray(data) && data.length > 0) {
-          const hasTeacherData = data.some((record: any) => 
-            record.teacher_email || record.teacher_name || !record.student_email
-          );
+      // If still no data, try to fetch all timetable entries and filter
+      if (allTimetableEntries.length === 0) {
+        try {
+          console.log("🔍 Trying to fetch all timetable entries...");
+          const allResponse = await axios.get(`${API_BASE}/timetable/`);
+          const allData = allResponse.data || [];
+          console.log("📊 All timetable data:", allData);
           
-          if (hasTeacherData) {
-            // Filter to only teacher role
-            attendance = data.filter((record: any) =>
-              String(record.role || "").toLowerCase() === "teacher"
+          if (Array.isArray(allData)) {
+            // Filter by teacher email or teacher ID
+            allTimetableEntries = allData.filter((entry: any) => 
+              entry.teacher_email === teacher.email || 
+              entry.teacher_id === teacher.teacher_id ||
+              entry.teacher === teacher.teacher_id
             );
-            break;
+            console.log("🎯 Filtered by teacher:", allTimetableEntries);
+          }
+        } catch (err) {
+          console.log("❌ Failed to fetch all timetable:", err);
+        }
+      }
+
+      // Final filtering by subject IDs - check multiple possible field names
+      const classes = allTimetableEntries.filter((entry: any) => {
+        const possibleFields = [
+          entry.subject_id,
+          entry.subjectId, 
+          entry.subject,
+          entry.subject_name,
+          entry.subject_code,
+          entry.subject_name_id
+        ];
+        
+        const matches = possibleFields.some(field => 
+          teacherSubjectIds.includes(field)
+        );
+        
+        if (matches) {
+          console.log("✅ Matched entry:", entry);
+        }
+        return matches;
+      });
+
+      console.log("🎯 Final filtered classes:", classes);
+
+      // Fetch leaves for the specific teacher - ALL LEAVES
+      let leaves: any[] = [];
+      let attendance: any[] = [];
+
+      try {
+        // Fetch leaves specifically for this teacher using applicant_email
+        console.log("🔍 Fetching leaves for teacher using applicant_email:", teacher.email);
+        const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${teacher.email}`);
+        const rawLeaves = leavesResponse.data || [];
+        console.log("📊 Raw leaves fetched:", rawLeaves.length);
+        
+        // Always filter client-side to ensure we only get this teacher's leaves
+        leaves = rawLeaves.filter((leave: any) => {
+          const matches = leave.applicant_email === teacher.email ||
+                        leave.email === teacher.email ||
+                        leave.teacher_email === teacher.email;
+          
+          if (matches) {
+            console.log("✅ Matched leave record:", leave);
+          }
+          return matches;
+        });
+        
+        console.log("✅ Filtered leaves for teacher", teacher.email, ":", leaves.length);
+      } catch (err) {
+        console.log("❌ Failed to fetch leaves with applicant_email, trying alternatives:", err);
+        // Try alternative endpoints
+        try {
+          const leavesResponse = await axios.get(`${API_BASE}/leaves/?email=${teacher.email}`);
+          const rawLeaves = leavesResponse.data || [];
+          
+          // Filter client-side
+          leaves = rawLeaves.filter((leave: any) => 
+            leave.applicant_email === teacher.email ||
+            leave.email === teacher.email ||
+            leave.teacher_email === teacher.email
+          );
+          console.log("✅ Filtered leaves from email endpoint:", leaves.length);
+        } catch (err2) {
+          console.log("❌ Alternative leaves endpoint also failed");
+          // Try fetching all leaves and filter by applicant_email
+          try {
+            const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
+            const allLeaves = allLeavesResponse.data || [];
+            console.log("📊 All leaves fetched:", allLeaves.length);
+            
+            // Filter leaves by applicant_email
+            leaves = allLeaves.filter((leave: any) => {
+              const matches = leave.applicant_email === teacher.email ||
+                            leave.email === teacher.email ||
+                            leave.teacher_email === teacher.email;
+              
+              if (matches) {
+                console.log("✅ Matched leave from all leaves:", leave);
+              }
+              return matches;
+            });
+            
+            console.log("✅ Filtered leaves from all leaves for", teacher.email, ":", leaves.length);
+          } catch (err3) {
+            console.log("❌ All leaves endpoints failed");
           }
         }
-      } catch (err) {
-        console.log("Failed attendance endpoint:", endpoint);
-      }
-    }
-
-    setTeacherExtra(prev => ({ ...prev, attendance }));
-  } catch (err) {
-    console.error("Error refreshing attendance:", err);
-  }
-};
-
-// Refresh leaves data when month/year changes
-const refreshLeavesData = async () => {
-  if (!selectedTeacher) return;
-  
-  try {
-    const [leaveYear, leaveMonthNum] = leaveMonth.split("-");
-    const response = await axios.get(
-      `${API_BASE}/leaves/?email=${selectedTeacher.email}&year=${leaveYear}&month=${leaveMonthNum}`
-    );
-    const leaves = response.data || [];
-    
-    setTeacherExtra(prev => ({ ...prev, leaves }));
-  } catch (err) {
-    console.error("Error refreshing leaves:", err);
-  }
-};
-
-// Refresh data when month/year changes
-useEffect(() => {
-  if (selectedTeacher) {
-    refreshAttendanceData();
-  }
-}, [attendanceMonth]);
-
-useEffect(() => {
-  if (selectedTeacher) {
-    refreshLeavesData();
-  }
-}, [leaveMonth]);
-
-// Refresh student attendance data when month changes
-useEffect(() => {
-  if (selectedStudent) {
-    refreshStudentAttendanceData();
-  }
-}, [studentAttendanceMonth]);
-
-// Refresh student leaves data when month changes
-useEffect(() => {
-  if (selectedStudent) {
-    refreshStudentLeavesData();
-  }
-}, [studentLeaveMonth]);
-
-const refreshStudentAttendanceData = async () => {
-  if (!selectedStudent) return;
-  
-  const [year, month] = studentAttendanceMonth.split("-");
-  let attendance: any[] = [];
-
-  try {
-    console.log("🔄 Refreshing student attendance data for:", studentAttendanceMonth);
-    
-    // Fetch all student_attendance records, then filter by email + month/year client-side
-    console.log("🔍 Fetching all student_attendance records for client-side filtering");
-    const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
-    let rawAttendance = attendanceResponse.data || [];
-
-    if (!Array.isArray(rawAttendance)) {
-      rawAttendance = Object.values(rawAttendance);
-    }
-
-    console.log("📊 Raw Student Attendance:", rawAttendance);
-    console.log("📊 Attendance length:", rawAttendance.length);
-
-    attendance = rawAttendance.filter((record: any) => {
-      const emailMatch =
-        record.student === selectedStudent.email ||
-        record.student_email === selectedStudent.email ||
-        record.email === selectedStudent.email ||
-        record.student_id === selectedStudent.email;
-
-      const recordDate = record.date || record.attendance_date;
-      let monthMatch = true;
-      if (recordDate && typeof recordDate === "string") {
-        const recMonth = recordDate.split("T")[0]?.slice(0, 7); // YYYY-MM
-        monthMatch = recMonth === studentAttendanceMonth;
       }
 
-      return emailMatch && monthMatch;
-    });
+      // Try multiple attendance endpoints for teachers with month/year filter
+      const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
+      const attendanceEndpoints = [
+        `${API_BASE}/attendance/?teacher_email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/attendance/?teacher=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/teacher-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/staff-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+      ];
 
-    console.log("✅ Updated student attendance (filtered by email + month):", attendance);
+      for (let endpoint of attendanceEndpoints) {
+        try {
+          console.log("🔍 Trying attendance endpoint:", endpoint);
+          const attendanceResponse = await axios.get(endpoint);
+          const data = attendanceResponse.data || [];
+          console.log("📊 Attendance data from", endpoint, ":", data);
+          
+          if (Array.isArray(data) && data.length > 0) {
+            // Check if this is teacher data (should have teacher fields, not student fields)
+            const hasTeacherData = data.some((record: any) => 
+              record.teacher_email || record.teacher_name || !record.student_email
+            );
+            
+            if (hasTeacherData) {
+              // Filter to only this teacher's records (email + role)
+              attendance = data.filter((record: any) => {
+                const roleMatch = String(record.role || "").toLowerCase() === "teacher";
+                const emailMatch =
+                  record.teacher_email === teacher.email ||
+                  record.email === teacher.email ||
+                  record.user_email === teacher.email;
+                return roleMatch && emailMatch;
+              });
+              console.log("✅ Found teacher attendance data from:", endpoint);
+              break;
+            } else {
+              console.log("⚠️ This endpoint returns student data, not teacher data");
+            }
+          }
+        } catch (err: any) {
+          console.log("❌ Failed for attendance endpoint:", endpoint, err?.response?.status || err);
+        }
+      }
 
-    // Update state with new attendance data
-    setStudentExtra(prev => ({
-      ...prev,
-      attendance: attendance,
-    }));
+      console.log("📝 Final Teacher Leaves (ALL):", leaves);
+      console.log("📊 Final Teacher Attendance:", attendance);
+
+      setTeacherExtra({
+        leaves: leaves,
+        subjects: subjects,
+        classes: classes,
+        reports: [],
+        attendance: attendance,
+      });
+    } catch (err) {
+      console.error("❌ Error in fetchTeacherDetails:", err);
+      setTeacherExtra({
+        leaves: [],
+        subjects: teacher.subject_list || [],
+        classes: [],
+        reports: [],
+        attendance: [],
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refresh attendance data when month/year changes
+  const refreshAttendanceData = async () => {
+    if (!selectedTeacher) return;
     
-  } catch (err) {
-    console.error("Error refreshing student attendance:", err);
-  }
-};
-
-const refreshStudentLeavesData = async () => {
-  if (!selectedStudent) return;
-  
-  const [year, month] = studentLeaveMonth.split("-");
-  let leaves: any[] = [];
-
-  try {
-    console.log("🔄 Refreshing student leaves data for:", studentLeaveMonth);
-    
-    // Try leaves endpoints with new month
     try {
-      console.log("🔍 Trying primary leaves endpoint:", `${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
-      const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
-      const rawLeaves = leavesResponse.data || [];
+      const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
+      const attendanceEndpoints = [
+        `${API_BASE}/attendance/?teacher_email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/attendance/?teacher=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/teacher-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+        `${API_BASE}/staff-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
+      ];
+
+      let attendance: any[] = [];
+      for (let endpoint of attendanceEndpoints) {
+        try {
+          const response = await axios.get(endpoint);
+          const data = response.data || [];
+          
+          if (Array.isArray(data) && data.length > 0) {
+            const hasTeacherData = data.some((record: any) => 
+              record.teacher_email || record.teacher_name || !record.student_email
+            );
+            
+            if (hasTeacherData) {
+              // Filter to only teacher role
+              attendance = data.filter((record: any) =>
+                String(record.role || "").toLowerCase() === "teacher"
+              );
+              break;
+            }
+          }
+        } catch (err) {
+          console.log("Failed attendance endpoint:", endpoint);
+        }
+      }
+
+      setTeacherExtra(prev => ({ ...prev, attendance }));
+    } catch (err) {
+      console.error("Error refreshing attendance:", err);
+    }
+  };
+
+  // Refresh leaves data when month/year changes
+  const refreshLeavesData = async () => {
+    if (!selectedTeacher) return;
+    
+    try {
+      // Fetch leaves specifically for this teacher using applicant_email
+      console.log("🔍 Refreshing leaves for teacher using applicant_email:", selectedTeacher.email);
+      const response = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedTeacher.email}`);
+      const rawLeaves = response.data || [];
+      console.log("📊 Raw leaves fetched:", rawLeaves.length);
       
-      // Filter client-side
-      leaves = rawLeaves.filter((leave: any) => 
-        leave.applicant_email === selectedStudent.email ||
-        leave.email === selectedStudent.email ||
-        leave.student_email === selectedStudent.email
-      );
+      // Always filter client-side to ensure we only get this teacher's leaves
+      const leaves = rawLeaves.filter((leave: any) => {
+        const matches = leave.applicant_email === selectedTeacher.email ||
+                      leave.email === selectedTeacher.email ||
+                      leave.teacher_email === selectedTeacher.email;
+        
+        if (matches) {
+          console.log("✅ Matched leave record:", leave);
+        }
+        return matches;
+      });
       
-      console.log("✅ Updated student leaves:", leaves);
-    } catch (err: any) {
-      console.log("❌ Primary leaves failed, trying alternatives");
+      setTeacherExtra(prev => ({ ...prev, leaves }));
+      console.log("✅ Refreshed leaves for", selectedTeacher.email, ":", leaves.length);
+    } catch (err) {
+      console.log("❌ Failed to refresh leaves with applicant_email, trying alternatives:", err);
+      // Try alternative endpoints
       try {
-        const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}`);
+        const response = await axios.get(`${API_BASE}/leaves/?email=${selectedTeacher.email}`);
+        const rawLeaves = response.data || [];
+        
+        // Filter client-side
+        const leaves = rawLeaves.filter((leave: any) => 
+          leave.applicant_email === selectedTeacher.email ||
+          leave.email === selectedTeacher.email ||
+          leave.teacher_email === selectedTeacher.email
+        );
+        
+        setTeacherExtra(prev => ({ ...prev, leaves }));
+        console.log("✅ Filtered leaves from email endpoint:", leaves.length);
+      } catch (err2) {
+        console.log("❌ Alternative leaves endpoint also failed");
+        // Try fetching all leaves and filter by applicant_email
+        try {
+          const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
+          const allLeaves = allLeavesResponse.data || [];
+          console.log("📊 All leaves fetched:", allLeaves.length);
+          
+          // Filter leaves by applicant_email
+          const leaves = allLeaves.filter((leave: any) => {
+            const matches = leave.applicant_email === selectedTeacher.email ||
+                          leave.email === selectedTeacher.email ||
+                          leave.teacher_email === selectedTeacher.email;
+            
+            if (matches) {
+              console.log("✅ Matched leave from all leaves:", leave);
+            }
+            return matches;
+          });
+          
+          setTeacherExtra(prev => ({ ...prev, leaves }));
+          console.log("✅ Filtered leaves from all leaves for", selectedTeacher.email, ":", leaves.length);
+        } catch (err3) {
+          console.log("❌ All leaves endpoints failed");
+          setTeacherExtra(prev => ({ ...prev, leaves: [] }));
+        }
+      }
+    }
+  };
+
+  // Refresh data when month/year changes
+  useEffect(() => {
+    if (selectedTeacher) {
+      refreshAttendanceData();
+    }
+  }, [attendanceMonth]);
+
+  useEffect(() => {
+    if (selectedTeacher) {
+      refreshLeavesData();
+    }
+  }, [leaveMonth]);
+
+  // Refresh student attendance data when month changes
+  useEffect(() => {
+    if (selectedStudent) {
+      refreshStudentAttendanceData();
+    }
+  }, [studentAttendanceMonth]);
+
+  // Refresh student leaves data when month changes
+  useEffect(() => {
+    if (selectedStudent) {
+      refreshStudentLeavesData();
+    }
+  }, [studentLeaveMonth]);
+
+  const refreshStudentAttendanceData = async () => {
+    if (!selectedStudent) return;
+    
+    const [year, month] = studentAttendanceMonth.split("-");
+    let attendance: any[] = [];
+
+    try {
+      console.log("🔄 Refreshing student attendance data for:", studentAttendanceMonth);
+      
+      // Fetch all student_attendance records, then filter by email + month/year client-side
+      console.log("🔍 Fetching all student_attendance records for client-side filtering");
+      const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
+      let rawAttendance = attendanceResponse.data || [];
+
+      if (!Array.isArray(rawAttendance)) {
+        rawAttendance = Object.values(rawAttendance);
+      }
+
+      console.log("📊 Raw Student Attendance:", rawAttendance);
+      console.log("📊 Attendance length:", rawAttendance.length);
+
+      attendance = rawAttendance.filter((record: any) => {
+        const emailMatch =
+          record.student === selectedStudent.email ||
+          record.student_email === selectedStudent.email ||
+          record.email === selectedStudent.email ||
+          record.student_id === selectedStudent.email;
+
+        const recordDate = record.date || record.attendance_date;
+        let monthMatch = true;
+        if (recordDate && typeof recordDate === "string") {
+          const recMonth = recordDate.split("T")[0]?.slice(0, 7); // YYYY-MM
+          monthMatch = recMonth === studentAttendanceMonth;
+        }
+
+        return emailMatch && monthMatch;
+      });
+
+      console.log("✅ Updated student attendance (filtered by email + month):", attendance);
+
+      // Update state with new attendance data
+      setStudentExtra(prev => ({
+        ...prev,
+        attendance: attendance,
+      }));
+      
+    } catch (err) {
+      console.error("Error refreshing student attendance:", err);
+    }
+  };
+
+  const refreshStudentLeavesData = async () => {
+    if (!selectedStudent) return;
+    
+    const [year, month] = studentLeaveMonth.split("-");
+    let leaves: any[] = [];
+
+    try {
+      console.log("🔄 Refreshing student leaves data for:", studentLeaveMonth);
+      
+      // Try leaves endpoints with new month
+      try {
+        console.log("🔍 Trying primary leaves endpoint:", `${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
+        const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
         const rawLeaves = leavesResponse.data || [];
         
+        // Filter client-side
         leaves = rawLeaves.filter((leave: any) => 
           leave.applicant_email === selectedStudent.email ||
           leave.email === selectedStudent.email ||
           leave.student_email === selectedStudent.email
         );
-      } catch (err2: any) {
-        console.log("❌ All leaves endpoints failed");
+        
+        console.log("✅ Updated student leaves:", leaves);
+      } catch (err: any) {
+        console.log("❌ Primary leaves failed, trying alternatives");
+        try {
+          const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}`);
+          const rawLeaves = leavesResponse.data || [];
+          
+          leaves = rawLeaves.filter((leave: any) => 
+            leave.applicant_email === selectedStudent.email ||
+            leave.email === selectedStudent.email ||
+            leave.student_email === selectedStudent.email
+          );
+        } catch (err2: any) {
+          console.log("❌ All leaves endpoints failed");
+        }
       }
+
+      // Update state with new leaves data
+      setStudentExtra(prev => ({
+        ...prev,
+        leaves: leaves,
+      }));
+      
+    } catch (err) {
+      console.error("Error refreshing student leaves:", err);
     }
+  };
 
-    // Update state with new leaves data
-    setStudentExtra(prev => ({
-      ...prev,
-      leaves: leaves,
-    }));
-    
-  } catch (err) {
-    console.error("Error refreshing student leaves:", err);
-  }
-};
-
-const fetchClasses = async (subjectId: number) => {
-  try {
-    const res = await axios.get(`${API_BASE}/classes?subject_id=${subjectId}`);
-    console.log('All Classes:', res.data);
-    setAllClasses(res.data); // Make sure this state exists
-  } catch (err) {
-    console.error('Error fetching classes:', err);
-  }
-};
+  const fetchClasses = async (subjectId: number) => {
+    try {
+      const res = await axios.get(`${API_BASE}/classes?subject_id=${subjectId}`);
+      console.log('All Classes:', res.data);
+      setAllClasses(res.data); // Make sure this state exists
+    } catch (err) {
+      console.error('Error fetching classes:', err);
+    }
+  };
 
   // Helper: resolve class info for a student using class_id and allClasses
   const getClassInfoForStudent = (student: any) => {
@@ -664,7 +843,6 @@ const fetchClasses = async (subjectId: number) => {
 
     return matchesClass && matchesSection;
   });
-
 
   // Fetch student details
   const fetchStudentDetails = async (student: any) => {
@@ -1099,34 +1277,34 @@ const fetchClasses = async (subjectId: number) => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-between mb-4">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
               <div></div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Management Monthly Report
               </h1>
               <button
                 onClick={refreshData}
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl font-medium flex items-center gap-2 transition-colors"
+                className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg sm:rounded-xl font-medium flex items-center gap-2 transition-colors text-sm sm:text-base"
               >
                 {loading ? "Refreshing..." : "🔄 Refresh"}
               </button>
             </div>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base sm:text-lg">
               Comprehensive overview of teachers and students performance
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-6 sm:mb-8">
             <button
               onClick={() => {
                 setView("teachers");
                 setSelectedTeacher(null);
                 fetchTeachers();
               }}
-              className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
                 view === "teachers"
                   ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
                   : "bg-white text-gray-700 border border-gray-300 hover:border-blue-500"
@@ -1140,7 +1318,7 @@ const fetchClasses = async (subjectId: number) => {
                 setSelectedStudent(null);
                 fetchStudents();
               }}
-              className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
                 view === "students"
                   ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
                   : "bg-white text-gray-700 border border-gray-300 hover:border-green-500"
@@ -1154,7 +1332,7 @@ const fetchClasses = async (subjectId: number) => {
                 setSelectedPrincipal(null);
                 fetchPrincipals();
               }}
-              className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
                 view === "principals"
                   ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg"
                   : "bg-white text-gray-700 border border-gray-300 hover:border-purple-500"
@@ -1170,29 +1348,91 @@ const fetchClasses = async (subjectId: number) => {
             </div>
           )}
 
-          {/* Teachers Grid */}
+          {/* Teachers Grid with Filters */}
           {view === "teachers" && !selectedTeacher && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {teachers.map((teacher) => (
-               // ✅ In your teachers grid - make sure onClick passes the full teacher object
-<div
-  key={teacher.teacher_id}
-  onClick={() => fetchTeacherDetails(teacher)} // Pass full teacher object
-  className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
->
-                  <div className="p-6 text-center">
-                    <img
-                      src={teacher.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={teacher.fullname}
-                      className="w-20 h-20 rounded-full border-4 border-blue-100 shadow-md mx-auto"
-                    />
-                    <h3 className="mt-4 text-lg font-bold text-gray-800">{teacher.fullname}</h3>
-                    <p className="text-sm text-blue-600 font-medium">{teacher.department_name}</p>
-                    <p className="text-xs text-gray-500 mt-1">{teacher.qualification}</p>
+            <>
+              {/* Teachers Filters */}
+              <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select
+                      value={teacherCategoryFilter}
+                      onChange={(e) => {
+                        setTeacherCategoryFilter(e.target.value);
+                        setDepartmentFilter("all"); // Reset department filter when category changes
+                      }}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    >
+                      {teacherCategories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <select
+                      value={departmentFilter}
+                      onChange={(e) => setDepartmentFilter(e.target.value)}
+                      className="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      disabled={teacherCategoryFilter === "all"}
+                    >
+                      {getDepartmentOptions().map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                <div className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                  Showing <span className="font-semibold">{filteredTeachers.length}</span> teachers
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredTeachers.map((teacher) => (
+                  <div
+                    key={teacher.teacher_id}
+                    onClick={() => fetchTeacherDetails(teacher)}
+                    className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
+                  >
+                    <div className="p-6 text-center">
+                      <img
+                        src={teacher.profile_picture || "https://i.pravatar.cc/150"}
+                        alt={teacher.fullname}
+                        className="w-20 h-20 rounded-full border-4 border-blue-100 shadow-md mx-auto"
+                      />
+                      <h3 className="mt-4 text-lg font-bold text-gray-800">{teacher.fullname}</h3>
+                      <p className="text-sm text-blue-600 font-medium">{teacher.department_name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{teacher.qualification}</p>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs text-gray-600 truncate" title={teacher.email}>
+                          📧 {teacher.email}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          🆔 {teacher.teacher_id}
+                        </p>
+                        {teacher.class_teacher_for && (
+                          <p className="text-xs text-green-600 font-semibold">
+                            👨‍🏫 Class Teacher: {teacher.class_teacher_for}
+                          </p>
+                        )}
+                        {teacher.experience_years && (
+                          <p className="text-xs text-gray-600">
+                            📅 {teacher.experience_years} years experience
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {/* Teacher Details */}
@@ -1216,21 +1456,24 @@ const fetchClasses = async (subjectId: number) => {
                   <span>←</span>
                   <span>Back to Teachers</span>
                 </button>
-                <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
                   <img
                     src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150"}
                     alt={selectedTeacher.fullname}
-                    className="w-32 h-32 rounded-2xl border-4 border-white shadow-lg"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
                   />
-                  <div className="flex-1">
-                    <h2 className="text-3xl font-bold mb-2">{selectedTeacher.fullname}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div className="flex-1 text-center sm:text-left">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedTeacher.fullname}</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div><b>Teacher ID:</b> {selectedTeacher.teacher_id}</div>
                       <div><b>Department:</b> {selectedTeacher.department_name}</div>
                       <div><b>Qualification:</b> {selectedTeacher.qualification}</div>
                       <div><b>Experience:</b> {selectedTeacher.experience_years} years</div>
                       <div><b>Phone:</b> {selectedTeacher.phone}</div>
                       <div><b>email:</b> {selectedTeacher.email}</div>
+                      {selectedTeacher.class_teacher_for && (
+                        <div><b>Class Teacher:</b> {selectedTeacher.class_teacher_for}</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1257,7 +1500,7 @@ const fetchClasses = async (subjectId: number) => {
                         </div>
                         <div className="bg-orange-50 p-4 rounded-xl text-center">
                           <div className="text-2xl font-bold text-orange-600">{stats.totalLeaves}</div>
-                          <div className="text-sm text-gray-600">Leaves</div>
+                          <div className="text-sm text-gray-600">Leaves (All)</div>
                         </div>
                       </>
                     );
@@ -1269,102 +1512,101 @@ const fetchClasses = async (subjectId: number) => {
               <div className="p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Subjects */}
-                  {/* Subjects */}
-<div className="bg-gray-50 p-6 rounded-xl">
-  <div className="flex justify-between items-center mb-4">
-    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-      📚 Subjects Taught
-    </h3>
-    <button
-      onClick={showAllTimetableData}
-      className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-lg transition-colors"
-    >
-      🔍 Debug Data
-    </button>
-  </div>
-  <div className="space-y-3">
-    {teacherExtra.subjects.map((sub: any) => (
-      <div 
-        key={sub.id} 
-        onClick={() => handleSubjectClick(sub)}
-        className={`bg-white p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-          selectedSubject?.id === sub.id 
-            ? "border-blue-500 ring-2 ring-blue-300 bg-blue-50" 
-            : "border-gray-200 hover:border-blue-300"
-        }`}
-      >
-        <div className="font-semibold text-gray-800">{sub.subject_name}</div>
-        <div className="text-sm text-gray-600">Code: {sub.subject_code}</div>
-        <div className="text-sm text-gray-600">ID: {sub.id}</div>
-      </div>
-    ))}
-  </div>
-  
-  {/* Debug Info */}
-  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-    <p className="text-xs text-yellow-800">
-      <strong>Debug:</strong> Total Subjects: {teacherExtra.subjects.length} | 
-      Total Classes: {teacherExtra.classes.length}
-    </p>
-  </div>
-</div>
+                  <div className="bg-gray-50 p-6 rounded-xl">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                        📚 Subjects Taught
+                      </h3>
+                      <button
+                        onClick={showAllTimetableData}
+                        className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-lg transition-colors self-start sm:self-auto"
+                      >
+                        🔍 Debug Data
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {teacherExtra.subjects.map((sub: any) => (
+                        <div 
+                          key={sub.id} 
+                          onClick={() => handleSubjectClick(sub)}
+                          className={`bg-white p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                            selectedSubject?.id === sub.id 
+                              ? "border-blue-500 ring-2 ring-blue-300 bg-blue-50" 
+                              : "border-gray-200 hover:border-blue-300"
+                          }`}
+                        >
+                          <div className="font-semibold text-gray-800">{sub.subject_name}</div>
+                          <div className="text-sm text-gray-600">Code: {sub.subject_code}</div>
+                          <div className="text-sm text-gray-600">ID: {sub.id}</div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Debug Info */}
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                      <p className="text-xs text-yellow-800">
+                        <strong>Debug:</strong> Total Subjects: {teacherExtra.subjects.length} | 
+                        Total Classes: {teacherExtra.classes.length}
+                      </p>
+                    </div>
+                  </div>
 
-  {/* Timetable for Selected Subject */}
-{selectedSubject && (
-  <div className="bg-gray-50 p-6 rounded-xl lg:col-span-2">
-    <h3 className="text-xl font-bold text-gray-800 mb-4">
-      🕒 Timetable for {selectedSubject.subject_name}
-    </h3>
-    
-    {/* Debug info - remove after it works */}
-    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-      <p className="text-sm text-yellow-800">
-        <strong>Debug Info:</strong> Selected Subject ID: {selectedSubject.id} | 
-        Filtered Entries: {filteredTimetable.length}
-      </p>
-    </div>
-    
-    {filteredTimetable.length > 0 ? (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTimetable.map((entry: any, index: number) => (
-          <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
-            <h4 className="font-semibold text-gray-800 mb-2">{entry.class_name}</h4>
-            <div className="space-y-1 text-sm text-gray-600">
-              <div><strong>Section:</strong> {entry.section}</div>
-              <div><strong>Day:</strong> {entry.day_of_week}</div>
-              <div><strong>Time:</strong> {entry.start_time} - {entry.end_time}</div>
-              {entry.room_number && <div><strong>Room:</strong> {entry.room_number}</div>}
-              {/* Debug info */}
-              <div className="mt-2 text-xs text-gray-400">
-                Subject ID: {entry.subject_id} | Entry ID: {entry.id}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div className="text-center py-8">
-        <div className="text-4xl mb-2">📅</div>
-        <p className="text-gray-500">No timetable entries found for this subject.</p>
-        <p className="text-sm text-gray-400 mt-2">
-          Subject ID: {selectedSubject.id} | No matching entries in timetable
-        </p>
-      </div>
-    )}
-  </div>
-)}
+                  {/* Timetable for Selected Subject */}
+                  {selectedSubject && (
+                    <div className="bg-gray-50 p-6 rounded-xl lg:col-span-2">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">
+                        🕒 Timetable for {selectedSubject.subject_name}
+                      </h3>
+                      
+                      {/* Debug info - remove after it works */}
+                      <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                        <p className="text-sm text-yellow-800">
+                          <strong>Debug Info:</strong> Selected Subject ID: {selectedSubject.id} | 
+                          Filtered Entries: {filteredTimetable.length}
+                        </p>
+                      </div>
+                      
+                      {filteredTimetable.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {filteredTimetable.map((entry: any, index: number) => (
+                            <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
+                              <h4 className="font-semibold text-gray-800 mb-2">{entry.class_name}</h4>
+                              <div className="space-y-1 text-sm text-gray-600">
+                                <div><strong>Section:</strong> {entry.section}</div>
+                                <div><strong>Day:</strong> {entry.day_of_week}</div>
+                                <div><strong>Time:</strong> {entry.start_time} - {entry.end_time}</div>
+                                {entry.room_number && <div><strong>Room:</strong> {entry.room_number}</div>}
+                                {/* Debug info */}
+                                <div className="mt-2 text-xs text-gray-400">
+                                  Subject ID: {entry.subject_id} | Entry ID: {entry.id}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="text-4xl mb-2">📅</div>
+                          <p className="text-gray-500">No timetable entries found for this subject.</p>
+                          <p className="text-sm text-gray-400 mt-2">
+                            Subject ID: {selectedSubject.id} | No matching entries in timetable
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Attendance Summary */}
                   <div className="bg-gray-50 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                         🗓️ Monthly Attendance
                       </h3>
                       <input
                         type="month"
                         value={attendanceMonth}
                         onChange={(e) => setAttendanceMonth(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
                       />
                     </div>
                     {(() => {
@@ -1401,61 +1643,93 @@ const fetchClasses = async (subjectId: number) => {
                     })()}
                   </div>
 
-                  {/* Leaves Summary */}
+                  {/* Leaves Summary - ALL LEAVES */}
                   <div className="bg-gray-50 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        📝 Leave History
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                        📝 All Leave History
                       </h3>
                       <input
                         type="month"
                         value={leaveMonth}
                         onChange={(e) => setLeaveMonth(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
                       />
                     </div>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center text-green-600">
                         <span>Approved Leaves:</span>
                         <span className="font-semibold">
-                          {teacherExtra.leaves.filter((l: any) => l.status === "Approved").length}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Approved").length : 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-yellow-600">
                         <span>Pending Leaves:</span>
                         <span className="font-semibold">
-                          {teacherExtra.leaves.filter((l: any) => l.status === "Pending").length}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Pending").length : 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-red-600">
                         <span>Rejected Leaves:</span>
                         <span className="font-semibold">
-                          {teacherExtra.leaves.filter((l: any) => l.status === "Rejected").length}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Rejected").length : 0}
                         </span>
                       </div>
+                      <div className="flex justify-between items-center text-blue-600 font-semibold">
+                        <span>Total Leaves:</span>
+                        <span className="font-semibold">{Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.length : 0}</span>
+                      </div>
                     </div>
+                    
+                    {/* Display recent leaves */}
+                    {Array.isArray(teacherExtra.leaves) && teacherExtra.leaves.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Recent Leaves:</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                          {teacherExtra.leaves.slice(0, 3).map((leave: any, index: number) => (
+                            <div 
+                              key={index}
+                              className="text-xs p-2 bg-white border border-gray-200 rounded"
+                            >
+                              <div className="flex justify-between">
+                                <span className="font-medium">{leave.leave_type}</span>
+                                <span className={`px-1 rounded ${
+                                  leave.status === 'Approved' ? 'bg-green-100 text-green-800' : 
+                                  leave.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {leave.status}
+                                </span>
+                              </div>
+                              <div className="text-gray-500">
+                                {leave.start_date} to {leave.end_date}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           )}
-          
 
           {/* Students Filters + Grid */}
           {view === "students" && !selectedStudent && (
             <>
               {/* Filters */}
-              <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                <div className="flex flex-wrap gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+              <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Class</label>
                     <select
                       value={studentClassFilter}
                       onChange={(e) => {
                         setStudentClassFilter(e.target.value);
                         setStudentSectionFilter("all");
                       }}
-                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                      className="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
                     >
                       <option value="all">All Classes</option>
                       {studentUniqueClasses.map((clsName) => (
@@ -1466,12 +1740,12 @@ const fetchClasses = async (subjectId: number) => {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
                     <select
                       value={studentSectionFilter}
                       onChange={(e) => setStudentSectionFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                      className="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
                       disabled={studentClassFilter === "all"}
                     >
                       <option value="all">All Sections</option>
@@ -1484,7 +1758,7 @@ const fetchClasses = async (subjectId: number) => {
                   </div>
                 </div>
 
-                <div className="text-sm text-gray-600">
+                <div className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                   Showing <span className="font-semibold">{filteredStudentsByClass.length}</span> students
                 </div>
               </div>
@@ -1576,32 +1850,30 @@ const fetchClasses = async (subjectId: number) => {
                   <span>Back to Students</span>
                 </button>
                 
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex flex-col md:flex-row gap-6 items-start">
-                    <img
-                      src={selectedStudent.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={selectedStudent.fullname}
-                      className="w-32 h-32 rounded-2xl border-4 border-white shadow-lg"
-                    />
-                    <div>
-                      <h2 className="text-3xl font-bold mb-2">{selectedStudent.fullname}</h2>
-                      {(() => {
-                        const classInfo = getClassInfoForStudent(selectedStudent);
-                        const className = classInfo?.class_name;
-                        const section = classInfo?.sec;
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
+                  <img
+                    src={selectedStudent.profile_picture || "https://i.pravatar.cc/150"}
+                    alt={selectedStudent.fullname}
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
+                  />
+                  <div className="text-center sm:text-left">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedStudent.fullname}</h2>
+                    {(() => {
+                      const classInfo = getClassInfoForStudent(selectedStudent);
+                      const className = classInfo?.class_name;
+                      const section = classInfo?.sec;
 
-                        return (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                            <div><b>Student ID:</b> {selectedStudent.student_id}</div>
-                            <div><b>Class:</b> {className || "Class ?"}</div>
-                            <div><b>Section:</b> {section || "-"}</div>
-                            <div><b>Roll No:</b> {selectedStudent.student_id}</div>
-                            <div><b>Gender:</b> {selectedStudent.gender}</div>
-                            <div><b>DOB:</b> {selectedStudent.date_of_birth}</div>
-                          </div>
-                        );
-                      })()}
-                    </div>
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
+                          <div><b>Student ID:</b> {selectedStudent.student_id}</div>
+                          <div><b>Class:</b> {className || "Class ?"}</div>
+                          <div><b>Section:</b> {section || "-"}</div>
+                          <div><b>Roll No:</b> {selectedStudent.student_id}</div>
+                          <div><b>Gender:</b> {selectedStudent.gender}</div>
+                          <div><b>DOB:</b> {selectedStudent.date_of_birth}</div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1738,13 +2010,13 @@ const fetchClasses = async (subjectId: number) => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {/* Attendance */}
                       <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-3">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
                           <h4 className="font-semibold text-gray-800">🗓️ Attendance</h4>
                           <input
                             type="month"
                             value={studentAttendanceMonth}
                             onChange={(e) => setStudentAttendanceMonth(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm w-full sm:w-auto"
                           />
                         </div>
                         {(() => {
@@ -1893,13 +2165,13 @@ const fetchClasses = async (subjectId: number) => {
 
                       {/* Leaves */}
                       <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="flex justify-between items-center mb-3">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
                           <h4 className="font-semibold text-gray-800">📝 Leaves</h4>
                           <input
                             type="month"
                             value={studentLeaveMonth}
                             onChange={(e) => setStudentLeaveMonth(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm w-full sm:w-auto"
                           />
                         </div>
                         {(() => {
@@ -1999,20 +2271,20 @@ const fetchClasses = async (subjectId: number) => {
                   <span>←</span>
                   <span>Back to Principals</span>
                 </button>
-                <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
                   <img
                     src={selectedPrincipal.profile_picture || "https://i.pravatar.cc/150"}
                     alt={selectedPrincipal.fullname}
-                    className="w-32 h-32 rounded-2xl border-4 border-white shadow-lg"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
                   />
-                  <div className="flex-1">
-                    <h2 className="text-3xl font-bold mb-2">{selectedPrincipal.fullname}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div className="flex-1 text-center sm:text-left">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedPrincipal.fullname}</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div><b>Principal ID:</b> {selectedPrincipal.principal_id}</div>
                       <div><b>School:</b> {selectedPrincipal.school_name}</div>
                       <div><b>Experience:</b> {selectedPrincipal.experience_years} years</div>
                       <div><b>Phone:</b> {selectedPrincipal.phone}</div>
-                      <div><b>email:</b> {selectedPrincipal.email}</div>
+                      <div><b>email:</b> <span className="break-words">{selectedPrincipal.email}</span></div>
                       <div><b>Qualification:</b> {selectedPrincipal.qualification}</div>
                     </div>
                   </div>
@@ -2103,15 +2375,15 @@ const fetchClasses = async (subjectId: number) => {
 
                   {/* Attendance Summary */}
                   <div className="bg-gray-50 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                         🗓️ Monthly Attendance
                       </h3>
                       <input
                         type="month"
                         value={attendanceMonth}
                         onChange={(e) => setAttendanceMonth(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 w-full sm:w-auto"
                       />
                     </div>
                     {(() => {
@@ -2150,15 +2422,15 @@ const fetchClasses = async (subjectId: number) => {
 
                   {/* Leaves Summary */}
                   <div className="bg-gray-50 p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
                         📝 Leave History
                       </h3>
                       <input
                         type="month"
                         value={leaveMonth}
                         onChange={(e) => setLeaveMonth(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 w-full sm:w-auto"
                       />
                     </div>
                     <div className="space-y-3">
@@ -2466,4 +2738,4 @@ const fetchClasses = async (subjectId: number) => {
   );
 };
 
-export default ManagementMonthlyReport;
+export default ManagementMonthlyReport; 

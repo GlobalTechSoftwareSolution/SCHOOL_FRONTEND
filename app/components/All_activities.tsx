@@ -1,29 +1,38 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import DashboardLayout from "@/app/components/DashboardLayout";
-import { 
-  FiCalendar, 
-  FiActivity, 
-  FiPlus, 
-  FiUser, 
+import {
+  FiCalendar,
+  FiPlus,
+  FiUser,
   FiArrowLeft,
   FiType,
   FiBook,
-  FiUsers,
-  FiClock,
-  FiEdit3,
-  FiTrash2,
   FiX
 } from "react-icons/fi";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/activities/";
+// Type definitions
+interface Activity {
+  id: number;
+  name: string;
+  description?: string;
+  type?: string;
+  date?: string;
+  class_name?: string;
+  section?: string;
+  conducted_by?: string;
+  conducted_by_email?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/activities/`;
 
 const Activities = () => {
-  const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState("");
@@ -93,33 +102,33 @@ const Activities = () => {
   };
 
   // Filter activities
-  const filteredActivities = activities.filter(activity => {
+  const filteredActivities = activities.filter((activity: Activity) => {
     const matchesType = filterType === "all" || activity.type === filterType;
     const matchesSearch = activity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         activity.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (activity.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     return matchesType && matchesSearch;
   });
 
   // Get activity type color
-  const getActivityTypeColor = (type: string) => {
-    const colors: any = {
+  const getActivityTypeColor = (type?: string) => {
+    const colors: Record<string, string> = {
       Cultural: "bg-purple-100 text-purple-800 border-purple-200",
       Sports: "bg-green-100 text-green-800 border-green-200",
       Academic: "bg-blue-100 text-blue-800 border-blue-200",
       Other: "bg-gray-100 text-gray-800 border-gray-200",
     };
-    return colors[type] || "bg-gray-100 text-gray-800 border-gray-200";
+    return colors[type || "Other"] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   // Get activity type icon
-  const getActivityTypeIcon = (type: string) => {
-    const icons: any = {
+  const getActivityTypeIcon = (type?: string) => {
+    const icons: Record<string, string> = {
       Cultural: "🎭",
       Sports: "⚽",
       Academic: "📚",
       Other: "📅",
     };
-    return icons[type] || "📅";
+    return icons[type || "Other"] || "📅";
   };
 
   // Reset form
@@ -353,7 +362,7 @@ const Activities = () => {
                 </div>
               ) : filteredActivities.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6">
-                  {filteredActivities.map((activity) => (
+                  {filteredActivities.map((activity: Activity) => (
                     <div
                       key={activity.id}
                       onClick={() => setSelectedActivity(activity)}

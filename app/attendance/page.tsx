@@ -20,7 +20,7 @@ interface BackendResponse {
   email?: string;
   role?: string;
   method_used?: string;
-  debug_info?: any;
+  debug_info?: unknown;
   // Fields that might be returned by backend
   attendance_status?: 'checkin' | 'checkout' | 'completed';
   checkin_time?: string;
@@ -28,13 +28,13 @@ interface BackendResponse {
   has_checkin?: boolean;
   date?: string;
   // Add generic index signature for any other fields
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const AttendanceSystem = () => {
   const [attendanceMode, setAttendanceMode] = useState<'face' | 'barcode' | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>('');
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState(''); // NEW: role
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -54,28 +54,20 @@ const AttendanceSystem = () => {
 
   // Get current location
   const getCurrentLocation = useCallback((): Promise<{ latitude: number; longitude: number }> => {
-    console.log('[Attendance] getCurrentLocation called');
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        console.error('[Attendance] Geolocation is not supported in this browser');
         reject(new Error('Geolocation is not supported'));
         return;
       }
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log(
-            '[Attendance] Location received',
-            position.coords.latitude,
-            position.coords.longitude
-          );
           resolve({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
           });
         },
         (error) => {
-          console.error('[Attendance] Error getting current location', error);
           reject(error);
         },
         {
@@ -93,34 +85,27 @@ const AttendanceSystem = () => {
       await tf.ready();
       const model = await blazeface.load();
       faceModelRef.current = model;
-      console.log('[Attendance] BlazeFace model loaded successfully');
-    } catch (error) {
-      console.error('[Attendance] Error loading BlazeFace model:', error);
+    } catch {
       setMessage('Error initializing face detection');
     }
   }, []);
 
   useEffect(() => {
-    console.log('[Attendance] AttendanceSystem component mounted');
     initializeFaceDetection();
 
     // Try to get location initially
     getCurrentLocation()
       .then(loc => {
-        console.log('[Attendance] Initial location obtained', loc);
         setCurrentLocation(loc);
       })
-      .catch(err => {
-        console.warn('[Attendance] Failed to get initial location:', err);
+      .catch(() => {
         setMessage('Location services unavailable. Some features may be limited.');
-      });
+      })
 
     return () => {
-      console.log('[Attendance] AttendanceSystem component unmounting, cleaning up resources');
       // cleanup
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => {
-          console.log('[Attendance] Stopping media track');
           t.stop();
         });
         streamRef.current = null;
@@ -136,7 +121,6 @@ const AttendanceSystem = () => {
 
   // Start camera for face recognition
   const startFaceRecognition = async () => {
-    console.log('[Attendance] Starting face recognition process');
     resetUserTracking(); // Reset tracking for new session
     
     try {
@@ -149,15 +133,12 @@ const AttendanceSystem = () => {
       setCheckoutTime(null);
 
       const location = await getCurrentLocation();
-      console.log('[Attendance] Location acquired for face recognition', location);
       setCurrentLocation(location);
 
       // Start webcam automatically via Webcam component; just set mode and active
       setAttendanceMode('face');
       setIsCameraActive(true);
-      console.log('[Attendance] Face recognition mode activated, camera ready');
-    } catch (error) {
-      console.error('[Attendance] Error starting face recognition:', error);
+    } catch {
       setMessage('Error accessing location or camera');
     } finally {
       setIsLoading(false);
@@ -166,7 +147,6 @@ const AttendanceSystem = () => {
 
   // Start barcode scanner (file upload mode)
   const startBarcodeScanner = async () => {
-    console.log('[Attendance] Starting barcode scanner process');
     resetUserTracking(); // Reset tracking for new session
     
     try {
@@ -179,14 +159,11 @@ const AttendanceSystem = () => {
       setCheckoutTime(null);
 
       const location = await getCurrentLocation();
-      console.log('[Attendance] Location acquired for barcode scanning', location);
       setCurrentLocation(location);
 
       setAttendanceMode('barcode');
       setIsCameraActive(false); // No camera needed for file upload
-      console.log('[Attendance] Barcode scanning mode activated, file upload ready');
-    } catch (error) {
-      console.error('[Attendance] Error preparing barcode scanner:', error);
+    } catch {
       setMessage('Error preparing barcode scanner');
     } finally {
       setIsLoading(false);
@@ -195,14 +172,12 @@ const AttendanceSystem = () => {
 
   // Decode image using ZXing library (hard decoding)
   const decodeImageHard = async (img: HTMLImageElement) => {
-    console.log('[Attendance] Starting hard decoding process for image', img.width, img.height);
     const canvas = document.createElement("canvas");
     canvas.width = img.width;
     canvas.height = img.height;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-      console.log('[Attendance] Failed to get 2D context for canvas');
       return null;
     }
 
@@ -223,20 +198,16 @@ const AttendanceSystem = () => {
 
     try {
       const decoded = reader.decodeBitmap(binaryBitmap);
-      console.log('[Attendance] Hard decoding successful', decoded.getText());
       return decoded.getText();
-    } catch (error) {
-      console.log('[Attendance] Hard decoding failed', error);
-      return null;
+    } catch {
+      setMessage('Error accessing location or camera');
     }
   };
 
   // Handle file upload for barcode scanning
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[Attendance] File upload initiated');
     const file = event.target.files?.[0];
     if (!file) {
-      console.log('[Attendance] No file selected for upload');
       return;
     }
 
@@ -249,19 +220,16 @@ const AttendanceSystem = () => {
     const fileReader = new FileReader();
 
     fileReader.onload = async () => {
-      console.log('[Attendance] File read completed, processing image');
       const img = new Image();
       img.src = fileReader.result as string;
 
       img.onload = async () => {
-        console.log('[Attendance] Image loaded, starting barcode detection', img.width, img.height);
         // First try normal decoding
         const reader = new BrowserMultiFormatReader();
 
         try {
           const normal = await reader.decodeFromImageElement(img);
           const decodedText = normal.getText();
-          console.log('[Attendance] Normal decoding successful', decodedText);
           setScannedEmail(decodedText);
           
           // Process attendance
@@ -269,11 +237,9 @@ const AttendanceSystem = () => {
             let loc = currentLocation;
             if (!loc) {
               try {
-                console.log('[Attendance] Location not available, requesting current location');
                 loc = await getCurrentLocation();
                 setCurrentLocation(loc);
-              } catch (e) {
-                console.error('[Attendance] Failed to get location for barcode attendance', e);
+              } catch {
                 setMessage('Location required to mark attendance');
                 setIsLoading(false);
                 return;
@@ -282,14 +248,12 @@ const AttendanceSystem = () => {
             await markAttendanceWithBarcode(decodedText, loc!);
           }, 600);
           return;
-        } catch (error) {
-          console.log('[Attendance] Normal scan failed, trying strong mode', error);
+        } catch {
         }
 
         // Try strong decoding
         const strong = await decodeImageHard(img);
         if (strong) {
-          console.log('[Attendance] Strong decoding successful', strong);
           setScannedEmail(strong);
           
           // Process attendance
@@ -297,11 +261,9 @@ const AttendanceSystem = () => {
             let loc = currentLocation;
             if (!loc) {
               try {
-                console.log('[Attendance] Location not available, requesting current location');
                 loc = await getCurrentLocation();
                 setCurrentLocation(loc);
-              } catch (e) {
-                console.error('[Attendance] Failed to get location for barcode attendance', e);
+              } catch {
                 setMessage('Location required to mark attendance');
                 setIsLoading(false);
                 return;
@@ -310,7 +272,6 @@ const AttendanceSystem = () => {
             await markAttendanceWithBarcode(strong, loc!);
           }, 600);
         } else {
-          console.log('[Attendance] Barcode not detected in image');
           setMessage("❌ Barcode not detected (image too blurry)");
           setIsLoading(false);
         }
@@ -322,19 +283,12 @@ const AttendanceSystem = () => {
 
   // Trigger file upload
   const triggerFileUpload = () => {
-    console.log('[Attendance] Triggering file upload dialog');
     fileInputRef.current?.click();
   };
 
   // Capture image for face recognition
   const captureAndDetectFace = useCallback(async () => {
-    console.log('[Attendance] Face capture and detection initiated');
     if (!webcamRef.current || !faceModelRef.current || !currentLocation) {
-      console.warn('[Attendance] Face detection prerequisites missing', {
-        hasWebcam: !!webcamRef.current,
-        hasModel: !!faceModelRef.current,
-        hasLocation: !!currentLocation,
-      });
       setMessage('Camera or location not ready');
       return;
     }
@@ -349,10 +303,8 @@ const AttendanceSystem = () => {
       setCheckoutTime(null);
 
       const imageSrc = webcamRef.current.getScreenshot();
-      console.log('[Attendance] Screenshot captured', !!imageSrc);
 
       if (!imageSrc) {
-        console.warn('[Attendance] Webcam failed to capture screenshot');
         setMessage('Failed to capture image. Try again.');
         return;
       }
@@ -362,7 +314,6 @@ const AttendanceSystem = () => {
       img.src = imageSrc;
       await new Promise(resolve => {
         img.onload = resolve;
-        console.log('[Attendance] Image loaded for face detection');
       });
 
       const canvas = document.createElement('canvas');
@@ -370,7 +321,6 @@ const AttendanceSystem = () => {
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error('[Attendance] Failed to get 2D context for face detection canvas');
         setMessage('Error processing image');
         return;
       }
@@ -378,26 +328,22 @@ const AttendanceSystem = () => {
 
       // run a local face detection pass to provide faster feedback (optional)
       const predictions = await faceModelRef.current!.estimateFaces(canvas, false);
-      console.log('[Attendance] Face detection predictions count', predictions ? predictions.length : 0);
       if (!predictions || predictions.length === 0) {
         setMessage('No face detected. Please position your face clearly.');
         return;
       }
 
       // Convert base64 to blob and send to backend as 'image' (backend expects request.FILES.get('image') or 'file')
-      console.log('[Attendance] Face detected locally, sending to backend for recognition');
       await markAttendanceWithFace(imageSrc, currentLocation);
-    } catch (error) {
-      console.error('[Attendance] Error during face capture and detection:', error);
+    } catch {
       setMessage('Error processing face image');
     } finally {
       setIsLoading(false);
     }
-  }, [currentLocation]);
+  }, [currentLocation, markAttendanceWithFace]);
 
   // Utility: dataURL -> Blob
   const dataURLtoBlob = (dataURL: string): Blob => {
-    console.log('[Attendance] Converting dataURL to Blob');
     const arr = dataURL.split(',');
     const mimeMatch = arr[0].match(/:(.*?);/);
     const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
@@ -407,13 +353,108 @@ const AttendanceSystem = () => {
     while (n--) {
       u8arr[n] = bstr.charCodeAt(n);
     }
-    console.log('[Attendance] Blob conversion completed');
     return new Blob([u8arr], { type: mime });
   };
 
+  // Stop camera & scanning
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => {
+        t.stop();
+      });
+      streamRef.current = null;
+    }
+
+    setIsCameraActive(false);
+    setAttendanceMode(null);
+  }, []);
+
+  // Format time for display
+  const formatTime = useCallback((timeString: string | null) => {
+    if (!timeString) return 'Not recorded';
+
+    try {
+      // Assuming timeString is in ISO format
+      const date = new Date(timeString);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return timeString;
+    }
+  }, []);
+
+  // Handle backend response shape (your backend returns status/message/user/role)
+  const handleBackendResult = useCallback((result: BackendResponse) => {
+    if (!result) {
+      setMessage('No response from server');
+      return;
+    }
+
+    if (result.status === 'success') {
+      const name = result.user || result.email || 'User';
+      const email = result.email || '';
+      const role = result.role || 'N/A';
+      const checkin = result.checkin_time || null;
+      const checkout = result.checkout_time || null;
+
+      // This logic determines what action we JUST performed based on our previous state
+      let actionPerformed = 'checkin';
+      if (email && lastUserEmail === email && userCheckedIn) {
+        actionPerformed = 'checkout';
+      }
+
+      setUserName(name);
+      setUserRole(role);
+      setCheckinTime(checkin);
+      setCheckoutTime(checkout);
+
+      // Update local tracking state for next time
+      // This logic prepares us for the NEXT action
+      if (email) {
+        if (lastUserEmail === email) {
+          // Same user, toggle state for next action
+          // If they were checked in, next action should be checkout
+          // If they were checked out, next action should be checkin
+          setUserCheckedIn(!userCheckedIn);
+        } else {
+          // New user, set initial state
+          setLastUserEmail(email);
+          setUserCheckedIn(true); // Next action should be checkout
+        }
+      }
+
+      // Customize message based on what action was performed
+      if (actionPerformed === 'checkin') {
+        if (checkin) {
+          setMessage(`✅ Check-in marked for ${name} (${role}) at ${formatTime(checkin)}`);
+        } else {
+          setMessage(`✅ Check-in marked for ${name} (${role})`);
+        }
+      } else {
+        if (checkout) {
+          setMessage(`✅ Check-out marked for ${name} (${role}) at ${formatTime(checkout)}`);
+        } else {
+          setMessage(`✅ Check-out marked for ${name} (${role})`);
+        }
+      }
+
+      // keep displayed for 3 seconds then reset
+      setTimeout(() => {
+        setMessage('');
+        setUserName('');
+        setUserRole('');
+        setScannedEmail(null);
+        setCheckinTime(null);
+        setCheckoutTime(null);
+      }, 3000);
+    } else {
+      // for 'fail' or 'error'
+      const emsg = result.message || result.error || 'Attendance failed';
+      setMessage(`❌ ${emsg}`);
+    }
+  }, [lastUserEmail, userCheckedIn, formatTime]);
+
   // Mark attendance with face (send 'image' field)
-  const markAttendanceWithFace = async (imageData: string, location: { latitude: number; longitude: number }) => {
-    console.log('[Attendance] Marking attendance with face recognition', location);
+  const markAttendanceWithFace = useCallback(async (imageData: string, location: { latitude: number; longitude: number }) => {
     try {
       setIsLoading(true);
       setMessage('Recognizing face...');
@@ -433,49 +474,35 @@ const AttendanceSystem = () => {
       formData.append('timestamp', new Date().toISOString());
       // Add action type to help backend understand intent
       formData.append('action', 'attendance');
-      
+
       // Add explicit check-in/check-out indicator based on local state
       if (lastUserEmail && userCheckedIn) {
-        console.log('[Attendance] User has existing check-in, marking as checkout');
         formData.append('attendance_action', 'checkout');
         // For checkout, also send the current time
         formData.append('check_out_time', new Date().toISOString());
       } else {
-        console.log('[Attendance] No existing check-in, marking as checkin');
         formData.append('attendance_action', 'checkin');
         // For checkin, also send the current time
         formData.append('check_in_time', new Date().toISOString());
       }
-      
+
       // Also send the last user email to help backend identify the user
       // For first-time users, we'll need to get the email from the face recognition response
       if (lastUserEmail) {
         formData.append('user_email', lastUserEmail);
       }
 
-      console.log('[Attendance] Sending face attendance request to backend with data:', {
-        method: 'face',
-        attendance_action: formData.get('attendance_action'),
-        user_email: formData.get('user_email'),
-        has_last_user_email: !!lastUserEmail,
-        user_checked_in: userCheckedIn
-      });
-
-      console.log('[Attendance] Sending face attendance request to backend');
       // Use the correct endpoint for marking attendance - the attendance/mark endpoint
       const response = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/attendance/mark/', {
         method: 'POST',
         body: formData
       });
-      console.log('[Attendance] Face attendance response received', response.status);
 
       let result: BackendResponse | null = null;
       try {
         const jsonData = await response.json();
         result = jsonData as BackendResponse;
-        console.log('[Attendance] Face attendance response parsed', result);
-      } catch (e) {
-        console.error('[Attendance] Failed to parse JSON response from face attendance', e);
+      } catch {
         setMessage('Server returned non-JSON response');
         return;
       }
@@ -483,19 +510,17 @@ const AttendanceSystem = () => {
       if (result) {
         handleBackendResult(result);
       }
-    } catch (error) {
-      console.error('[Attendance] Error marking attendance with face:', error);
+    } catch {
       setMessage('Error connecting to server');
     } finally {
       setIsLoading(false);
       // stop camera after attempt
       stopCamera();
     }
-  };
+  }, [lastUserEmail, userCheckedIn, stopCamera, handleBackendResult]);
 
   // Mark attendance with barcode (send 'barcode' field — backend treats barcode as email)
   const markAttendanceWithBarcode = async (barcodeData: string, location: { latitude: number; longitude: number }) => {
-    console.log('[Attendance] Marking attendance with barcode', barcodeData, location);
     try {
       setIsLoading(true);
       setMessage('Processing barcode...');
@@ -516,12 +541,10 @@ const AttendanceSystem = () => {
       
       // Add explicit check-in/check-out indicator based on local state
       if (lastUserEmail && userCheckedIn) {
-        console.log('[Attendance] User has existing check-in, marking as checkout');
         formData.append('attendance_action', 'checkout');
         // For checkout, also send the current time
         formData.append('check_out_time', new Date().toISOString());
       } else {
-        console.log('[Attendance] No existing check-in, marking as checkin');
         formData.append('attendance_action', 'checkin');
         // For checkin, also send the current time
         formData.append('check_in_time', new Date().toISOString());
@@ -536,30 +559,17 @@ const AttendanceSystem = () => {
         formData.append('user_email', barcodeData);
       }
 
-      console.log('[Attendance] Sending barcode attendance request to backend with data:', {
-        method: 'barcode',
-        barcode: barcodeData,
-        attendance_action: formData.get('attendance_action'),
-        user_email: formData.get('user_email'),
-        has_last_user_email: !!lastUserEmail,
-        user_checked_in: userCheckedIn
-      });
-
-      console.log('[Attendance] Sending barcode attendance request to backend');
       // Use the correct endpoint for marking attendance - the attendance/mark endpoint
       const response = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/attendance/mark/', {
         method: 'POST',
         body: formData
       });
-      console.log('[Attendance] Barcode attendance response received', response.status);
 
       let result: BackendResponse | null = null;
       try {
         const jsonData = await response.json();
         result = jsonData as BackendResponse;
-        console.log('[Attendance] Barcode attendance response parsed', result);
-      } catch (e) {
-        console.error('[Attendance] Failed to parse JSON response from barcode attendance', e);
+      } catch {
         setMessage('Server returned non-JSON response');
         return;
       }
@@ -567,133 +577,11 @@ const AttendanceSystem = () => {
       if (result) {
         handleBackendResult(result);
       }
-    } catch (error) {
-      console.error('[Attendance] Error marking attendance with barcode:', error);
+    } catch {
       setMessage('Error connecting to server');
     } finally {
       setIsLoading(false);
       stopCamera();
-    }
-  };
-
-  // Stop camera & scanning
-  const stopCamera = () => {
-    console.log('[Attendance] Stopping camera and cleaning up');
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => {
-        console.log('[Attendance] Stopping media track');
-        t.stop();
-      });
-      streamRef.current = null;
-    }
-    
-    setIsCameraActive(false);
-    setAttendanceMode(null);
-    console.log('[Attendance] Camera stopped and state reset');
-  };
-
-  // Handle backend response shape (your backend returns status/message/user/role)
-  const handleBackendResult = (result: BackendResponse) => {
-    console.log('[Attendance] Handling backend result', result);
-    if (!result) {
-      console.log('[Attendance] No response received from backend');
-      setMessage('No response from server');
-      return;
-    }
-
-    if (result.status === 'success') {
-      const name = result.user || result.email || 'User';
-      const email = result.email || '';
-      const role = result.role || 'N/A';
-      const attendanceStatus = result.attendance_status || null;
-      const checkin = result.checkin_time || null;
-      const checkout = result.checkout_time || null;
-      
-      // This logic determines what action we JUST performed based on our previous state
-      let actionPerformed = 'checkin';
-      if (email && lastUserEmail === email && userCheckedIn) {
-        actionPerformed = 'checkout';
-      }
-
-      console.log('[Attendance] Success response received', { 
-        name, 
-        role, 
-        attendanceStatus, 
-        checkin, 
-        checkout,
-        email,
-        actionPerformed,
-        lastUserEmail,
-        userCheckedIn
-      });
-      
-      setUserName(name);
-      setUserRole(role);
-      setCheckinTime(checkin);
-      setCheckoutTime(checkout);
-      
-      // Update local tracking state for next time
-      // This logic prepares us for the NEXT action
-      if (email) {
-        if (lastUserEmail === email) {
-          // Same user, toggle state for next action
-          // If they were checked in, next action should be checkout
-          // If they were checked out, next action should be checkin
-          console.log(`[Attendance] Same user ${email}, toggling userCheckedIn from ${userCheckedIn} to ${!userCheckedIn}`);
-          setUserCheckedIn(!userCheckedIn);
-        } else {
-          // New user, set initial state
-          console.log(`[Attendance] New user ${email}, setting lastUserEmail and userCheckedIn to true`);
-          setLastUserEmail(email);
-          setUserCheckedIn(true); // Next action should be checkout
-        }
-      }
-      
-      // Customize message based on what action was performed
-      if (actionPerformed === 'checkin') {
-        if (checkin) {
-          setMessage(`✅ Check-in marked for ${name} (${role}) at ${formatTime(checkin)}`);
-        } else {
-          setMessage(`✅ Check-in marked for ${name} (${role})`);
-        }
-      } else {
-        if (checkout) {
-          setMessage(`✅ Check-out marked for ${name} (${role}) at ${formatTime(checkout)}`);
-        } else {
-          setMessage(`✅ Check-out marked for ${name} (${role})`);
-        }
-      }
-
-      // keep displayed for 3 seconds then reset
-      setTimeout(() => {
-        console.log('[Attendance] Clearing attendance result display');
-        setMessage('');
-        setUserName('');
-        setUserRole('');
-        setScannedEmail(null);
-        setCheckinTime(null);
-        setCheckoutTime(null);
-      }, 3000);
-    } else {
-      // for 'fail' or 'error'
-      const emsg = result.message || result.error || 'Attendance failed';
-      console.error('[Attendance] Attendance failed', emsg, result);
-      setMessage(`❌ ${emsg}`);
-      // Optionally show debug info in console
-      if (result.debug_info) console.debug('[Attendance] Debug info:', result.debug_info);
-    }
-  };
-
-  // Format time for display
-  const formatTime = (timeString: string | null) => {
-    if (!timeString) return 'Not recorded';
-    
-    try {
-      // Assuming timeString is in ISO format
-      const date = new Date(timeString);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      return timeString;
     }
   };
 
@@ -869,7 +757,7 @@ const AttendanceSystem = () => {
                     </div>
                   </div>
                 )}
-
+  
                 <button
                   onClick={stopCamera}
                   className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold"

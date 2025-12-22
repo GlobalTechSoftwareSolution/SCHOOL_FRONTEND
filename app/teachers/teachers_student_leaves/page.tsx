@@ -4,9 +4,27 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
+interface ClassInfo {
+  id: number;
+  class_name: string;
+  sec: string;
+  class_teacher_name: string;
+  class_teacher_email: string;
+}
+
+interface Student {
+  id: number;
+  email: string;
+  fullname: string;
+  class_id: number;
+  roll_number: string;
+  section: string;
+  profile_picture: string;
+}
+
 interface LeaveApplication {
   id: number;
-  applicant: string; // Student email who applied for leave
+  applicant: string;
   applicant_email: string;
   approved_by_email: string | null;
   leave_type: string;
@@ -16,40 +34,25 @@ interface LeaveApplication {
   status: string;
   created_at: string;
   updated_at: string;
-  // Enhanced fields we'll add
   student_name?: string;
-  class_name?: string;
-  section?: string;
-  applied_date?: string;
-  teacher_remarks?: string;
-}
-
-interface TimetableEntry {
-  teacher: string;
-  class_id: number;
 }
 
 interface TeacherClass {
+  class_id: number;
   class_name: string;
   section: string;
 }
 
 const TeachersStudentLeavePage = () => {
+  // const [classes, setClasses] = useState<ClassInfo[]>([]); // Not currently used
+  // const [students, setStudents] = useState<Student[]>([]); // Not currently used
   const [leaves, setLeaves] = useState<LeaveApplication[]>([]);
   const [teacherClasses, setTeacherClasses] = useState<TeacherClass[]>([]);
+  const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedLeave, setSelectedLeave] = useState<LeaveApplication | null>(null);
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [remarks, setRemarks] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
-  const [filters, setFilters] = useState({
-    status: "all",
-    class: "all",
-    search: ""
-  });
 
-  // Fetch teacher's classes and leave applications
+  // Fetch teacher's classes
   useEffect(() => {
     const fetchTeacherData = async () => {
       try {
@@ -71,148 +74,40 @@ const TeachersStudentLeavePage = () => {
           return;
         }
 
-        // Fetch teacher's timetable to get their classes
+        // Fetch teacher's timetable to get class IDs
         const timetableResponse = await axios.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/timetable/`
         );
-        
-        const teacherTimetable: TimetableEntry[] = timetableResponse.data.filter(
-          (item: any) => item.teacher === teacherEmail
+
+        const teacherTimetable = timetableResponse.data.filter(
+          (item: { teacher: string }) => item.teacher === teacherEmail
         );
 
         // Collect unique class_ids from timetable
         const classIds = Array.from(
-          new Set(teacherTimetable.map((t: any) => t.class_id))
-        ).filter(Boolean);
+          new Set(teacherTimetable.map((t: { class_id: number }) => t.class_id))
+        ).filter((id): id is number => Boolean(id));
 
-        // Fetch classes from classes API and keep only those for this teacher
+        // Fetch classes from classes API
         const classesRes = await axios.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/classes/`
         );
         const allClasses = classesRes.data || [];
 
-        const uniqueClasses: TeacherClass[] = allClasses
-          .filter((cls: any) => classIds.includes(cls.id))
-          .map((cls: any) => ({
+        // Filter classes to only those taught by this teacher
+        const teacherClassesData: TeacherClass[] = allClasses
+          .filter((cls: ClassInfo) => classIds.includes(cls.id))
+          .map((cls: ClassInfo) => ({
+            class_id: cls.id,
             class_name: cls.class_name,
             section: cls.sec || "N/A",
           }));
 
-        setTeacherClasses(uniqueClasses);
-
-        // Fetch student_attendance records (we will derive "leave" entries from these)
-        const attendanceResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/student_attendance/`
-        );
-
-        // Create teacher classes set for filtering
-        const teacherClassesSet = new Set(
-          uniqueClasses.map((cls: TeacherClass) => `${cls.class_name}-${cls.section}`)
-        );
-
-        // Fetch all students first to avoid 404 errors
-        const studentsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`
-        );
-        
-        // Create a map of students by email for quick lookup
-        const studentsMap = new Map();
-        studentsResponse.data.forEach((student: any) => {
-          studentsMap.set(student.email, student);
-        });
-
-        // Enhance attendance rows with student information and filter to this teacher's classes
-        const enhancedLeaves: LeaveApplication[] = [];
-        
-        for (const att of attendanceResponse.data) {
-          try {
-            // Only consider rows belonging to this teacher
-            if (att.teacher && att.teacher !== teacherEmail) {
-              continue;
-            }
-
-            // Only consider absences (treat them as leave-like entries)
-            if (!att.status || att.status.toLowerCase() !== "absent") {
-              continue;
-            }
-
-            const studentEmail = att.student;
-            if (!studentEmail) {
-              continue;
-            }
-
-            // Look up student information from the students map
-            const studentData = studentsMap.get(studentEmail);
-            
-            if (!studentData) {
-              // Try to create a basic leave entry with available information
-              const basicLeave: LeaveApplication = {
-                id: att.id,
-                applicant: studentEmail,
-                applicant_email: studentEmail,
-                approved_by_email: null,
-                leave_type: att.subject_name || "Attendance - Absent",
-                start_date: att.date,
-                end_date: att.date,
-                reason: "Marked absent in attendance",
-                status: att.status,
-                created_at: att.created_time,
-                updated_at: att.created_time,
-                student_name: att.student_name || studentEmail,
-                class_name: att.class_name || "Unknown",
-                section: att.section || "Unknown",
-                applied_date: att.created_time,
-                teacher_remarks: "",
-              };
-              // still continue to class filter below
-              // no "continue" here so we can still check class match
-            }
-            
-            // Enhance attendance row with student information, mapping into LeaveApplication shape
-            const enhancedLeave: LeaveApplication = {
-              id: att.id,
-              applicant: studentEmail,
-              applicant_email: studentEmail,
-              approved_by_email: null,
-              leave_type: att.subject_name || "Attendance - Absent",
-              start_date: att.date,
-              end_date: att.date,
-              reason: "Marked absent in attendance",
-              status: att.status,
-              created_at: att.created_time,
-              updated_at: att.created_time,
-              student_name:
-                att.student_name ||
-                studentData?.fullname ||
-                studentData?.name ||
-                studentEmail,
-              class_name: att.class_name || studentData?.class_name || studentData?.class,
-              section: att.section || studentData?.section || "N/A",
-              applied_date: att.created_time,
-              teacher_remarks: "",
-            };
-
-            // Check if this student is in teacher's classes
-            const leaveClassKey = `${enhancedLeave.class_name}-${enhancedLeave.section}`;
-            // Also try with "Grade" prefix for compatibility
-            const gradeClassKey = `Grade ${enhancedLeave.class_name}-${enhancedLeave.section}`;
-            
-            const matches = teacherClassesSet.has(leaveClassKey) || teacherClassesSet.has(gradeClassKey);
-            
-            if (matches) {
-              enhancedLeaves.push(enhancedLeave);
-            }
-          } catch (error) {
-            console.error(`❌ Error processing attendance row for student: ${att?.student}`, error);
-            // Skip this leave if we can't process it
-          }
-        }
-
-        setLeaves(enhancedLeaves);
-
+        // setClasses(allClasses); // Not currently used
+        setTeacherClasses(teacherClassesData);
       } catch (error) {
         console.error("❌ Error fetching teacher data:", error);
-        setError("Failed to fetch leave applications. Please try again.");
+        setError("Failed to fetch class data. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -221,84 +116,71 @@ const TeachersStudentLeavePage = () => {
     fetchTeacherData();
   }, []);
 
-  // Handle leave action (approve/reject)
-  const handleLeaveAction = async (action: "approve" | "reject") => {
-    if (!selectedLeave) return;
+  // Fetch students and leaves when a class is selected
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!selectedClass) {
+        // Clear data when no class is selected
+        // setStudents([]); // Not currently used
+        setLeaves([]);
+        return;
+      }
 
-    try {
-      setActionLoading(true);
-      
-      const token = localStorage.getItem("accessToken");
-      const updateData = {
-        status: action === "approve" ? "Approved" : "Rejected",
-        teacher_remarks: remarks
-      };
+      try {
+        setLoading(true);
 
-      await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/leaves/${selectedLeave.id}/`,
-        updateData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+        // Fetch students from students API filtered by class_id
+        const studentsResponse = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`
+        );
 
-      // Update local state
-      setLeaves(prevLeaves =>
-        prevLeaves.map(leave =>
-          leave.id === selectedLeave.id
-            ? {
-                ...leave,
-                status: action === "approve" ? "Approved" : "Rejected",
-                teacher_remarks: remarks
-              }
-            : leave
-        )
-      );
+        const classStudents = studentsResponse.data.filter(
+          (student: Student) => student.class_id === selectedClass
+        );
 
-      setShowActionModal(false);
-      setRemarks("");
-      setSelectedLeave(null);
+        // setStudents(classStudents); // Not currently used
 
-    } catch (error) {
-      console.error("❌ Error updating leave application:", error);
-      setError("Failed to update leave application. Please try again.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+        // Fetch leaves from leaves API
+        const leavesResponse = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/leaves/`
+        );
 
-  // Filter leaves based on filters
-  const filteredLeaves = leaves.filter(leave => {
-    const matchesStatus = filters.status === "all" || leave.status === filters.status;
-    const matchesClass = filters.class === "all" || leave.class_name === filters.class;
-    const matchesSearch = (leave.student_name?.toLowerCase() || "").includes(filters.search.toLowerCase()) ||
-                         (leave.leave_type?.toLowerCase() || "").includes(filters.search.toLowerCase());
-    
-    return matchesStatus && matchesClass && matchesSearch;
-  });
+        // Filter leaves to only those from students in this class
+        const classStudentEmails = new Set(classStudents.map((s: Student) => s.email));
+        const classLeaves = leavesResponse.data.filter(
+          (leave: LeaveApplication) => classStudentEmails.has(leave.applicant)
+        );
 
-  // Statistics (map API status values to display values)
-  const stats = {
-    total: leaves.length,
-    pending: leaves.filter(leave => leave.status?.toLowerCase() === "pending").length,
-    approved: leaves.filter(leave => leave.status?.toLowerCase() === "approved").length,
-    rejected: leaves.filter(leave => leave.status?.toLowerCase() === "rejected").length,
-  };
+        // Enhance leaves with student names
+        const enhancedLeaves = classLeaves.map((leave: LeaveApplication) => {
+          const student = classStudents.find((s: Student) => s.email === leave.applicant);
+          return {
+            ...leave,
+            student_name: student ? student.fullname : leave.applicant
+          };
+        });
 
-  // Get unique classes for filter
-  const uniqueClasses = Array.from(new Set(leaves.map(leave => leave.class_name).filter(Boolean)));
+        setLeaves(enhancedLeaves);
+        setLoading(false);
+      } catch (error) {
+        console.error("❌ Error fetching data:", error);
+        setError("Failed to fetch leave data. Please try again.");
+        setLoading(false);
+      }
+    };
 
-  if (loading) {
+    fetchData();
+  }, [selectedClass]);
+
+  if (loading && teacherClasses.length === 0) {
     return (
       <DashboardLayout role="teachers">
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-center min-h-[400px]">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading leave applications...</p>
+                <p className="text-gray-600">Loading classes...</p>
               </div>
             </div>
           </div>
@@ -309,26 +191,27 @@ const TeachersStudentLeavePage = () => {
 
   return (
     <DashboardLayout role="teachers">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6">
+      <div className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
           <div className="mb-6 sm:mb-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
-              <div className="text-center md:text-left">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">My Classes - Student Leave Management</h1>
-                <p className="text-gray-600 text-sm sm:text-base">Review and manage leave applications from students in your classes</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="text-center sm:text-left">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Student Leave Applications</h1>
+                <p className="text-gray-600 text-sm sm:text-base">Manage leave applications from students in your classes</p>
               </div>
-              <div className="w-full md:w-auto">
+
+              <div className="w-full sm:w-auto">
                 <div className="bg-white rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 border border-gray-200">
                   <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="bg-blue-100 p-2 sm:p-3 rounded-full">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <div className="bg-blue-100 p-2 sm:p-3 rounded-full flex-shrink-0">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Leave Coordinator</h3>
-                      <p className="text-xs sm:text-sm text-gray-600">{stats.pending} pending applications</p>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">Leave Management</h3>
+                      <p className="text-xs sm:text-sm text-gray-600">{leaves.length} applications</p>
                     </div>
                   </div>
                 </div>
@@ -336,350 +219,125 @@ const TeachersStudentLeavePage = () => {
             </div>
           </div>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Applications</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{stats.total}</p>
-                </div>
-                <div className="bg-blue-100 p-2 sm:p-3 rounded-full">
-                  <svg className="w-4 w-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Pending Review</p>
-                  <p className="text-xl sm:text-2xl font-bold text-orange-600 mt-1">{stats.pending}</p>
-                </div>
-                <div className="bg-orange-100 p-2 sm:p-3 rounded-full">
-                  <svg className="w-4 w-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Approved</p>
-                  <p className="text-xl sm:text-2xl font-bold text-green-600 mt-1">{stats.approved}</p>
-                </div>
-                <div className="bg-green-100 p-2 sm:p-3 rounded-full">
-                  <svg className="w-4 w-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Rejected</p>
-                  <p className="text-xl sm:text-2xl font-bold text-red-600 mt-1">{stats.rejected}</p>
-                </div>
-                <div className="bg-red-100 p-2 sm:p-3 rounded-full">
-                  <svg className="w-4 w-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Filters Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-              {/* Search Filter */}
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Search</label>
-                <input
-                  type="text"
-                  placeholder="Search by student or leave type..."
-                  value={filters.search}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-              </div>
-
-              {/* Status Filter */}
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Status</label>
+          {/* Class Selector */}
+          {teacherClasses.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Class</label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <select
-                  value={filters.status}
-                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  value={selectedClass ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSelectedClass(v === "" ? null : Number(v));
+                  }}
+                  className="w-full sm:w-1/2 md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  aria-label="Filter by class"
                 >
-                  <option value="all">All Status</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
-              </div>
-
-              {/* Class Filter */}
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Class</label>
-                <select
-                  value={filters.class}
-                  onChange={(e) => setFilters(prev => ({ ...prev, class: e.target.value }))}
-                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="all">All Classes</option>
-                  {uniqueClasses.map(className => (
-                    <option key={className} value={className}>{className}</option>
+                  <option value="">All Classes</option>
+                  {teacherClasses.map((cls) => (
+                    <option key={cls.class_id} value={cls.class_id}>
+                      {cls.class_name} - {cls.section}
+                    </option>
                   ))}
                 </select>
+
+                {/* small helper text on the right on larger screens */}
+                <div className="text-xs text-gray-500 sm:ml-2">
+                  {selectedClass ? "Showing selected class only" : "Showing applications across all classes"}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Leave Applications Cards Grid */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* Leaves View */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Leave Applications</h2>
               <p className="text-gray-600 text-xs sm:text-sm mt-1">
-                Showing {filteredLeaves.length} of {leaves.length} applications
+                {selectedClass 
+                  ? `${leaves.length} applications from selected class` 
+                  : `${leaves.length} total applications across all your classes`}
               </p>
             </div>
 
-            {filteredLeaves.length > 0 ? (
+            {leaves.length > 0 ? (
               <div className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {filteredLeaves.map((leave) => (
+                {/* Responsive grid: 1 col mobile, 2 sm, 3 md+, 4 xl */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {leaves.map((leave) => (
                     <div
                       key={leave.id}
-                      className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-all duration-200 group"
+                      className="bg-gray-50 rounded-lg border border-gray-200 p-4 flex flex-col justify-between min-h-[150px]"
                     >
-                      {/* Student Info Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 text-base sm:text-lg mb-1 line-clamp-1">
-                            {leave.student_name || 'N/A'}
-                          </h3>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                              {leave.class_name || 'N/A'}
-                            </span>
-                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                              {leave.section || 'N/A'}
-                            </span>
-                          </div>
+                      <div className="flex items-start justify-between mb-3 gap-3">
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">{leave.student_name || leave.applicant}</h3>
+                          <p className="text-xs sm:text-sm text-gray-600 truncate">{leave.applicant}</p>
                         </div>
-                        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
-                          leave.status?.toLowerCase() === 'approved' 
-                            ? 'bg-green-100 text-green-800' 
-                            : leave.status?.toLowerCase() === 'rejected'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {leave.status || 'Pending'}
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${
+                            leave.status === "Approved"
+                              ? "bg-green-100 text-green-800"
+                              : leave.status === "Rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                          aria-hidden
+                        >
+                          {leave.status || "Pending"}
                         </span>
                       </div>
 
-                      {/* Leave Details */}
-                      <div className="space-y-3 mb-4">
-                        <div>
-                          <p className="text-xs font-medium text-gray-500">Leave Type</p>
-                          <p className="text-sm font-semibold text-gray-900">{leave.leave_type || 'N/A'}</p>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                          <span className="text-gray-600 text-xs sm:text-sm">Type:</span>
+                          <span className="font-medium text-sm">{leave.leave_type || "N/A"}</span>
                         </div>
-                        
-                        <div>
-                          <p className="text-xs font-medium text-gray-500">Date Range</p>
-                          <p className="text-sm text-gray-900">
-                            {leave.start_date && leave.end_date 
-                              ? `${new Date(leave.start_date).toLocaleDateString()} - ${new Date(leave.end_date).toLocaleDateString()}`
-                              : 'N/A'
-                            }
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {leave.start_date && leave.end_date 
-                              ? `${Math.ceil((new Date(leave.end_date).getTime() - new Date(leave.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1} days`
-                              : 'N/A'
-                            }
-                          </p>
+
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                          <span className="text-gray-600 text-xs sm:text-sm">Dates:</span>
+                          <span className="font-medium text-sm break-words">
+                            {leave.start_date} to {leave.end_date}
+                          </span>
                         </div>
 
                         <div>
-                          <p className="text-xs font-medium text-gray-500">Applied Date</p>
-                          <p className="text-sm text-gray-900">
-                            {leave.applied_date ? new Date(leave.applied_date).toLocaleDateString() : 'N/A'}
+                          <span className="text-gray-600 text-xs sm:text-sm">Reason:</span>
+                          <p className="mt-1 text-gray-900 text-sm overflow-hidden" style={{ wordBreak: "break-word" }}>
+                            {leave.reason || "No reason provided"}
                           </p>
                         </div>
-
-                        <div>
-                          <p className="text-xs font-medium text-gray-500">Reason</p>
-                          <p className="text-sm text-gray-900 line-clamp-2 mt-1 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                            {leave.reason || 'No reason provided'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Action Button */}
-                      <div className="flex justify-end pt-3 border-t border-gray-100">
-                        <button
-                          onClick={() => {
-                            setSelectedLeave(leave);
-                            setShowActionModal(true);
-                          }}
-                          disabled={leave.status !== 'Pending'}
-                          className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                            leave.status !== 'Pending'
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : 'bg-blue-600 text-white hover:bg-blue-700'
-                          }`}
-                        >
-                          Review
-                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : (
+            ) : loading ? (
               <div className="text-center py-8 sm:py-12">
-                <svg className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading leave applications...</p>
+              </div>
+            ) : (
+              <div className="text-center py-8 sm:py-12 px-4">
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <h3 className="mt-2 text-sm sm:text-base font-medium text-gray-900">No leave applications found</h3>
-                <p className="mt-1 text-xs sm:text-sm text-gray-500">
-                  {filters.status !== 'all' || filters.class !== 'all' || filters.search !== '' 
-                    ? 'Try adjusting your filters' 
-                    : 'No leave applications have been submitted yet.'}
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No leave applications</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {selectedClass 
+                    ? "No students in this class have submitted leave applications." 
+                    : "No leave applications found across your classes."}
                 </p>
               </div>
             )}
           </div>
         </div>
-
-        {/* Action Modal */}
-        {showActionModal && selectedLeave && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
-            <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-xl sm:text-2xl font-bold">Review Leave Application</h2>
-                    <p className="text-blue-100 text-sm sm:text-base">Take action on this leave request</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowActionModal(false);
-                      setRemarks("");
-                      setSelectedLeave(null);
-                    }}
-                    className="text-white hover:text-blue-200 transition-colors flex-shrink-0 ml-2"
-                  >
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                {/* Student Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-gray-500">Student Name</label>
-                    <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedLeave.student_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs sm:text-sm font-medium text-gray-500">Class & Section</label>
-                    <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedLeave.class_name || 'N/A'} • {selectedLeave.section || 'N/A'}</p>
-                  </div>
-                </div>
-
-                {/* Leave Details */}
-                <div className="border-t border-b border-gray-200 py-3 sm:py-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium text-gray-500">Leave Type</label>
-                      <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedLeave.leave_type || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs sm:text-sm font-medium text-gray-500">Duration</label>
-                      <p className="text-base sm:text-lg font-semibold text-gray-900">
-                        {selectedLeave.start_date && selectedLeave.end_date 
-                          ? `${Math.ceil((new Date(selectedLeave.end_date).getTime() - new Date(selectedLeave.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1} days`
-                          : 'N/A'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-2 sm:mt-3">
-                    <label className="text-xs sm:text-sm font-medium text-gray-500">Date Range</label>
-                    <p className="text-base sm:text-lg font-semibold text-gray-900">
-                      {selectedLeave.start_date && selectedLeave.end_date 
-                        ? `${new Date(selectedLeave.start_date).toLocaleDateString()} - ${new Date(selectedLeave.end_date).toLocaleDateString()}`
-                        : 'N/A'
-                      }
-                    </p>
-                  </div>
-                </div>
-
-                {/* Reason */}
-                <div>
-                  <label className="text-xs sm:text-sm font-medium text-gray-500">Reason for Leave</label>
-                  <p className="text-gray-900 mt-2 bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200 text-sm sm:text-base">
-                    {selectedLeave.reason || 'No reason provided'}
-                  </p>
-                </div>
-
-                {/* Teacher Remarks */}
-                <div>
-                  <label className="text-xs sm:text-sm font-medium text-gray-500 mb-2 block">
-                    Your Remarks {selectedLeave.teacher_remarks && `(Previous: "${selectedLeave.teacher_remarks}")`}
-                  </label>
-                  <textarea
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    placeholder="Enter your remarks or feedback for the student..."
-                    rows={3}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm sm:text-base"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="border-t border-gray-200 p-4 sm:p-6 bg-gray-50 rounded-b-xl sm:rounded-b-2xl">
-                <div className="flex flex-col xs:flex-row justify-end gap-2 sm:gap-3">
-                  <button
-                    onClick={() => setShowActionModal(false)}
-                    className="px-4 sm:px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base order-2 xs:order-1"
-                    disabled={actionLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleLeaveAction("reject")}
-                    disabled={actionLoading}
-                    className="px-4 sm:px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 text-sm sm:text-base order-3 xs:order-2"
-                  >
-                    {actionLoading ? "Processing..." : "Reject"}
-                  </button>
-                  <button
-                    onClick={() => handleLeaveAction("approve")}
-                    disabled={actionLoading}
-                    className="px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm sm:text-base order-1 xs:order-3"
-                  >
-                    {actionLoading ? "Processing..." : "Approve"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );

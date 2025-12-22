@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import axios from "axios";
 import { 
   User, 
@@ -48,7 +49,7 @@ export default function Admin_ProfilePage() {
             const userInfo = JSON.parse(userInfoRaw);
             if (userInfo?.email) email = userInfo.email;
           }
-        } catch (err) {
+        } catch {
           // Ignore parse error, fallback to empty email
         }
         if (!email) {
@@ -56,7 +57,7 @@ export default function Admin_ProfilePage() {
           setIsLoading(false);
           return;
         }
-        const response = await fetch(`https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`);
         if (!response.ok) throw new Error("Failed to fetch admin data");
         const data = await response.json();
         // Format joinDate as YYYY-MM-DD if possible
@@ -129,7 +130,7 @@ export default function Admin_ProfilePage() {
           const userInfo = JSON.parse(userInfoRaw);
           if (userInfo?.email) email = userInfo.email;
         }
-      } catch (err) {
+      } catch {
         // Ignore parse error
       }
       
@@ -140,11 +141,11 @@ export default function Admin_ProfilePage() {
       const formDataPatch = new FormData();
       formDataPatch.append("profile_picture", file);
       
-      console.log("Sending PATCH request with FormData to:", `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
+      console.log("Sending PATCH request with FormData to:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`);
       
       // ✅ CRITICAL FIX: Use axios and DO NOT SET Content-Type manually
       const res = await axios.patch(
-        `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`,
         formDataPatch
       );
       
@@ -165,7 +166,7 @@ export default function Admin_ProfilePage() {
         }
       });
       window.dispatchEvent(event);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error uploading profile picture:", error);
       if (error.response) {
         console.error("Response data:", error.response.data);
@@ -196,7 +197,7 @@ export default function Admin_ProfilePage() {
           const userInfo = JSON.parse(userInfoRaw);
           if (userInfo?.email) email = userInfo.email;
         }
-      } catch (err) {
+      } catch {
         // Ignore parse error
       }
       
@@ -227,11 +228,11 @@ export default function Admin_ProfilePage() {
         formDataToSend.append("profile_picture", file);
       }
 
-      console.log("Sending PATCH request with FormData to:", `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`);
+      console.log("Sending PATCH request with FormData to:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`);
       
       // ✅ CRITICAL FIX: Use axios and DO NOT SET Content-Type manually
       const res = await axios.patch(
-        `https://school.globaltechsoftwaresolutions.cloud/api/admins/${email}/`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`,
         formDataToSend
       );
       
@@ -249,7 +250,7 @@ export default function Admin_ProfilePage() {
       
       // Auto-close popup after 3 seconds
       setTimeout(() => setShowSuccessPopup(false), 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving profile:", error);
       if (error.response) {
         console.error("Response data:", error.response.data);
@@ -353,9 +354,11 @@ export default function Admin_ProfilePage() {
                         {/* Profile Picture with clickable overlay and hidden input */}
                         <div className="flex justify-center mb-6 flex-col items-center">
                           <label className="relative cursor-pointer group">
-                            <img
+                            <Image
                               src={formData.profile_picture || "/default-avatar.png"}
                               alt="Profile Picture"
+                              width={96}
+                              height={96}
                               className="rounded-full w-24 h-24 object-cover border-2 border-gray-200 group-hover:opacity-80 transition"
                             />
                             {isEditing && (

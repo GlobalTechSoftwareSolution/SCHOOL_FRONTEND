@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
@@ -13,7 +14,6 @@ interface Student {
   student_id: string;
   class_id: number;
   profile_picture?: string | null;
-  [key: string]: any;
 }
 
 interface Teacher {
@@ -21,7 +21,6 @@ interface Teacher {
   email: string;
   fullname: string;
   profile_picture?: string | null;
-  [key: string]: any;
 }
 
 interface Principal {
@@ -29,7 +28,6 @@ interface Principal {
   email: string;
   fullname: string;
   profile_picture?: string | null;
-  [key: string]: any;
 }
 
 interface Admin {
@@ -37,7 +35,6 @@ interface Admin {
   email: string;
   fullname: string;
   profile_picture?: string | null;
-  [key: string]: any;
 }
 
 interface ClassData {
@@ -46,7 +43,6 @@ interface ClassData {
   sec?: string;
   class_id?: number;
   class_teacher_name?: string;
-  [key: string]: any;
 }
 
 interface AttendanceRecord {
@@ -59,7 +55,39 @@ interface AttendanceRecord {
   check_out?: string;
   role?: string;
   profile_picture?: string | null;
-  [key: string]: any;
+}
+
+interface StudentAttendanceRecord {
+  id: number;
+  student: string;
+  student_name?: string;
+  class_id?: number;
+  class_name?: string;
+  section?: string;
+  date: string;
+  status: string;
+  created_time?: string;
+  check_in?: string;
+  check_out?: string;
+}
+
+interface MergedAttendanceRecord {
+  id: number;
+  fullname?: string;
+  email?: string;
+  student_id?: string;
+  class_id?: number;
+  class_name?: string;
+  section?: string;
+  class_teacher?: string;
+  date: string;
+  check_in?: string;
+  check_out?: string;
+  status: string;
+  profile_picture?: string | null;
+  user_name?: string;
+  user_email?: string;
+  role?: string;
 }
 
 export default function ClassWiseAttendance() {
@@ -69,28 +97,26 @@ export default function ClassWiseAttendance() {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]); // for teachers/principal/admin
-  const [studentAttendance, setStudentAttendance] = useState<any[]>([]); // from /student_attendance/
+  const [studentAttendance, setStudentAttendance] = useState<StudentAttendanceRecord[]>([]); // from /student_attendance/
   const [selectedClassId, setSelectedClassId] = useState("");
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState("students");
-  const [adminEmail, setAdminEmail] = useState("");
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const t = new Date();
-    return t.toISOString().slice(0, 10); // YYYY-MM-DD
-  });
-
-  // READ ADMIN EMAIL FROM LOCALSTORAGE
-  useEffect(() => {
+  const [adminEmail] = useState(() => {
     try {
       const userData = localStorage.getItem("userData");
       if (userData) {
         const parsed = JSON.parse(userData);
-        setAdminEmail(parsed.email);
+        return parsed.email || "";
       }
-    } catch (err) {
+    } catch {
       // silently ignore localStorage errors
     }
-  }, []);
+    return "";
+  });
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const t = new Date();
+    return t.toISOString().slice(0, 10); // YYYY-MM-DD
+  });
 
   // FETCH ALL APIs
   useEffect(() => {
@@ -105,14 +131,14 @@ export default function ClassWiseAttendance() {
         try {
           const p = await axios.get(`${API}/principal/`);
           setPrincipal(Array.isArray(p.data) ? p.data[0] : p.data);
-        } catch (err) {
+        } catch {
           // principal API may legitimately be missing; ignore
         }
 
         try {
           const ad = await axios.get(`${API}/admin/`);
           setAdmin(Array.isArray(ad.data) ? ad.data[0] : ad.data);
-        } catch (err) {
+        } catch {
           // admin API may legitimately be missing; ignore
         }
 
@@ -126,7 +152,7 @@ export default function ClassWiseAttendance() {
         setAttendance(a.data);
 
         setLoading(false);
-      } catch (err) {
+      } catch {
         setLoading(false);
       }
     };
@@ -137,7 +163,7 @@ export default function ClassWiseAttendance() {
   // MERGE STUDENTS + CLASS + ATTENDANCE WITH PROFILE PICTURES (filtered by selectedDate)
   const getMergedAttendance = () => {
     const merged = studentAttendance
-      .map((att: any) => {
+      .map((att: StudentAttendanceRecord) => {
         // student_attendance: student (email), student_name, class_id, class_name, section, date, status, created_time
         const student = students.find((s) => s.email === att.student);
 
@@ -466,6 +492,25 @@ export default function ClassWiseAttendance() {
             min-width: 640px;
           }
         }
+
+        /* Enhanced mobile styles for card layout */
+        @media (max-width: 639px) {
+          .admin-attendance-page .content-area {
+            border-radius: 0.75rem;
+          }
+          
+          .admin-attendance-page .content-area > div {
+            padding: 1rem;
+          }
+          
+          .admin-attendance-page h2 {
+            font-size: 1.25rem;
+          }
+          
+          .admin-attendance-page p {
+            font-size: 0.875rem;
+          }
+        }
       `}</style>
     </DashboardLayout>
   );
@@ -473,7 +518,7 @@ export default function ClassWiseAttendance() {
 
 /* TABLE COMPONENT */
 interface AttendanceTableProps {
-  data: any[];
+  data: MergedAttendanceRecord[];
   includeClass: boolean;
 }
 
@@ -496,6 +541,24 @@ function AttendanceTable({ data, includeClass }: AttendanceTableProps) {
     );
   };
 
+  const getStatusBadgeMobile = (status: string) => {
+    const statusConfig: Record<string, { color: string; icon: string }> = {
+      Present: { color: "bg-green-100 text-green-800", icon: "✅" },
+      Absent: { color: "bg-red-100 text-red-800", icon: "❌" },
+      Late: { color: "bg-yellow-100 text-yellow-800", icon: "⏰" },
+      Halfday: { color: "bg-orange-100 text-orange-800", icon: "🕑" },
+    };
+
+    const config = statusConfig[status] || { color: "bg-gray-100 text-gray-800", icon: "❓" };
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+        <span>{config.icon}</span>
+        {status}
+      </span>
+    );
+  };
+
   const getInitials = (name: string) => {
     return (name || "?")
       .split(" ")
@@ -505,91 +568,154 @@ function AttendanceTable({ data, includeClass }: AttendanceTableProps) {
   };
 
   return (
-    <div className="attendance-table overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-xs sm:text-sm">
-        <thead className="bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Photo
-            </th>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Name
-            </th>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Email
-            </th>
-            {includeClass && (
+    <>
+      {/* Table view for larger screens */}
+      <div className="hidden sm:block attendance-table overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full text-xs sm:text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
               <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Class
+                Photo
               </th>
-            )}
-            {includeClass && (
               <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Section
+                Name
               </th>
-            )}
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Status
-            </th>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Check In
-            </th>
-            <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Check Out
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {data.map((item) => (
-            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Email
+              </th>
+              {includeClass && (
+                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Class
+                </th>
+              )}
+              {includeClass && (
+                <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Section
+                </th>
+              )}
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Check In
+              </th>
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[0.65rem] sm:text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Check Out
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {data.map((item) => (
+              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  {item.profile_picture ? (
+                    <Image
+                      src={item.profile_picture}
+                      alt={item.user_name || item.fullname || ""}
+                      width={40}
+                      height={40}
+                      className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                    />
+                  ) : null}
+                  {!item.profile_picture && (
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                      {getInitials(item.user_name || item.fullname || "?")}
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <div className="font-medium text-gray-900">{item.user_name || item.fullname}</div>
+                </td>
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600 max-w-[220px] sm:max-w-none break-words">
+                  {item.user_email || item.email}
+                </td>
+                {includeClass && (
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600">
+                    {item.class_name}
+                  </td>
+                )}
+                {includeClass && (
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600">
+                    {item.section}
+                  </td>
+                )}
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">{getStatusBadge(item.status)}</td>
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <span className={`font-medium ${item.check_in ? "text-green-600" : "text-gray-400"}`}>
+                    {item.check_in || "Not checked in"}
+                  </span>
+                </td>
+                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <span className={`font-medium ${item.check_out ? "text-blue-600" : "text-gray-400"}`}>
+                    {item.check_out || "Not checked out"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Card view for small screens */}
+      <div className="sm:hidden grid grid-cols-1 gap-4">
+        {data.map((item) => (
+          <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
                 {item.profile_picture ? (
-                  <img
+                  <Image
                     src={item.profile_picture}
-                    alt={item.user_name || item.fullname}
+                    alt={item.user_name || item.fullname || ""}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                    onError={(e) => {
-                      (e.currentTarget).style.display = "none";
-                    }}
                   />
-                ) : null}
-                {!item.profile_picture && (
-                  <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                     {getInitials(item.user_name || item.fullname || "?")}
                   </div>
                 )}
-              </td>
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                <div className="font-medium text-gray-900">{item.user_name || item.fullname}</div>
-              </td>
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600 max-w-[220px] sm:max-w-none break-words">
-                {item.user_email || item.email}
-              </td>
+                <div>
+                  <h3 className="font-medium text-gray-900 text-sm">{item.user_name || item.fullname}</h3>
+                  <p className="text-gray-600 text-xs truncate max-w-[160px]">
+                    {item.user_email || item.email}
+                  </p>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                {getStatusBadgeMobile(item.status)}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
               {includeClass && (
-                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600">
-                  {item.class_name}
-                </td>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500">Class:</span>
+                  <span className="font-medium text-gray-900">{item.class_name || "N/A"}</span>
+                </div>
               )}
               {includeClass && (
-                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-gray-600">
-                  {item.section}
-                </td>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500">Section:</span>
+                  <span className="font-medium text-gray-900">{item.section || "N/A"}</span>
+                </div>
               )}
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">{getStatusBadge(item.status)}</td>
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">Check In:</span>
                 <span className={`font-medium ${item.check_in ? "text-green-600" : "text-gray-400"}`}>
                   {item.check_in || "Not checked in"}
                 </span>
-              </td>
-              <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">Check Out:</span>
                 <span className={`font-medium ${item.check_out ? "text-blue-600" : "text-gray-400"}`}>
                   {item.check_out || "Not checked out"}
                 </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

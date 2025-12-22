@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface Report {
   id: number;
@@ -78,7 +78,7 @@ const StudentReportsPage = () => {
 
           const normalizedEmails = possibleEmails
             .filter(Boolean)
-            .map((e: any) => e.toString().trim().toLowerCase());
+            .map((e: unknown) => String(e).trim().toLowerCase());
 
           const matches = normalizedEmails.includes(email);
 
@@ -103,7 +103,7 @@ const StudentReportsPage = () => {
         }
 
         setReports(studentReports);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("❌ Error fetching reports:", err);
         setError("Failed to fetch reports. Please try again later.");
       } finally {

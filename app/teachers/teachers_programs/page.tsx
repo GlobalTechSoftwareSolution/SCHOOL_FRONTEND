@@ -6,20 +6,14 @@ import {
   Calendar,
   Clock,
   Users,
-  MapPin,
   BookOpen,
   ChevronRight,
   Search,
-  Download,
-  Share2,
-  Bookmark,
   ArrowLeft,
   Target,
   Award,
   BarChart3,
   FileText,
-  PlayCircle,
-  CheckCircle,
   XCircle,
   Mail,
   Phone
@@ -235,7 +229,7 @@ const TeachersProgramsPage = () => {
   };
 
   // Get status options based on available programs
-  const statuses = ['all', 'active', 'upcoming', 'completed'];
+  // const statuses = ['all', 'active', 'upcoming', 'completed']; // Not currently used
 
   if (loading) {
     return (
@@ -275,7 +269,61 @@ const TeachersProgramsPage = () => {
 
   return (
     <DashboardLayout role="teachers">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-2 sm:p-4 md:p-6">
+        <style jsx>{`
+          @media (max-width: 640px) {
+            .mobile-card, .card-mobile {
+              padding: 1rem !important;
+              border-radius: 0.75rem !important;
+              margin-bottom: 1rem !important;
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            }
+            
+            .mobile-grid, .grid-mobile {
+              grid-template-columns: 1fr !important;
+              gap: 1rem !important;
+            }
+            
+            .mobile-header, .header-mobile {
+              flex-direction: column !important;
+              text-align: center !important;
+              gap: 1rem !important;
+            }
+            
+            .mobile-filters, .filters-mobile {
+              flex-direction: column !important;
+              gap: 1rem !important;
+            }
+            
+            .mobile-stats, .stats-mobile {
+              grid-template-columns: 1fr 1fr !important;
+              gap: 0.75rem !important;
+            }
+            
+            .mobile-tabs, .tabs-mobile {
+              padding: 1rem !important;
+            }
+            
+            .mobile-tab-button, .tab-button-mobile {
+              padding: 0.75rem !important;
+              font-size: 0.875rem !important;
+            }
+            
+            .mobile-list-item, .list-item-mobile {
+              padding: 1rem !important;
+            }
+            
+            .mobile-search, .search-mobile {
+              padding: 0.75rem !important;
+              font-size: 0.875rem !important;
+            }
+            
+            .mobile-select, .select-mobile {
+              padding: 0.75rem !important;
+              font-size: 0.875rem !important;
+            }
+          }
+        `}</style>
         {/* Header */}
         {!selectedProgram ? (
           <div className="mb-8">
@@ -307,8 +355,8 @@ const TeachersProgramsPage = () => {
         {!selectedProgram && (
           <>
             {/* Filters and Search */}
-            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 mb-8">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
+              <div className="mobile-filters filters-mobile flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex flex-col sm:flex-row gap-4 flex-1">
                   {/* Search */}
                   <div className="relative flex-1 max-w-md">
@@ -318,30 +366,30 @@ const TeachersProgramsPage = () => {
                       placeholder="Search programs..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-12 pr-6 py-3 w-full border border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg shadow-sm transition-all duration-200"
+                      className="mobile-search search-mobile pl-12 pr-6 py-3 w-full border border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg shadow-sm transition-all duration-200"
                     />
                   </div>
-
+                  
                   {/* Status Filter */}
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg shadow-sm transition-all duration-200"
-                  >
-                    <option value="all">All Status</option>
-                    {statuses.filter(status => status !== 'all').map(status => (
-                      <option key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      className="mobile-select select-mobile pl-4 pr-10 py-3 border border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg shadow-sm transition-all duration-200 bg-white appearance-none w-full sm:w-48"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="upcoming">Upcoming</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* View Toggle */}
-                <div className="flex items-center gap-2 bg-gray-100 rounded-2xl p-1">
+                <div className="view-toggle flex items-center gap-2 bg-gray-100 rounded-2xl p-1">
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`p-2 rounded-xl transition-all duration-200 ${
+                    className={`view-toggle-button p-2 rounded-xl transition-all duration-200 ${
                       viewMode === "grid" ? "bg-white shadow-sm" : "text-gray-500"
                     }`}
                   >
@@ -354,7 +402,7 @@ const TeachersProgramsPage = () => {
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`p-2 rounded-xl transition-all duration-200 ${
+                    className={`view-toggle-button p-2 rounded-xl transition-all duration-200 ${
                       viewMode === "list" ? "bg-white shadow-sm" : "text-gray-500"
                     }`}
                   >
@@ -399,12 +447,12 @@ const TeachersProgramsPage = () => {
               </div>
             ) : viewMode === "grid" ? (
               // Grid View
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="mobile-grid grid-mobile grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {filteredPrograms.map((program) => (
                   <div
                     key={program.id}
                     onClick={() => fetchProgramDetails(program.id)}
-                    className="bg-white rounded-3xl shadow-lg border-2 border-gray-100 p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-blue-300 group"
+                    className="mobile-card card-mobile bg-white rounded-2xl sm:rounded-3xl shadow-lg border-2 border-gray-100 p-4 sm:p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-blue-300 group"
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between mb-4">
@@ -497,7 +545,7 @@ const TeachersProgramsPage = () => {
                   <div
                     key={program.id}
                     onClick={() => fetchProgramDetails(program.id)}
-                    className={`p-6 cursor-pointer transition-all duration-200 hover:bg-blue-50 group ${
+                    className={`mobile-list-item list-item-mobile p-4 sm:p-6 cursor-pointer transition-all duration-200 hover:bg-blue-50 group ${
                       index !== filteredPrograms.length - 1 ? 'border-b border-gray-200' : ''
                     }`}
                   >
@@ -567,8 +615,8 @@ const TeachersProgramsPage = () => {
             ) : (
               <>
                 {/* Program Header */}
-                <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                <div className="mobile-card card-mobile bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 p-4 sm:p-8">
+                  <div className="mobile-header header-mobile flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 sm:gap-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-4">
                         <div className={`p-3 rounded-2xl ${
@@ -596,7 +644,7 @@ const TeachersProgramsPage = () => {
                       <p className="text-gray-600 text-lg mb-6 leading-relaxed">{selectedProgram.description}</p>
                       
                       {/* Enhanced Stats Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <div className="mobile-stats stats-mobile grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
                         <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
                           <Calendar className="h-5 w-5 text-blue-600" />
                           <div>
@@ -670,9 +718,9 @@ const TeachersProgramsPage = () => {
                 </div>
 
                 {/* Program Details Tabs */}
-                <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
                   <div className="border-b border-gray-200">
-                    <div className="flex space-x-1 px-8 pt-6 overflow-x-auto">
+                    <div className="mobile-tabs tabs-mobile flex space-x-1 px-2 sm:px-8 pt-4 sm:pt-6 overflow-x-auto">
                       {[
                         { id: "overview", label: "Overview", icon: FileText },
                         { id: "coordinator", label: "Coordinator", icon: Users },
@@ -680,7 +728,7 @@ const TeachersProgramsPage = () => {
                       ].map(({ id, label, icon: Icon }) => (
                         <button
                           key={id}
-                          className={`flex items-center gap-3 py-4 px-6 rounded-t-2xl text-lg font-semibold transition-all duration-200 border-b-2 whitespace-nowrap ${
+                          className={`mobile-tab-button tab-button-mobile flex items-center gap-2 sm:gap-3 py-3 px-3 sm:px-6 rounded-t-xl sm:rounded-t-2xl text-sm sm:text-lg font-semibold transition-all duration-200 border-b-2 whitespace-nowrap ${
                             activeTab === id
                               ? "text-blue-600 border-blue-600 bg-blue-50"
                               : "text-gray-600 border-transparent hover:text-gray-900 hover:bg-gray-50"
@@ -796,7 +844,7 @@ const TeachersProgramsPage = () => {
                             <Users className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
                             <h4 className="text-xl font-semibold text-gray-900 mb-2">No Coordinator Assigned</h4>
                             <p className="text-gray-600">
-                              This program currently doesn't have an assigned coordinator. Please contact the administration for assistance.
+                              This program currently doesn&apos;t have an assigned coordinator. Please contact the administration for assistance.
                             </p>
                           </div>
                         )}

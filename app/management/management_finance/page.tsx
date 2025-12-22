@@ -13,7 +13,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface FeePayment {
   id: number;
@@ -28,6 +28,11 @@ interface FeePayment {
   transaction_id: string;
   status: string;
   remarks: string;
+  // Extended fields added during data processing
+  fee_type?: string;
+  class_name?: string;
+  section?: string;
+  student_full_data?: Student | null;
 }
 
 interface FeeStructure {
@@ -36,16 +41,31 @@ interface FeeStructure {
   amount: string;
 }
 
+interface Student {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  class_id: number;
+  class_name?: string;
+  sec?: string;
+  [key: string]: unknown;
+}
+
+interface Class {
+  id: number;
+  class_name: string;
+  sec: string;
+  [key: string]: unknown;
+}
+
 const ManagementFinance = () => {
   const [payments, setPayments] = useState<FeePayment[]>([]);
-  const [structures, setStructures] = useState<FeeStructure[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [pendingFees, setPendingFees] = useState<any[]>([]);
-  const [paidFees, setPaidFees] = useState<any[]>([]);
+  const [pendingFees, setPendingFees] = useState<FeePayment[]>([]);
+  const [paidFees, setPaidFees] = useState<FeePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState<string>("all");
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedStudent, setSelectedStudent] = useState<FeePayment | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"paid" | "pending">("paid");
 
@@ -93,33 +113,30 @@ const ManagementFinance = () => {
       try {
         setLoading(true);
         const [paymentsRes, structuresRes, studentsRes, classesRes] = await Promise.all([
-          axios.get(`${API_BASE}/fee_payments/`),
-          axios.get(`${API_BASE}/fee_structures/`),
-          axios.get(`${API_BASE}/students/`),
-          axios.get(`${API_BASE}/classes/`),
+          axios.get<FeePayment[]>(`${API_BASE}/fee_payments/`),
+          axios.get<FeeStructure[]>(`${API_BASE}/fee_structures/`),
+          axios.get<Student[]>(`${API_BASE}/students/`),
+          axios.get<Class[]>(`${API_BASE}/classes/`),
         ]);
 
-        const paymentsData = paymentsRes.data;
-        const structuresData = structuresRes.data;
-        const studentsData = studentsRes.data;
-        const classesData = classesRes.data || [];
+        const paymentsData: FeePayment[] = paymentsRes.data;
+        const structuresData: FeeStructure[] = structuresRes.data;
+        const studentsData: Student[] = studentsRes.data;
+        const classesData: Class[] = classesRes.data || [];
 
         setPayments(paymentsData);
-        setStructures(structuresData);
-        setStudents(studentsData);
-        setClasses(classesData);
 
         // Match fee_structure IDs to get fee_type and total amount
         // Also match student email to get class_name and section
-        const mergedData = paymentsData.map((pay: FeePayment) => {
+        const mergedData: FeePayment[] = paymentsData.map((pay: FeePayment) => {
           const structure = structuresData.find(
             (s: FeeStructure) => s.id === pay.fee_structure
           );
           const student = studentsData.find(
-            (s: any) => s.email === pay.student
+            (s: Student) => s.email === pay.student
           );
           const classInfo = student?.class_id
-            ? classesData.find((c: any) => c.id === student.class_id)
+            ? classesData.find((c: Class) => c.id === student.class_id)
             : null;
 
           // Total from fee structure (treat missing/invalid as 0)
@@ -141,25 +158,25 @@ const ManagementFinance = () => {
             class_name: classInfo?.class_name || "Unknown",
             section: classInfo?.sec || "Unknown",
             student_full_data: student || null,
-          };
+          } as FeePayment;
         });
 
         // Calculate totals
         const paidTotal = mergedData
-          .filter((p: any) => p.status === "Paid")
-          .reduce((sum: number, p: any) => sum + parseFloat(p.amount_paid), 0);
+          .filter((p: FeePayment) => p.status === "Paid")
+          .reduce((sum: number, p: FeePayment) => sum + parseFloat(p.amount_paid || "0"), 0);
 
         const pendingTotal = mergedData
-          .filter((p: any) => p.remaining_amount > 0)
-          .reduce((sum: number, p: any) => sum + p.remaining_amount, 0);
+          .filter((p: FeePayment) => p.remaining_amount && parseFloat(p.remaining_amount.toString()) > 0)
+          .reduce((sum: number, p: FeePayment) => sum + (p.remaining_amount ? parseFloat(p.remaining_amount.toString()) : 0), 0);
 
         const transport = mergedData
-          .filter((p: any) => p.fee_type === "Transport")
-          .reduce((sum: number, p: any) => sum + parseFloat(p.amount_paid), 0);
+          .filter((p: FeePayment) => p.fee_type === "Transport")
+          .reduce((sum: number, p: FeePayment) => sum + parseFloat(p.amount_paid || "0"), 0);
 
         setPayments(mergedData);
-        setPaidFees(mergedData.filter((p: any) => p.status === "Paid"));
-        setPendingFees(mergedData.filter((p: any) => p.remaining_amount > 0));
+        setPaidFees(mergedData.filter((p: FeePayment) => p.status === "Paid"));
+        setPendingFees(mergedData.filter((p: FeePayment) => p.remaining_amount && parseFloat(p.remaining_amount.toString()) > 0));
         setTotalPaid(paidTotal);
         setTotalPending(pendingTotal);
         setTransportIncome(transport);
@@ -187,7 +204,7 @@ const ManagementFinance = () => {
   };
 
   // Handle card click
-  const handleCardClick = (student: any) => {
+  const handleCardClick = (student: FeePayment) => {
     setSelectedStudent(student);
     setShowModal(true);
   };
@@ -199,7 +216,7 @@ const ManagementFinance = () => {
   };
 
   // Monthly Chart Data
-  const monthlyData = payments.reduce((acc: any, payment) => {
+  const monthlyData: Record<string, number> = payments.reduce((acc: Record<string, number>, payment: FeePayment) => {
     const month = new Date(payment.payment_date).toLocaleString("default", {
       month: "short",
     });

@@ -1,12 +1,12 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Briefcase, 
+import Image from "next/image";
+import {  User,
+  Mail,
+  Phone,
+  Briefcase,
   Building,
   Calendar,
   Edit3,
@@ -15,52 +15,88 @@ import {
   Shield,
   CheckCircle,
   Clock,
-  Eye,
-  EyeOff,
-  Key,
   Camera
 } from "lucide-react";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`
+
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+      detail?: string;
+    };
+    status?: number;
+  };
+  message?: string;
+}
+
+interface ManagementUser {
+  id?: number;
+  fullname?: string;
+  email?: string;
+  designation?: string;
+  phone?: string;
+  department?: string;
+  address?: string;
+  office_address?: string;
+  qualification?: string;
+  date_of_birth?: string;
+  date_joined?: string;
+  profile_picture?: string;
+  user_details?: {
+    email?: string;
+    role?: string;
+    is_active?: boolean;
+    is_approved?: boolean;
+    created_at?: string;
+  };
+}
+
+interface FormData {
+  fullname: string;
+  email: string;
+  designation: string;
+  phone: string;
+  department: string;
+  address: string;
+  office_address: string;
+  qualification: string;
+  date_of_birth: string;
+  date_joined: string;
+  [key: string]: string | undefined;
+}
 
 const ManagementProfilePage = () => {
-  const [management, setManagement] = useState<any>(null);
-  const [formData, setFormData] = useState<any>({});
+  const [management, setManagement] = useState<ManagementUser | null>(null);
+  const [formData, setFormData] = useState<FormData>({
+    fullname: "",
+    email: "",
+    designation: "",
+    phone: "",
+    department: "",
+    address: "",
+    office_address: "",
+    qualification: "",
+    date_of_birth: "",
+    date_joined: ""
+  });
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: ""
-  });
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  useEffect(() => {
-    const userData = localStorage.getItem("userData");
-    if (userData) {
-      const parsed = JSON.parse(userData);
-      if (parsed.email) {
-        fetchManagementProfile(parsed.email);
-      }
-    }
-  }, []);
-
-  const fetchManagementProfile = async (email: string) => {
+  const fetchManagementProfile = useCallback(async (email: string) => {
     try {
       const res = await axios.get(`${API_BASE}/management/`);
       const allManagers = res.data || [];
 
       const profile = allManagers.find(
-        (m: any) => m.email === email || m.user_details?.email === email
+        (m) => m.email === email || m.user_details?.email === email
       );
 
       if (profile) {
@@ -76,7 +112,10 @@ const ManagementProfilePage = () => {
           phone: profile.phone || "",
           department: profile.department || "",
           address: profile.address || "",
+          office_address: profile.office_address || "",
           qualification: profile.qualification || "",
+          date_of_birth: profile.date_of_birth || "",
+          date_joined: profile.date_joined || "",
           ...profile
         });
       } else {
@@ -88,7 +127,17 @@ const ManagementProfilePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const userData = localStorage.getItem("userData");
+    if (userData) {
+      const parsed = JSON.parse(userData);
+      if (parsed.email) {
+        fetchManagementProfile(parsed.email);
+      }
+    }
+  }, [fetchManagementProfile]);
 
   const showError = (message: string) => {
     setErrorMessage(message);
@@ -148,14 +197,14 @@ const ManagementProfilePage = () => {
 
       // Update management data with new photo URL
       if (response.data?.profile_picture) {
-        setManagement((prev: any) => ({
-          ...prev,
+        setManagement((prev) => ({
+          ...prev!,
           profile_picture: response.data.profile_picture
         }));
         setProfilePhoto(response.data.profile_picture);
         showSuccess();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading photo:', error);
       showError('Failed to upload profile photo');
       // Reset to original photo on error
@@ -191,7 +240,10 @@ const ManagementProfilePage = () => {
         phone: formData.phone,
         department: formData.department,
         address: formData.address,
-        qualification: formData.qualification
+        office_address: formData.office_address,
+        qualification: formData.qualification,
+        date_of_birth: formData.date_of_birth,
+        date_joined: formData.date_joined
       };
 
       // Remove empty fields
@@ -213,29 +265,33 @@ const ManagementProfilePage = () => {
         ...formData,
         ...response.data
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating management profile:", error);
-      if (error.response?.status === 404) {
+      if ((error as ApiError)?.response?.status === 404) {
         try {
-          const email = management.email || management.user_details?.email;
+          const email = management?.email || management?.user_details?.email;
           const updateData = {
             fullname: formData.fullname,
             designation: formData.designation,
             phone: formData.phone,
             department: formData.department,
             address: formData.address,
+            office_address: formData.office_address,
             qualification: formData.qualification,
+            date_of_birth: formData.date_of_birth,
+            date_joined: formData.date_joined,
             email: email
           };
           
           const response = await axios.put(
-            `${API_BASE}/management/${encodeURIComponent(email)}/`,
+            `${API_BASE}/management/${encodeURIComponent(email!)}/`,
             updateData
           );
           showSuccess();
           setManagement(response.data);
           setEditing(false);
-        } catch (putError) {
+        } catch (error) {
+          console.error("Profile update error:", error);
           showError("Failed to update profile. Please try again.");
         }
       } else {
@@ -255,7 +311,10 @@ const ManagementProfilePage = () => {
       phone: management?.phone || "",
       department: management?.department || "",
       address: management?.address || "",
+      office_address: management?.office_address || "",
       qualification: management?.qualification || "",
+      date_of_birth: management?.date_of_birth || "",
+      date_joined: management?.date_joined || "",
       ...management
     });
     setEditing(false);
@@ -341,9 +400,11 @@ const ManagementProfilePage = () => {
                     <div className="relative">
                       <div className="w-24 h-24 bg-white/20 rounded-2xl border-4 border-white/30 shadow-lg flex items-center justify-center relative overflow-hidden">
                         {profilePhoto || management?.profile_picture ? (
-                          <img 
-                            src={profilePhoto || management?.profile_picture} 
+                          <Image 
+                            src={profilePhoto || management?.profile_picture || ""} 
                             alt="Profile" 
+                            width={96}
+                            height={96}
                             className="w-full h-full object-cover rounded-2xl"
                           />
                         ) : (
@@ -495,7 +556,7 @@ const ManagementProfilePage = () => {
                           </div>
                         </div>
 
-                        <div>
+                        {/* <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Address
                           </label>
@@ -512,6 +573,48 @@ const ManagementProfilePage = () => {
                                   : "border-gray-300 bg-gray-50"
                               }`}
                               placeholder="Enter your address"
+                            />
+                          </div>
+                        </div> */}
+
+                        {/* Date of Birth Field */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Date of Birth
+                          </label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <input
+                              type="date"
+                              value={formData.date_of_birth || ""}
+                              onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                              disabled={!editing}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
+                                editing 
+                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                  : "border-gray-300 bg-gray-50"
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Date Joined Field */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Date Joined
+                          </label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <input
+                              type="date"
+                              value={formData.date_joined || ""}
+                              onChange={(e) => setFormData({ ...formData, date_joined: e.target.value })}
+                              disabled={!editing}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
+                                editing 
+                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                  : "border-gray-300 bg-gray-50"
+                              }`}
                             />
                           </div>
                         </div>
@@ -548,7 +651,7 @@ const ManagementProfilePage = () => {
                           </div>
                         </div>
 
-                        <div>
+                        {/* <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Department
                           </label>
@@ -567,7 +670,7 @@ const ManagementProfilePage = () => {
                               placeholder="Enter your department"
                             />
                           </div>
-                        </div>
+                        </div> */}
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -586,6 +689,28 @@ const ManagementProfilePage = () => {
                                   : "border-gray-300 bg-gray-50"
                               }`}
                               placeholder="Enter your qualification"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Office Address Field */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Office Address
+                          </label>
+                          <div className="relative">
+                            <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <textarea
+                              value={formData.office_address || ""}
+                              onChange={(e) => setFormData({ ...formData, office_address: e.target.value })}
+                              disabled={!editing}
+                              rows={3}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all resize-none ${
+                                editing 
+                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                  : "border-gray-300 bg-gray-50"
+                              }`}
+                              placeholder="Enter your office address"
                             />
                           </div>
                         </div>
@@ -695,154 +820,7 @@ const ManagementProfilePage = () => {
       {/* Popup Modals */}
       {showSuccessPopup && <SuccessPopup />}
       {showErrorPopup && <ErrorPopup />}
-      {showPasswordModal && <PasswordChangeModal />}
     </DashboardLayout>
-  );
-};
-
-// Password Change Modal Component
-const PasswordChangeModal = () => {
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: ""
-  });
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("New passwords do not match!");
-      return;
-    }
-
-    try {
-      const userData = JSON.parse(localStorage.getItem("userData") || "{}");
-      const email = userData.email || userData.user_details?.email;
-      
-      const response = await axios.patch(`${API_BASE}/management/change-password/`, {
-        email: email,
-        current_password: passwordData.currentPassword,
-        new_password: passwordData.newPassword
-      });
-
-      alert("Password changed successfully!");
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: ""
-      });
-      // Close modal - you'll need to pass this function as props
-    } catch (error: any) {
-      console.error("Error changing password:", error);
-      alert(error.response?.data?.message || "Failed to change password");
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-t-2xl p-6 text-white">
-          <h2 className="text-2xl font-bold">Change Password</h2>
-        </div>
-        
-        <form onSubmit={handlePasswordChange} className="p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrentPassword ? "text" : "password"}
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                >
-                  {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                >
-                  {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 mt-6">
-            <button
-              type="button"
-              onClick={() => {
-                // You'll need to pass this function as props or use a global state
-                setPasswordData({
-                  currentPassword: "",
-                  newPassword: "",
-                  confirmPassword: ""
-                });
-              }}
-              className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-            >
-              Change Password
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 };
 

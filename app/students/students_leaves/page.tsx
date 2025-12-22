@@ -17,7 +17,16 @@ interface Leave {
   updated_at: string;
 }
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/leaves/";
+interface ApiError {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/leaves/`;
 
 const StudentLeaves = () => {
   const [activeTab, setActiveTab] = useState("all");
@@ -146,9 +155,10 @@ const StudentLeaves = () => {
         const all = Array.isArray(refreshed.data) ? refreshed.data : [refreshed.data];
         setLeaves(all.filter((l: Leave) => l.applicant === studentEmail));
       }
-    } catch (error: any) {
-      console.error("❌ Error submitting leave:", error.response?.data || error);
-      showNotification('error', `Failed to submit leave: ${error.response?.data?.message || 'Please try again'}`);
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error("❌ Error submitting leave:", apiError.response?.data || apiError);
+      showNotification('error', `Failed to submit leave: ${apiError.response?.data?.message || 'Please try again'}`);
     } finally {
       setSubmitting(false);
     }

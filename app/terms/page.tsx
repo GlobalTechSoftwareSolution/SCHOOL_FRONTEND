@@ -71,7 +71,7 @@ const TermsPage = () => {
               1. Acceptance of Terms
             </h2>
             <p className="text-gray-700 mb-3">
-              By accessing or using the Smart School ERP Portal ("Service"), you acknowledge that you have read, 
+              By accessing or using the Smart School ERP Portal (&quot;Service&quot;), you acknowledge that you have read, 
               understood, and agree to be bound by these Terms & Conditions. These terms constitute a legally 
               binding agreement between you and GlobalTech Software Solutions.
             </p>
@@ -96,7 +96,7 @@ const TermsPage = () => {
               <li>Use the platform only for lawful educational purposes</li>
               <li>Maintain accurate and complete account information</li>
               <li>Not share your login credentials with others</li>
-              <li>Not attempt to gain unauthorized access to other users' data</li>
+              <li>Not attempt to gain unauthorized access to other users&apos; data</li>
               <li>Not use the service to transmit malicious software</li>
             </ul>
           </section>
@@ -245,7 +245,7 @@ const TermsPage = () => {
                 </Link>
               </p>
               <p className="mb-2">
-                📞 Phone: +91 9844281875
+                📞 Phone: +91 8495862494
               </p>
               <p>
                 📍 Address: No 10, 4th Floor, Gaduniya Complex, Ramaiah Layout, Vidyaranyapura, Bangalore - 560097  

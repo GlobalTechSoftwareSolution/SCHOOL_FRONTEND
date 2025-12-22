@@ -4,13 +4,11 @@ import React from "react";
 import Slider from "react-slick";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { 
-  ArrowRight, 
-  ArrowLeft, 
+import {
+  ArrowRight,
+  ArrowLeft,
   Play,
   Pause,
-  Star,
-  Shield,
   Zap,
   CheckCircle
 } from "lucide-react";
@@ -78,7 +76,13 @@ const slides = [
   },
 ];
 
-const CustomArrow = ({ onClick, direction, className }: any) => (
+interface CustomArrowProps {
+  onClick?: () => void;
+  direction: 'prev' | 'next';
+  className?: string;
+}
+
+const CustomArrow = ({ onClick, direction, className }: CustomArrowProps) => (
   <motion.button
     whileHover={{ scale: 1.1, backgroundColor: "rgba(59, 130, 246, 0.1)" }}
     whileTap={{ scale: 0.9 }}
@@ -95,7 +99,7 @@ const CustomArrow = ({ onClick, direction, className }: any) => (
 
 export default function SchoolFeaturesSlider() {
   const [isPlaying, setIsPlaying] = React.useState(true);
-  const sliderRef = React.useRef<any>(null);
+  const sliderRef = React.useRef<Slider | null>(null);
 
   const settings = {
     dots: true,
@@ -119,12 +123,12 @@ export default function SchoolFeaturesSlider() {
         settings: { slidesToShow: 1, slidesToScroll: 1 }
       },
     ],
-    appendDots: (dots: any) => (
+    appendDots: (dots: React.ReactNode) => (
       <div className="absolute -bottom-10">
         <ul className="flex justify-center space-x-2">{dots}</ul>
       </div>
     ),
-    customPaging: (i: number) => (
+    customPaging: () => (
       <div className="w-3 h-3 bg-gray-300 rounded-full transition-all duration-300 hover:bg-blue-400" />
     ),
   };

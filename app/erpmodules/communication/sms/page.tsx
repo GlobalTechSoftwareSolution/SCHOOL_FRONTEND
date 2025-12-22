@@ -12,6 +12,7 @@ import {
   Database,
   ShieldCheck,
 } from "lucide-react";
+import Image from "next/image";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 
@@ -108,9 +109,11 @@ const Sms = () => {
             >
               {/* IMAGE BOX LIKE YOUR SCREENSHOT */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4 flex justify-center">
-                <img
+                <Image
                   src={feature.image}
                   alt={feature.title}
+                  width={500}
+                  height={300}
                   className="max-h-48 w-auto object-contain"
                 />
               </div>

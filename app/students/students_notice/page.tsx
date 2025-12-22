@@ -2,8 +2,38 @@
 import DashboardLayout from "@/app/components/DashboardLayout";
 import React, { useState, useEffect } from "react";
 
+interface Notice {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  posted_date: string;
+  important: boolean;
+  notice_by: string;
+  category: string;
+  notice_to: string;
+  notice_to_email: string;
+}
+
+interface MappedNotice {
+  id: number;
+  title: string;
+  content: string;
+  type: string;
+  date: string;
+  priority: string;
+  author: string;
+  category: string;
+  notice_to: string;
+  notice_to_email: string;
+}
+
+interface ApiError {
+  message?: string;
+}
+
 const AllNotice = () => {
-  const [notices, setNotices] = useState<any[]>([]);
+  const [notices, setNotices] = useState<MappedNotice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,22 +47,20 @@ const AllNotice = () => {
         setLoading(true);
         setError(null);
 
-        console.log("🛰 Fetching notices...");
-        const res = await fetch(
-          "https://school.globaltechsoftwaresolutions.cloud/api/notices/"
-        );
-        if (!res.ok) throw new Error("Failed to fetch notices");
-
-        const data = await res.json();
-        console.log("✅ Fetched notices:", data.length);
-
-        // 🔹 Get logged-in student's email
+        // Get logged-in student's email from localStorage
         let userEmail = "";
         if (typeof window !== "undefined") {
-          const userInfo =
-            localStorage.getItem("userInfo") ||
-            localStorage.getItem("userData");
-          if (userInfo) {
+          const userData = localStorage.getItem("userData");
+          const userInfo = localStorage.getItem("userInfo");
+          
+          if (userData) {
+            try {
+              const parsed = JSON.parse(userData);
+              userEmail = (parsed.email || "").trim().toLowerCase();
+            } catch {
+              userEmail = "";
+            }
+          } else if (userInfo) {
             try {
               const parsed = JSON.parse(userInfo);
               userEmail = (parsed.email || "").trim().toLowerCase();
@@ -42,24 +70,28 @@ const AllNotice = () => {
           }
         }
 
-        console.log("📧 Logged-in user email:", userEmail);
+        if (!userEmail) {
+          throw new Error("User email not found in localStorage");
+        }
 
-      // 🔍 Filter notices ONLY for the logged-in user (strict match)
-const filteredData = (Array.isArray(data) ? data : []).filter((notice: any) => {
-  const toField = (notice.notice_to || "").trim().toLowerCase();
-  const toEmailField = (notice.notice_to_email || "").trim().toLowerCase();
+        const res = await fetch(
+         `${process.env.NEXT_PUBLIC_API_BASE_URL}/notices/`
+        );
+        
+        if (!res.ok) {
+          throw new Error(`Failed to fetch notices: ${res.status} ${res.statusText}`);
+        }
 
-  // ✅ Match only if the user's email is present in either field
-  const isUserNotice =
-    toField === userEmail || toEmailField === userEmail;
+        const data = await res.json();
 
-  return isUserNotice;
-});
+        // Filter notices that are specifically addressed to this user
+        const filteredData = (Array.isArray(data) ? data : []).filter((notice: Notice) => {
+          // Check if notice is addressed to this user specifically
+          const noticeTo = (notice.notice_to || "").trim().toLowerCase();
+          return noticeTo === userEmail;
+        });
 
-console.log("📋 Filtered notices for user:", filteredData.length);
-
-
-        const mapped = filteredData.map((n: any) => ({
+        const mapped = filteredData.map((n: Notice) => ({
           id: n.id,
           title: n.title || "Untitled Notice",
           content: n.message || "",
@@ -73,9 +105,9 @@ console.log("📋 Filtered notices for user:", filteredData.length);
         }));
 
         setNotices(mapped);
-      } catch (err) {
-        console.error("❌ Error fetching notices:", err);
-        setError("Could not load notices.");
+      } catch (err: unknown) {
+        const apiError = err as ApiError;
+        setError("Could not load notices: " + (apiError.message || "Unknown error"));
       } finally {
         setLoading(false);
       }
@@ -141,7 +173,7 @@ console.log("📋 Filtered notices for user:", filteredData.length);
               📰 Notice Board
             </h1>
             <p className="text-lg text-gray-600">
-              View notices sent directly to you or general announcements.
+              Welcome to your Student Notice Board
             </p>
           </div>
 

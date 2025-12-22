@@ -11,9 +11,8 @@ import {
   Link,
   ShieldCheck,
   BarChart2,
-  Globe,
-  Smartphone,
 } from "lucide-react";
+import NextImage from "next/image";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 
@@ -63,7 +62,7 @@ const Whatsapp = () => {
                 "/erpmodules/whatsapp/WhatsApp-Business-API-Integration.jpg",
             },
             {
-              icon: <Image className="text-green-700" size={26} />,
+              icon: <Image className="text-green-700" size={26} aria-hidden="true" alt="" />,
               title: "Multimedia Messaging",
               desc: "Send not only text but also images, videos, PDFs, and voice messages for richer, more engaging communication.",
               image:
@@ -118,9 +117,11 @@ const Whatsapp = () => {
             >
               {/* Image Box */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4 flex justify-center">
-                <img
+                <NextImage
                   src={feature.image}
-                  alt={feature.title}
+                  alt=""
+                  width={500}
+                  height={300}
                   className="max-h-48 w-auto object-contain"
                 />
               </div>

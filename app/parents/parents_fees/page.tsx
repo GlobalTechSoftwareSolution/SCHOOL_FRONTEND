@@ -2,16 +2,15 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
+import Image from "next/image";
 import {
   CreditCard,
   TrendingUp,
   CheckCircle,
   XCircle,
   Clock,
-  Download,
   Filter,
   Search,
-  Eye,
   FileText,
   Calendar,
   IndianRupee,
@@ -20,7 +19,6 @@ import {
   ChevronUp,
   User,
   BarChart3,
-  Percent,
   AlertCircle,
   Plus,
   Wallet,
@@ -36,7 +34,7 @@ import {
   Gem
 } from "lucide-react";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface FeeStructure {
   id: number;
@@ -66,13 +64,22 @@ const ParentFeePayments = () => {
   const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [loading, setLoading] = useState(true);
-  const [parentEmail, setParentEmail] = useState("");
+  // Commented out unused state
+  // const [parentEmail, setParentEmail] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [feeTypeFilter, setFeeTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [expandedPayment, setExpandedPayment] = useState<number | null>(null);
-  const [children, setChildren] = useState<any[]>([]);
+  interface Child {
+    email: string;
+    fullname: string;
+    class_name: string;
+    section: string;
+    profile_picture?: string;
+  }
+
+  const [children, setChildren] = useState<Child[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [newPayment, setNewPayment] = useState({
     student: "",
@@ -93,7 +100,7 @@ const ParentFeePayments = () => {
     const userData = JSON.parse(localStorage.getItem("userData") || "{}");
     const email = userData?.email || "";
     if (email) {
-      setParentEmail(email);
+      // setParentEmail(email); // Commented out unused state
       fetchParentAndPayments(email);
     } else {
       console.warn("⚠️ No parent email found in localStorage");
@@ -109,7 +116,7 @@ const ParentFeePayments = () => {
       ]);
       
       const currentParent = parents.find(
-        (p: any) => p.email === email
+        (p: Record<string, unknown>) => p.email === email
       );
 
       if (!currentParent) {
@@ -119,13 +126,12 @@ const ParentFeePayments = () => {
       }
 
       const childEmails: string[] =
-        currentParent.children_list?.map((child: any) => child.email?.trim() || "") || [];
+        currentParent.children_list?.map((child: Record<string, unknown>) => (child.email as string)?.trim() || "") || [];
 
       // Merge profile pictures from students API
-      const childrenWithProfiles = (currentParent.children_list || []).map((child: any) => {
-        const studentData = students.find((s: any) => s.email === child.email);
+      const childrenWithProfiles = (currentParent.children_list || []).map((child: Record<string, unknown>) => {
+        const studentData = students.find((s: Record<string, unknown>) => s.email === child.email);
         const profilePic = studentData?.profile_picture || "";
-        console.log("profile_picture:", profilePic, "for child:", child.fullname);
         return {
           ...child,
           profile_picture: profilePic
@@ -177,7 +183,7 @@ const ParentFeePayments = () => {
         });
 
       setFeePayments(filteredPayments);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ Error fetching data:", error);
     } finally {
       setLoading(false);
@@ -217,7 +223,8 @@ const ParentFeePayments = () => {
 
   // Get unique fee types and children for filters
   const uniqueFeeTypes = [...new Set(feePayments.map(p => p.fee_type))];
-  const uniqueChildren = [...new Set(feePayments.map(p => p.student_name))];
+  // Commented out unused variable
+  // const uniqueChildren = [...new Set(feePayments.map(p => p.student_name))];
 
   const filteredPayments = feePayments.filter((payment) => {
     const matchesSearch =
@@ -306,7 +313,7 @@ const ParentFeePayments = () => {
         
         alert("Payment added successfully!");
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error adding payment:", error);
       alert("Failed to add payment. Please try again.");
     } finally {
@@ -371,7 +378,7 @@ const ParentFeePayments = () => {
                   <h1 className="text-2xl xs:text-3xl sm:text-4xl font-bold bg-gradient-to-br from-gray-900 to-blue-900 bg-clip-text text-transparent">
                     Fee Payments
                   </h1>
-                  <p className="text-gray-600 text-sm xs:text-base sm:text-lg mt-1 xs:mt-2">Track and manage your children's fee payments with ease</p>
+                  <p className="text-gray-600 text-sm xs:text-base sm:text-lg mt-1 xs:mt-2">Track and manage your children&apos;s fee payments with ease</p>
                 </div>
               </div>
             </div>
@@ -553,10 +560,12 @@ const ParentFeePayments = () => {
                         <div className="relative">
                           <div className="w-10 h-10 xs:w-12 xs:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl flex items-center justify-center text-white font-semibold text-sm xs:text-base group-hover:scale-110 transition-transform duration-300 overflow-hidden">
                             {child.profile_picture ? (
-                              <img
+                              <Image
                                 src={child.profile_picture}
                                 alt={child.fullname}
                                 className="w-10 h-10 xs:w-12 xs:h-12 object-cover"
+                                width={48}
+                                height={48}
                               />
                             ) : (
                               child.fullname?.charAt(0) || 'C'

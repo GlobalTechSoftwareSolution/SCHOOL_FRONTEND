@@ -1,7 +1,8 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
+import Image from "next/image";
 import { CheckCircle, XCircle, Upload, Edit3, Save, X } from "lucide-react";
 
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/teachers/`;
@@ -35,6 +36,28 @@ interface Teacher {
   subject_list: Subject[];
 }
 
+// Interface for editable teacher fields (excluding subject_list)
+interface EditableTeacherFields {
+  email: string;
+  fullname: string;
+  teacher_id: string;
+  department_name: string;
+  role: string;
+  qualification: string;
+  experience_years: number;
+  phone: string;
+  date_of_birth: string;
+  gender: string;
+  nationality: string;
+  blood_group: string;
+  date_joined: string;
+  residential_address: string;
+  emergency_contact_name: string;
+  emergency_contact_relationship: string;
+  emergency_contact_no: string;
+  profile_picture: string;
+}
+
 const TeacherProfilePage = () => {
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [formData, setFormData] = useState<Partial<Teacher>>({});
@@ -44,17 +67,6 @@ const TeacherProfilePage = () => {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [showErrorPopup, setShowErrorPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState("");
-
-  // ✅ Fetch from localStorage and API
-  useEffect(() => {
-    const storedUser = localStorage.getItem("userData");
-    if (storedUser) {
-      const { email } = JSON.parse(storedUser);
-      if (email) fetchTeacher(email);
-    } else {
-      setLoading(false);
-    }
-  }, []);
 
   // ✅ Show popup with auto-hide
   const showPopup = (type: 'success' | 'error', message: string) => {
@@ -71,7 +83,7 @@ const TeacherProfilePage = () => {
   };
 
   // ✅ Fetch teacher details
-  const fetchTeacher = async (email: string) => {
+  const fetchTeacher = useCallback(async (email: string) => {
     try {
       const res = await axios.get(`${API_BASE_URL}${email}/`);
       setTeacher(res.data);
@@ -82,7 +94,18 @@ const TeacherProfilePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // ✅ Fetch from localStorage and API
+  useEffect(() => {
+    const storedUser = localStorage.getItem("userData");
+    if (storedUser) {
+      const { email } = JSON.parse(storedUser);
+      if (email) fetchTeacher(email);
+    } else {
+      setLoading(false);
+    }
+  }, [fetchTeacher]);
 
   // ✅ Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -107,7 +130,7 @@ const handleSave = async () => {
       uploadData.append("profile_picture", profileFile);
 
       // Add only changed fields, skip undefined values
-      const fieldsToUpdate: (keyof Teacher)[] = [
+      const fieldsToUpdate: (keyof EditableTeacherFields)[] = [
         "fullname",
         "department_name",
         "qualification",
@@ -146,7 +169,7 @@ const handleSave = async () => {
 
     } else {
       // Just text updates, no file upload - send only changed fields
-      const fieldsToUpdate: (keyof Teacher)[] = [
+      const fieldsToUpdate: (keyof EditableTeacherFields)[] = [
         "fullname",
         "department_name",
         "qualification",
@@ -164,11 +187,12 @@ const handleSave = async () => {
       ];
 
       // Create a clean object with only the fields to update
-      const updateData: Partial<Teacher> = {};
+      const updateData: Partial<EditableTeacherFields> = {};
       fieldsToUpdate.forEach((key) => {
         const value = formData[key];
         if (value !== undefined && value !== null && value !== "") {
-          (updateData as any)[key] = value;
+          // Use proper type assertion
+          (updateData as Record<keyof EditableTeacherFields, unknown>)[key] = value;
         }
       });
 
@@ -181,11 +205,11 @@ const handleSave = async () => {
     setProfileFile(null);
     showPopup('success', "Profile updated successfully!");
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating profile:", error);
     const errorMessage =
-      error.response?.data?.detail ||
-      error.response?.data?.message ||
+      (error as { response?: { data?: { detail?: string; message?: string } } })?.response?.data?.detail ||
+      (error as { response?: { data?: { detail?: string; message?: string } } })?.response?.data?.message ||
       "Failed to update profile";
     showPopup('error', errorMessage);
   }
@@ -250,14 +274,16 @@ const handleSave = async () => {
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative group">
               <div className="w-32 h-32 rounded-full border-4 border-white/20 shadow-2xl overflow-hidden">
-                <img
+                <Image
                   src={
                     profileFile
                       ? URL.createObjectURL(profileFile)
                       : teacher.profile_picture || "https://via.placeholder.com/150"
                   }
                   alt="Profile"
-                  className="w-full h-full object-cover"
+                  width={128}
+                  height={128}
+                  className="w-full h-full object-cover rounded-full"
                 />
               </div>
               {isEditing && (
@@ -325,7 +351,7 @@ const handleSave = async () => {
               </h2>
               <div className="grid md:grid-cols-2 gap-6">
                 <InputField label="Full Name" name="fullname" value={formData.fullname || ""} onChange={handleChange} disabled={!isEditing} />
-                <InputField label="Teacher ID" name="teacher_id" value={formData.teacher_id || ""} disabled />
+                <InputField label="Teacher ID" name="teacher_id" value={formData.teacher_id || ""} disabled={true} />
                 <InputField label="Department" name="department_name" value={formData.department_name || ""} onChange={handleChange} disabled={!isEditing} />
                 <InputField label="Qualification" name="qualification" value={formData.qualification || ""} onChange={handleChange} disabled={!isEditing} />
                 <InputField label="Experience (Years)" name="experience_years" value={formData.experience_years || ""} onChange={handleChange} disabled={!isEditing} />
@@ -423,7 +449,16 @@ const handleSave = async () => {
 };
 
 // ✅ Enhanced Input Field Component
-const InputField = ({ label, name, value, onChange, disabled = false, type = "text" }: any) => (
+interface InputFieldProps {
+  label: string;
+  name: string;
+  value: string | number;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+  type?: string;
+}
+
+const InputField = ({ label, name, value, onChange, disabled = false, type = "text" }: InputFieldProps) => (
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
     <input

@@ -143,32 +143,57 @@ const modulesData = {
   ],
 };
 
+// Pre-generate particles data at module level with fixed values
+const particlesData = [
+  { id: 0, x: 100, y: 200, scale: 0.7, width: 8, height: 8, duration: 3.5, delay: 0.5, xMovement: 20 },
+  { id: 1, x: 300, y: 150, scale: 0.9, width: 12, height: 12, duration: 4.2, delay: 1.2, xMovement: -15 },
+  { id: 2, x: 500, y: 300, scale: 0.6, width: 6, height: 6, duration: 2.8, delay: 0.8, xMovement: 35 },
+  { id: 3, x: 700, y: 100, scale: 0.8, width: 10, height: 10, duration: 3.9, delay: 1.5, xMovement: -25 },
+  { id: 4, x: 200, y: 400, scale: 0.5, width: 5, height: 5, duration: 2.3, delay: 0.3, xMovement: 40 },
+  { id: 5, x: 600, y: 250, scale: 0.7, width: 9, height: 9, duration: 3.1, delay: 1.8, xMovement: -30 },
+  { id: 6, x: 800, y: 350, scale: 0.9, width: 11, height: 11, duration: 4.5, delay: 0.6, xMovement: 15 },
+  { id: 7, x: 400, y: 50, scale: 0.6, width: 7, height: 7, duration: 2.7, delay: 1.1, xMovement: -35 },
+  { id: 8, x: 900, y: 200, scale: 0.8, width: 10, height: 10, duration: 3.8, delay: 0.9, xMovement: 25 },
+  { id: 9, x: 150, y: 450, scale: 0.5, width: 6, height: 6, duration: 2.5, delay: 1.6, xMovement: -20 },
+  { id: 10, x: 550, y: 100, scale: 0.7, width: 8, height: 8, duration: 3.3, delay: 0.4, xMovement: 30 },
+  { id: 11, x: 750, y: 300, scale: 0.9, width: 12, height: 12, duration: 4.1, delay: 1.3, xMovement: -10 },
+  { id: 12, x: 350, y: 500, scale: 0.6, width: 7, height: 7, duration: 2.9, delay: 0.7, xMovement: 45 },
+  { id: 13, x: 650, y: 150, scale: 0.8, width: 9, height: 9, duration: 3.6, delay: 1.9, xMovement: -40 },
+  { id: 14, x: 250, y: 350, scale: 0.5, width: 5, height: 5, duration: 2.4, delay: 0.2, xMovement: 10 },
+  { id: 15, x: 850, y: 50, scale: 0.7, width: 8, height: 8, duration: 3.2, delay: 1.4, xMovement: -5 },
+  { id: 16, x: 450, y: 400, scale: 0.9, width: 11, height: 11, duration: 4.3, delay: 0.8, xMovement: 50 },
+  { id: 17, x: 50, y: 250, scale: 0.6, width: 6, height: 6, duration: 2.6, delay: 1.7, xMovement: -45 },
+  { id: 18, x: 950, y: 150, scale: 0.8, width: 10, height: 10, duration: 3.7, delay: 0.5, xMovement: 5 },
+  { id: 19, x: 750, y: 450, scale: 0.5, width: 7, height: 7, duration: 2.2, delay: 1.0, xMovement: -50 },
+];
+
 const FloatingParticles = () => {
   if (typeof window === "undefined") return null;
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(20)].map((_, i) => (
+      {particlesData.map((particle) => (
         <motion.div
-          key={i}
+          key={particle.id}
           className="absolute rounded-full bg-gradient-to-r from-blue-200 to-purple-200"
           initial={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-            scale: Math.random() * 0.5 + 0.5,
+            x: particle.x,
+            y: particle.y,
+            scale: particle.scale,
           }}
           animate={{
             y: [null, -100, -200],
-            x: [null, Math.random() * 100 - 50],
+            x: [null, particle.xMovement],
             opacity: [0, 1, 0],
           }}
           transition={{
-            duration: Math.random() * 3 + 2,
+            duration: particle.duration,
             repeat: Infinity,
-            delay: Math.random() * 2,
+            delay: particle.delay,
           }}
           style={{
-            width: Math.random() * 20 + 5,
-            height: Math.random() * 20 + 5,
+            width: particle.width,
+            height: particle.height,
           }}
         />
       ))}
@@ -179,7 +204,7 @@ const FloatingParticles = () => {
 export default function ERPModules() {
   const [activeTab, setActiveTab] = useState("academics");
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
+  // const [isPlaying, setIsPlaying] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
 
   const currentModules = modulesData[activeTab as keyof typeof modulesData];
@@ -187,12 +212,12 @@ export default function ERPModules() {
   const totalSlides = Math.ceil(currentModules.length / slidesToShow);
 
   useEffect(() => {
-    if (!isPlaying || isHovering) return;
+    if (isHovering) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % totalSlides);
     }, 4000);
     return () => clearInterval(interval);
-  }, [isPlaying, isHovering, totalSlides]);
+  }, [isHovering, totalSlides]);
 
   const visibleModules = currentModules.slice(
     currentSlide * slidesToShow,

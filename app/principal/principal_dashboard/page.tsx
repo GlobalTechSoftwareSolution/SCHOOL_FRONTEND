@@ -6,17 +6,81 @@ import {
   FiBook,
   FiBarChart2,
   FiCalendar,
-  FiBell,
   FiTrendingUp,
   FiAward,
   FiClock,
-  FiMessageSquare,
-  FiActivity,
-  FiEye
+  FiActivity
 } from "react-icons/fi";
 import axios from "axios";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
+
+interface RawTeacher {
+  email?: string;
+  user_details?: { email?: string; fullname?: string };
+  fullname?: string;
+  name?: string;
+  department_name?: string;
+  department?: string;
+}
+
+interface RawStudent {
+  email?: string;
+  fullname?: string;
+  class_name?: string;
+  class_id?: number;
+  section?: string;
+  sec?: string;
+}
+
+interface RawClass {
+  id?: number;
+  class_name?: string;
+  sec?: string;
+}
+
+interface RawActivity {
+  id?: number;
+  name?: string;
+  date?: string;
+  type?: string;
+  class_name?: string;
+  section?: string;
+}
+
+interface RawAttendance {
+  id?: number;
+  user_email?: string;
+  student_email?: string;
+  user_name?: string;
+  student_name?: string;
+  class_name?: string;
+  sec?: string;
+  section?: string;
+  role?: string;
+  department?: string;
+  date?: string;
+  check_in?: string;
+  check_out?: string | null;
+  status?: string;
+}
+
+interface AttendanceEntry {
+  id?: number;
+  role: string;
+  display_name: string;
+  user_email?: string;
+  student_name?: string;
+  user_name?: string;
+  class_name?: string;
+  section?: string;
+  sec?: string;
+  department?: string;
+  date?: string;
+  check_in?: string;
+  check_out?: string | null;
+  status?: string;
+}
 
 const PrincipalDashboard = () => {
   const [stats, setStats] = useState({
@@ -27,9 +91,8 @@ const PrincipalDashboard = () => {
     pendingApprovals: 0,
     upcomingEvents: 0
   });
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<RawActivity[]>([]);
+  const [attendanceData, setAttendanceData] = useState<AttendanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPresent, setShowPresent] = useState(false);
   const [showAbsent, setShowAbsent] = useState(false);
@@ -43,35 +106,35 @@ const PrincipalDashboard = () => {
 
         // Fetch all required data
         const [teachersRes, studentsRes, classesRes, activitiesRes, attendanceRes] = await Promise.all([
-          axios.get(`${API_BASE}/teachers/`),
-          axios.get(`${API_BASE}/students/`),
-          axios.get(`${API_BASE}/classes/`),
-          axios.get(`${API_BASE}/activities/`),
-          axios.get(`${API_BASE}/attendance/`),
+          axios.get<RawTeacher[]>(`${API_BASE}/teachers/`),
+          axios.get<RawStudent[]>(`${API_BASE}/students/`),
+          axios.get<RawClass[]>(`${API_BASE}/classes/`),
+          axios.get<RawActivity[]>(`${API_BASE}/activities/`),
+          axios.get<RawAttendance[]>(`${API_BASE}/attendance/`),
         ]);
 
         // Calculate statistics
-        const teachers = teachersRes.data || [];
-        const students = studentsRes.data || [];
-        const classes = classesRes.data || [];
-        const activities = activitiesRes.data || [];
-        const attendance = attendanceRes.data || [];
+        const teachers = Array.isArray(teachersRes.data) ? teachersRes.data : [];
+        const students = Array.isArray(studentsRes.data) ? studentsRes.data : [];
+        const classes = Array.isArray(classesRes.data) ? classesRes.data : [];
+        const activities = Array.isArray(activitiesRes.data) ? activitiesRes.data : [];
+        const attendance = Array.isArray(attendanceRes.data) ? attendanceRes.data : [];
 
 
         // Calculate attendance rate
-        const presentCount = attendance.filter((a: any) => a.status === "Present").length;
+        const presentCount = attendance.filter((a) => a.status === "Present").length;
         const totalCount = attendance.length;
         const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
         // Get unique classes from classes API
-        const uniqueClasses = [...new Set(classes.map((c: any) => c.class_name))].filter(Boolean);
+        const uniqueClasses = [...new Set(classes.map((c) => c.class_name))].filter(Boolean) as string[];
 
 
         // Get upcoming events (next 7 days)
         const today = new Date();
         const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
         const upcoming = activities
-          .filter((activity: any) => {
+          .filter((activity) => {
             if (!activity.date) return false;
             const activityDate = new Date(activity.date);
             return activityDate >= today && activityDate <= nextWeek;
@@ -79,23 +142,21 @@ const PrincipalDashboard = () => {
           .slice(0, 5);
 
         // Get recent activities (last 5)
-        const recent = activities.slice(0, 5);
-
         // Enrich attendance with display name, role, class & section (for students) or department (for teachers)
-        const enrichedAttendance = attendance.map((record: any) => {
+        const enrichedAttendance: AttendanceEntry[] = attendance.map((record) => {
 
           const email = String(record.user_email || record.student_email || "").toLowerCase();
           const roleRaw = record.role || "";
           const role = String(roleRaw).toLowerCase();
 
-          let displayName = record.student_name || record.user_name || record.user_email;
+          let displayName = record.student_name || record.user_name || record.user_email || "";
           let className = record.class_name || "";
           let section = record.sec || record.section || "";
           let department = record.department || "";
 
           if (role === "student") {
             const student = students.find(
-              (s: any) => String(s.email || "").toLowerCase() === email
+              (s) => String(s.email || "").toLowerCase() === email
             );
             if (student) {
               displayName = student.fullname || displayName;
@@ -106,7 +167,7 @@ const PrincipalDashboard = () => {
 
               // If class info still missing, resolve via classes API using class_id
               if (!className || !section) {
-                const cls = classes.find((c: any) => c.id === student.class_id);
+                const cls = classes.find((c) => c.id === student.class_id);
                 if (cls) {
                   className = cls.class_name || className;
                   section = cls.sec || section;
@@ -117,7 +178,7 @@ const PrincipalDashboard = () => {
 
           if (role === "teacher") {
             const teacher = teachers.find(
-              (t: any) => String(t.email || "").toLowerCase() === email
+              (t) => String(t.email || "").toLowerCase() === email
             );
             if (teacher) {
               displayName = teacher.fullname || displayName;
@@ -145,7 +206,6 @@ const PrincipalDashboard = () => {
           upcomingEvents: upcoming.length
         });
 
-        setRecentActivities(recent);
         setUpcomingEvents(upcoming);
         // Store enriched attendance; Present/Absent tables will filter for today
         setAttendanceData(enrichedAttendance);
@@ -186,14 +246,6 @@ const PrincipalDashboard = () => {
       color: "bg-purple-500",
       bgColor: "bg-purple-50",
       textColor: "text-purple-600"
-    },
-    {
-      title: "Attendance Rate",
-      value: `${stats.attendanceRate}%`,
-      icon: <FiTrendingUp className="w-6 h-6" />,
-      color: "bg-orange-500",
-      bgColor: "bg-orange-50",
-      textColor: "text-orange-600"
     },
     {
       title: "Upcoming Events",
@@ -257,7 +309,7 @@ const PrincipalDashboard = () => {
               Welcome Back, Principal!
             </h1>
             <p className="text-gray-600 text-lg">
-              Here's what's happening at your school today.
+              Here&apos;s what&apos;s happening at your school today.
             </p>
             <div className="flex items-center gap-2 mt-2 text-gray-500">
               <FiClock className="w-4 h-4" />
@@ -336,59 +388,6 @@ const PrincipalDashboard = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Recent Activities */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <FiActivity className="w-5 h-5 text-green-500" />
-                    Recent Activities
-                  </h2>
-                  <p className="text-gray-600 text-sm mt-1">Latest school events and updates</p>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {recentActivities.length > 0 ? (
-                      recentActivities.map((activity, index) => (
-                        <div
-                          key={index}
-                          className="flex items-start gap-4 p-4 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors group"
-                        >
-                          <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                            <FiCalendar className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
-                              {activity.name}
-                            </h4>
-                            <p className="text-gray-600 text-sm mt-1 line-clamp-1">
-                              {activity.description || "No description provided"}
-                            </p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <FiClock className="w-3 h-3" />
-                                {activity.date ? new Date(activity.date).toLocaleDateString() : "No date"}
-                              </span>
-                              <span className={`px-2 py-1 rounded-full text-xs ${activity.type === 'Cultural' ? 'bg-purple-100 text-purple-800' :
-                                  activity.type === 'Sports' ? 'bg-green-100 text-green-800' :
-                                    activity.type === 'Academic' ? 'bg-blue-100 text-blue-800' :
-                                      'bg-gray-100 text-gray-800'
-                                }`}>
-                                {activity.type || 'General'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <div className="text-4xl mb-2">📊</div>
-                        <p className="text-gray-500">No recent activities found.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Right Column - Upcoming Events & Notifications */}
@@ -459,7 +458,7 @@ const PrincipalDashboard = () => {
               <FiTrendingUp className="w-5 h-5 text-green-500" />
               Recent Attendance
             </h2>
-            <p className="text-gray-600 text-sm mb-4">Today's attendance records</p>
+            <p className="text-gray-600 text-sm mb-4">Today&apos;s attendance records</p>
 
             {attendanceData.length > 0 ? (
               <>

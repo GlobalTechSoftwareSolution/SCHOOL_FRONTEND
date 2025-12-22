@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 
@@ -106,10 +107,12 @@ const Faculty = () => {
           transition={{ duration: 1 }}
         >
           <div className="absolute inset-0">
-            <img
+            <Image
               src="https://images.pexels.com/photos/1181539/pexels-photo-1181539.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800&fit=crop"
               alt="Faculty Hub"
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              priority
             />
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/90 to-slate-900/80"></div>
           </div>
@@ -166,11 +169,14 @@ const Faculty = () => {
                     className="relative"
                   >
                     <div className="absolute -inset-4 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-2xl blur-xl opacity-20"></div>
-                    <img
-                      src={section.image}
-                      alt={section.title}
-                      className="relative w-full h-96 object-cover rounded-2xl shadow-2xl"
-                    />
+                    <div className="relative w-full h-96 rounded-2xl overflow-hidden shadow-2xl">
+                      <Image
+                        src={section.image}
+                        alt={section.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
                   </motion.div>
                 </div>
                 

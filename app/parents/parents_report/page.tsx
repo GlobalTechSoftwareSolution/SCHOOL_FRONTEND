@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 // ✅ API Base
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 // ✅ Type Definitions
 type Child = {
@@ -45,7 +45,8 @@ const ParentReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
-  const [parentEmail, setParentEmail] = useState<string>("");
+  // Commented out unused state
+  // const [parentEmail, setParentEmail] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [reportTypeFilter, setReportTypeFilter] = useState("all");
   const [childFilter, setChildFilter] = useState("all");
@@ -57,7 +58,7 @@ const ParentReportsPage: React.FC = () => {
     const userData = localStorage.getItem("userData");
     if (userData) {
       const parsedData = JSON.parse(userData);
-      setParentEmail(parsedData.email);
+      // setParentEmail(parsedData.email); // Commented out unused state
       if (parsedData.email) {
         fetchParentAndReports(parsedData.email);
       }
@@ -70,14 +71,13 @@ const ParentReportsPage: React.FC = () => {
   // ✅ Core Fetch Function
   const fetchParentAndReports = async (email: string) => {
     try {
-      console.log("📩 Fetching parent details for:", email);
 
       // 1️⃣ Get all parents
       const parentRes = await axios.get(`${API_BASE}/parents/`);
       const parentList = parentRes.data || [];
 
       // 2️⃣ Match the parent by email
-      const parentData = parentList.find((p: any) => p.email === email);
+      const parentData = parentList.find((p: Record<string, unknown>) => p.email === email);
       if (!parentData) {
         console.error("❌ Parent not found in API response");
         setLoading(false);
@@ -87,18 +87,15 @@ const ParentReportsPage: React.FC = () => {
       // 3️⃣ Get children list
       const childrenList = parentData.children_list || [];
       setChildren(childrenList);
-      console.log("🧒 Children List:", childrenList);
 
       // 4️⃣ Get reports
       const reportsRes = await axios.get(`${API_BASE}/reports/`);
       const allReports: Report[] = reportsRes.data || [];
-      console.log("📄 All Reports:", allReports);
 
       // 5️⃣ Collect children emails
       const childEmails = childrenList
         .map((child: Child) => child.email?.toLowerCase())
         .filter(Boolean);
-      console.log("👧 Child Emails:", childEmails);
 
       // 6️⃣ Filter reports that match any child
       const filteredReports = allReports.filter((report) => {
@@ -111,9 +108,8 @@ const ParentReportsPage: React.FC = () => {
         return childEmails.includes(studentEmail);
       });
 
-      console.log("✅ Filtered Reports:", filteredReports);
       setReports(filteredReports);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ Error fetching reports:", error);
     } finally {
       setLoading(false);

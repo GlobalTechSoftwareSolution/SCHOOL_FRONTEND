@@ -12,7 +12,6 @@ import {
   Download,
   Calendar,
   Clock,
-  Users,
   BookOpen,
   MapPin,
   ChevronLeft,
@@ -76,11 +75,9 @@ interface SubjectInfo {
   color_code?: string;
 }
 
-const API_BASE = 'http://school.globaltechsoftwaresolutions.cloud';
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 export default function Timetablecreation() {
-  console.log('🚀 [APP] Timetablecreation component mounted');
-  console.log('📡 [API] API Base URL:', API_BASE);
   const [entries, setEntries] = useState<TimetableEntry[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number | 'all'>('all');
@@ -126,10 +123,11 @@ export default function Timetablecreation() {
     { key: 'sunday', label: 'Sunday', shortLabel: 'Sun' },
   ];
 
-  const predefinedColors = [
-    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6',
-    '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
-  ];
+// Predefined colors for timetable entries
+  // const predefinedColors = [
+  //   '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6',
+  //   '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
+  // ];
 
   const getSubjectColor = (subject: string, entry?: TimetableEntry): string => {
     if (entry?.color_code) {
@@ -155,35 +153,29 @@ export default function Timetablecreation() {
 
   const fetchTimetable = useCallback(async () => {
     try {
-      console.log('📡 [API] Fetching timetable data...');
       setLoading(true);
       setError('');
       const res = await axios.get(`${API_BASE}/timetable/`);
-      console.log('✅ [API] Timetable data fetched successfully');
       const data = Array.isArray(res.data) ? res.data : [];
-      console.log('📋 [API] Entries count:', data.length);
       setEntries(data);
-    } catch (err: any) {
-      console.log('❌ [API] Error fetching timetable:', err);
-      console.error('❌ [API] Full error details:', err);
-      const errorMessage = err?.response?.data?.message || 'Failed to load timetable';
-      console.log('❌ [API] Error message:', errorMessage);
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      console.log('🏁 [API] Fetch timetable operation completed');
-    }
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load timetable';
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
   }, []);
 
   const fetchTeachers = async () => {
     try {
       const res = await axios.get(`${API_BASE}/teachers/`);
       const data = Array.isArray(res.data) ? res.data : [];
-      const normalized: TeacherInfo[] = data.map((t: any) => ({
-        email: t.email || t.user_details?.email || '',
-        fullname: t.fullname || t.name || t.user_details?.fullname || t.email || '',
-        department_name: t.department_name || t.department || undefined,
-      })).filter(t => t.email);
+      const normalized: TeacherInfo[] = data.map((t: Record<string, unknown>) => {
+        const email = (t.email as string) || (t.user_details && typeof t.user_details === 'object' && (t.user_details as Record<string, unknown>).email as string) || '';
+        const fullname = (t.fullname as string) || (t.name as string) || (t.user_details && typeof t.user_details === 'object' && (t.user_details as Record<string, unknown>).fullname as string) || (t.email as string) || '';
+        const department_name = (t.department_name as string) || (t.department as string) || undefined;
+        return { email, fullname, department_name };
+      }).filter(t => t.email) as TeacherInfo[];
       setTeachers(normalized);
     } catch (err) {
       console.error('Failed to load teachers:', err);
@@ -204,9 +196,9 @@ export default function Timetablecreation() {
     try {
       const res = await axios.get(`${API_BASE}/departments/`);
       const data = Array.isArray(res.data) ? res.data : [];
-      const mapped: SubjectInfo[] = data.map((dept: any) => ({
-        id: dept.id,
-        name: dept.department_name || dept.name || '',
+      const mapped: SubjectInfo[] = data.map((dept: Record<string, unknown>) => ({
+        id: dept.id as number | string,
+        name: (dept.department_name as string) || (dept.name as string) || '',
       }));
       setSubjects(mapped);
     } catch (err) {
@@ -280,8 +272,8 @@ export default function Timetablecreation() {
 
       const dayKey = entry.day_of_week.toLowerCase();
       if (['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].includes(dayKey)) {
-        (slot as any)[dayKey] = combinedLabel;
-        (slot as any)[`${dayKey}Data`] = entry;
+        (slot as unknown as Record<string, unknown>)[dayKey] = combinedLabel;
+        (slot as unknown as Record<string, unknown>)[`${dayKey}Data`] = entry;
       }
     });
 
@@ -291,28 +283,15 @@ export default function Timetablecreation() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('📝 [FORM] Form submission started');
     
     // Validate required fields
-    console.log('🔍 [FORM] Validating required fields:', {
-      class_id: newEntry.class_id,
-      subject: newEntry.subject,
-      start_time: newEntry.start_time,
-      end_time: newEntry.end_time,
-      teacher: newEntry.teacher,
-      day_of_week: newEntry.day_of_week
-    });
-    
     if (!newEntry.class_id || !newEntry.subject || !newEntry.start_time || !newEntry.end_time || !newEntry.teacher || !newEntry.day_of_week) {
-      console.log('❌ [FORM] Required fields missing');
       setError('Please fill all required fields');
       return;
     }
 
-    console.log('🔍 [FORM] Checking for conflicts...');
     const conflictMessage = checkForConflicts(newEntry);
     if (conflictMessage) {
-      console.log('⚠️ [FORM] Conflict detected:', conflictMessage);
       setError(formatConflictMessage(conflictMessage));
       return;
     }
@@ -320,7 +299,6 @@ export default function Timetablecreation() {
     try {
       setSaving(true);
       setError('');
-      console.log('📡 [API] Preparing to save timetable entry');
 
       // Convert day_of_week from key to proper format if needed
       let formattedDay = newEntry.day_of_week;
@@ -329,7 +307,7 @@ export default function Timetablecreation() {
         formattedDay = newEntry.day_of_week.charAt(0).toUpperCase() + newEntry.day_of_week.slice(1).toLowerCase();
       }
       
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         class_id: Number(newEntry.class_id),
         subject: isNaN(Number(newEntry.subject)) ? newEntry.subject : Number(newEntry.subject),
         day_of_week: formattedDay,
@@ -339,11 +317,6 @@ export default function Timetablecreation() {
         room_number: newEntry.room_number || null,
         color_code: newEntry.color_code || null,
       };
-      
-      console.log('📡 [API] Day of week conversion:', { original: newEntry.day_of_week, formatted: formattedDay });
-
-      // Log the payload for debugging
-      console.log('📡 [API] Sending payload:', payload);
 
       // Remove empty fields
       Object.keys(payload).forEach(key => {
@@ -352,33 +325,29 @@ export default function Timetablecreation() {
         }
       });
 
-      console.log('📡 [API] Final payload after cleanup:', payload);
-
-      console.log('📡 [API] Payload:', payload);
-
       if (editingEntry) {
-        console.log('📡 [API] Sending PATCH request to update entry', `${API_BASE}/timetable/${editingEntry.id}/`);
         try {
           await axios.patch(`${API_BASE}/timetable/${editingEntry.id}/`, payload);
-          console.log('✅ [API] Entry updated successfully');
           setError(`✅ Timetable entry updated successfully!`);
-        } catch (patchError: any) {
-          console.log('⚠️ [API] PATCH failed, trying PUT as fallback', patchError);
+        } catch {
           // If PATCH fails, try PUT as fallback
           try {
             await axios.put(`${API_BASE}/timetable/${editingEntry.id}/`, payload);
-            console.log('✅ [API] Entry updated successfully with PUT');
             setError(`✅ Timetable entry updated successfully!`);
-          } catch (putError: any) {
+          } catch (putError: unknown) {
             // If both PATCH and PUT fail, re-throw the error
-            console.log('❌ [API] Both PATCH and PUT failed', putError);
-            throw new Error(`Failed to update: ${putError?.response?.data?.message || putError?.message || 'Unknown error'}`);
+            const putErrorMessage = putError && typeof putError === 'object' && 'response' in putError &&
+              putError.response && typeof putError.response === 'object' &&
+              putError.response !== null && 'data' in putError.response &&
+              putError.response.data && typeof putError.response.data === 'object' &&
+              putError.response.data !== null && 'message' in putError.response.data ?
+              (putError.response.data as { message: string }).message :
+              putError instanceof Error ? putError.message : 'Unknown error';
+            throw new Error(`Failed to update: ${putErrorMessage}`);
           }
         }
       } else {
-        console.log('📡 [API] Sending POST request to create new entry', `${API_BASE}/timetable/`);
         await axios.post(`${API_BASE}/timetable/`, payload);
-        console.log('✅ [API] New entry created successfully');
         setError(`✅ New timetable entry created successfully!`);
       }
 
@@ -387,34 +356,27 @@ export default function Timetablecreation() {
       } else {
         resetNewEntryForm();
       }
-      console.log('🔄 [API] Refreshing timetable data');
       await fetchTimetable();
-    } catch (err: any) {
-      console.log('❌ [API] Error saving timetable entry:', err);
-      console.error('❌ [API] Full error details:', err);
-      
+    } catch (err: unknown) {
       // Extract detailed error information
       let errorMessage = 'Failed to save timetable entry';
-      if (err?.response?.data) {
-        console.log('❌ [API] Backend error response:', err.response.data);
-        if (err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response.data.detail) {
-          errorMessage = err.response.data.detail;
-        } else if (typeof err.response.data === 'string') {
-          errorMessage = err.response.data;
+      if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && err.response !== null && 'data' in err.response && err.response.data) {
+        const response = err.response as { data: unknown };
+        if (typeof response.data === 'object' && response.data !== null && 'message' in response.data && response.data.message) {
+          errorMessage = (response.data as { message: string }).message;
+        } else if (typeof response.data === 'object' && response.data !== null && 'detail' in response.data && response.data.detail) {
+          errorMessage = (response.data as { detail: string }).detail;
+        } else if (typeof response.data === 'string') {
+          errorMessage = response.data;
         } else {
-          errorMessage = JSON.stringify(err.response.data);
+          errorMessage = JSON.stringify(response.data);
         }
-      } else if (err?.message) {
+      } else if (err instanceof Error && err.message) {
         errorMessage = err.message;
       }
-      
-      console.log('❌ [API] Final error message:', errorMessage);
       setError(`Failed to save timetable entry: ${errorMessage}`);
     } finally {
       setSaving(false);
-      console.log('🏁 [FORM] Save operation completed');
       // Clear success message after 3 seconds
       setTimeout(() => {
         if (!saving && error?.startsWith('✅')) {
@@ -502,7 +464,7 @@ export default function Timetablecreation() {
     return firstConflict;
   };
 
-  const getAllConflicts = (entry: typeof newEntry): string[] => {
+  const getAllConflicts = useCallback((entry: typeof newEntry): string[] => {
     const conflicts: string[] = [];
     
     // Convert time strings to minutes for easier comparison
@@ -599,7 +561,7 @@ export default function Timetablecreation() {
     }
 
     return conflicts;
-  };
+  }, [entries, classes, editingEntry]);
 
   const formatConflictMessage = (message: string): string => {
     return `⚠️ ${message}`;
@@ -623,21 +585,6 @@ export default function Timetablecreation() {
   const handleDelete = (id: number) => {
     setDeletingEntryId(id);
     setShowDeleteConfirm(true);
-  };
-
-  const resetForm = () => {
-    setNewEntry({
-      class_id: '',
-      subject: '',
-      day_of_week: 'Monday',
-      start_time: '',
-      end_time: '',
-      teacher: '',
-      room_number: '',
-      color_code: '#3B82F6'
-    });
-    setEditingEntry(null);
-    setShowForm(false);
   };
 
   const exportTimetable = () => {
@@ -725,7 +672,7 @@ export default function Timetablecreation() {
               <p className="text-sm text-gray-500 mt-1">Try adjusting your filters</p>
             </div>
           ) : (
-            dayEntries.map((entry, index) => {
+            dayEntries.map((entry) => {
               const teacherInfo = teachers.find(t => t.email === entry.teacher);
               const subjectName = entry.subject_name || String(entry.subject);
               const classInfo = classes.find(c => c.id === entry.class_id);
@@ -840,8 +787,7 @@ export default function Timetablecreation() {
                 const rawContent = slot[day.key as keyof TimeSlot];
                 const cellContent = typeof rawContent === 'string' ? rawContent : '';
                 const subjectForColor = cellContent ? cellContent.split(' - ')[0] : '';
-                const classInfo = entryData ? classes.find(c => c.id === entryData.class_id) : null;
-                const teacherInfo = entryData ? teachers.find(t => t.email === entryData.teacher) : null;
+
 
                 return (
                   <div
@@ -912,11 +858,11 @@ export default function Timetablecreation() {
 
     const conflicts = getAllConflicts(newEntry);
     setConflictWarnings(conflicts);
-  }, [newEntry, entries, editingEntry, classes]);
+  }, [newEntry, getAllConflicts]);
 
   useEffect(() => {
     checkConflictsInRealTime();
-  }, [newEntry, entries, editingEntry, classes]);
+  }, [checkConflictsInRealTime]);
 
   const showEntryDetails = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
@@ -957,21 +903,14 @@ export default function Timetablecreation() {
   const confirmDelete = async () => {
     if (!deletingEntryId) return;
     
-    console.log('📝 [FORM] Delete confirmation started for entry:', deletingEntryId);
-    
     try {
-      console.log('📡 [API] Sending DELETE request for entry:', deletingEntryId);
       await axios.delete(`${API_BASE}/timetable/${deletingEntryId}/`);
-      console.log('✅ [API] Entry deleted successfully');
       await fetchTimetable();
       setShowDeleteConfirm(false);
       setDeletingEntryId(null);
       setError(`✅ Timetable entry deleted successfully!`);
-    } catch (err: any) {
-      console.log('❌ [API] Error deleting timetable entry:', err);
-      console.error('❌ [API] Full error details:', err);
-      const errorMessage = err?.response?.data?.message || 'Failed to delete timetable entry';
-      console.log('❌ [API] Error message:', errorMessage);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete timetable entry';
       setError(errorMessage);
       setShowDeleteConfirm(false);
       setDeletingEntryId(null);
@@ -1565,4 +1504,3 @@ export default function Timetablecreation() {
     </div>
   );
 }
-

@@ -1,11 +1,10 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import {
   Plus,
   Search,
-  Filter,
   Calendar,
   Clock4,
   CheckCircle,
@@ -13,7 +12,6 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
-  Download,
   FileText,
   User,
   Clock,
@@ -61,10 +59,6 @@ const TeacherLeavesPage = () => {
 
   const leaveTypes = ["Sick", "Casual", "Vacation",  "Other"];
 
-  useEffect(() => {
-    fetchLeaves();
-  }, []);
-
   const showPopup = (type: 'success' | 'error', message: string) => {
     setPopupMessage(message);
     if (type === 'success') {
@@ -78,7 +72,7 @@ const TeacherLeavesPage = () => {
     }, 4000);
   };
 
-  const fetchLeaves = async () => {
+  const fetchLeaves = useCallback(async () => {
     try {
       setLoading(true);
       const userData = localStorage.getItem("userData");
@@ -96,7 +90,11 @@ const TeacherLeavesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchLeaves();
+  }, [fetchLeaves]);
 
   const handleSubmitLeave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,8 +121,8 @@ const TeacherLeavesPage = () => {
         setShowNewLeaveForm(false);
         setNewLeave({ leave_type: "", start_date: "", end_date: "", reason: "" });
       }
-    } catch (error: any) {
-      console.error("Error submitting leave:", error.response?.data || error.message);
+    } catch (error: unknown) {
+      console.error("Error submitting leave:", (error as { response?: { data?: string } })?.response?.data || (error as Error)?.message);
       showPopup('error', "Failed to submit leave application");
     } finally {
       setSubmitting(false);
@@ -165,16 +163,16 @@ const TeacherLeavesPage = () => {
     }
   };
 
-  const getStatusBgColor = (status: string) => {
-    switch (status) {
-      case "Approved":
-        return "bg-green-500";
-      case "Rejected":
-        return "bg-red-500";
-      default:
-        return "bg-yellow-500";
-    }
-  };
+  // const getStatusBgColor = (status: string) => {
+  //   switch (status) {
+  //     case "Approved":
+  //       return "bg-green-500";
+  //     case "Rejected":
+  //       return "bg-red-500";
+  //     default:
+  //       return "bg-yellow-500";
+  //   }
+  // };
 
   const calculateDays = (start: string, end: string) => {
     const startDate = new Date(start);

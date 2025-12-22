@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import {
@@ -14,16 +15,32 @@ import {
   Briefcase,
   Users,
   CheckCircle,
-  XCircle,
-  Upload
+  XCircle
 } from "lucide-react";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
+
+interface Child {
+  name?: string;
+  email?: string;
+  class?: string;
+}
+
+interface ParentData {
+  email: string;
+  fullname?: string;
+  phone?: string;
+  occupation?: string;
+  residential_address?: string;
+  relationship_to_student?: string;
+  profile_picture?: string;
+  children_list?: Child[];
+}
 
 const ParentProfilePage = () => {
   const [parentEmail, setParentEmail] = useState("");
   
-  const [parentData, setParentData] = useState<any>(null);
+  const [parentData, setParentData] = useState<ParentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -45,8 +62,8 @@ const ParentProfilePage = () => {
   // ✅ Fetch parent data from API
   const fetchParentDetails = async (email: string) => {
     try {
-      const res = await axios.get(`${API_BASE}/parents/`);
-      const foundParent = res.data.find((p: any) => p.email === email);
+      const res = await axios.get<ParentData[]>(`${API_BASE}/parents/`);
+      const foundParent = res.data.find((p: ParentData) => p.email === email);
       if (foundParent) {
         setParentData(foundParent);
       } else {
@@ -97,7 +114,7 @@ const ParentProfilePage = () => {
 
     setSaving(true);
     try {
-      let updatedData: any = {
+      const updatedData: Record<string, string | undefined> = {
         fullname: parentData.fullname,
         phone: parentData.phone,
         occupation: parentData.occupation,
@@ -215,16 +232,23 @@ const ParentProfilePage = () => {
             <div className="bg-gradient-to-r from-blue-600 to-purple-700 p-8 text-white">
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="relative group">
-                  <div className="w-32 h-32 rounded-full border-4 border-white/20 shadow-2xl overflow-hidden bg-white">
-                    <img
-                      src={
-                        profileFile
-                          ? URL.createObjectURL(profileFile)
-                          : parentData.profile_picture || "/default-profile.png"
-                      }
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-32 h-32 rounded-full border-4 border-white/20 shadow-2xl overflow-hidden bg-white relative">
+                    {profileFile ? (
+                      <Image
+                        src={URL.createObjectURL(profileFile)}
+                        alt="Profile"
+                        width={128}
+                        height={128}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src={parentData.profile_picture || "/default-profile.png"}
+                        alt="Profile"
+                        fill
+                        className="object-cover"
+                      />
+                    )}
                   </div>
                   {isEditing && (
                     <label className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
@@ -424,7 +448,7 @@ const ParentProfilePage = () => {
                     Your Children ({parentData.children_list.length})
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {parentData.children_list.map((child: any, index: number) => (
+                    {parentData.children_list.map((child: Child, index: number) => (
                       <div key={index} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">

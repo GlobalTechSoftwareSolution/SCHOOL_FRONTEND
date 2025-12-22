@@ -3,8 +3,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/grades/";
-const STUDENTS_API = "https://school.globaltechsoftwaresolutions.cloud/api/students/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/grades/`;
+const STUDENTS_API = `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`;
 
 type Grade = {
   id: number;
@@ -18,7 +18,6 @@ type Grade = {
   exam_date?: string;
   remarks?: string;
   student?: string;
-  [k: string]: any;
 };
 
 const StudentMarks = () => {
@@ -224,7 +223,7 @@ const StudentMarks = () => {
               <span className="text-2xl">📚</span>
             </div>
             <div className="text-gray-700 font-semibold text-lg mb-2">No grades found</div>
-            <div className="text-gray-500">We couldn't find any grade records for your account.</div>
+            <div className="text-gray-500">We could not find any grade records for your account.</div>
           </div>
         </div>
       </DashboardLayout>
@@ -243,7 +242,7 @@ const StudentMarks = () => {
               Academic Performance
             </h1>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Track your academic journey with detailed insights and performance metrics
+              Welcome to your Student Marks Dashboard
             </p>
           </div>
 

@@ -2,12 +2,13 @@
 
 import DashboardLayout from "@/app/components/DashboardLayout";
 import React, { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 
 interface Student {
     email: string;
     parent_name: string | null;
     fullname: string;
-    student_id: string;
+    student_id: string | null;
     phone: string | null;
     date_of_birth: string | null;
     gender: string | null;
@@ -23,17 +24,30 @@ interface Student {
     blood_group: string | null;
     class_id: string | null;
     parent: string | null;
+    section: string | null;  // Will be populated from classes API
+}
+
+interface ClassInfo {
+    id: number;
+    class_name: string;
+    sec: string;
 }
 
 interface ValidationErrors {
     [key: string]: string;
 }
 
+interface ApiError {
+    message?: string;
+}
+
 const StudentProfile = () => {
-    const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api/students/";
+    const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`;
+    const CLASSES_API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/classes/`;
 
     const [student, setStudent] = useState<Student | null>(null);
     const [originalStudent, setOriginalStudent] = useState<Student | null>(null);
+    const [, _setClassInfo] = useState<ClassInfo | null>(null);
     const [error, setError] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -98,15 +112,43 @@ const StudentProfile = () => {
             setStudent(data);
             setOriginalStudent(data);
             
-            if (data.profile_picture) {
-                setPreviewUrl(data.profile_picture);
+            // Fetch class information if class_id exists
+            if (data.class_id) {
+                try {
+                    const classRes = await fetch(CLASSES_API_BASE + data.class_id + "/");
+                    if (classRes.ok) {
+                        const classData = await classRes.json();
+                        _setClassInfo(classData);
+                        
+                        // Update student with class name and section from API for display purposes
+                        setStudent(prev => prev ? {
+                            ...prev,
+                            class_id: classData.class_name, // Display class name instead of ID
+                            section: classData.sec
+                        } : null);
+                        
+                        // Keep original student with class ID for API calls
+                        setOriginalStudent(prev => prev ? {
+                            ...prev,
+                            class_id: classData.class_name, // Display class name instead of ID
+                            section: classData.sec
+                        } : null);
+                    }
+                } catch {
+                    // Silently fail if class info can't be fetched
+                }
             }
-        } catch (err: any) {
-            setError(err.message);
+            
+            if (data.profile_picture) {
+                setPreviewUrl(data.profile_picture.startsWith('http') ? data.profile_picture : `${process.env.NEXT_PUBLIC_API_BASE_URL}${data.profile_picture}`);
+            }
+        } catch (err: unknown) {
+            const apiError = err as ApiError;
+            setError(apiError.message || "An error occurred");
         } finally {
             setIsLoading(false);
         }
-    }, [getLoggedEmail]);
+    }, [getLoggedEmail, API_BASE, CLASSES_API_BASE]);
 
     useEffect(() => {
         fetchStudent();
@@ -221,7 +263,7 @@ const StudentProfile = () => {
             setOriginalStudent(updatedStudent);
             
             if (profileFile && updatedStudent.profile_picture) {
-                setPreviewUrl(updatedStudent.profile_picture);
+                setPreviewUrl(updatedStudent.profile_picture.startsWith('http') ? updatedStudent.profile_picture : `${process.env.NEXT_PUBLIC_API_BASE_URL}${updatedStudent.profile_picture}`);
             }
             
             setShowSuccessPopup(true);
@@ -229,9 +271,10 @@ const StudentProfile = () => {
             setIsEditing(false);
             setProfileFile(null);
 
-        } catch (err: any) {
-            console.error("Save error:", err);
-            setError(err.message);
+        } catch (err: unknown) {
+            const apiError = err as ApiError;
+            console.error("Save error:", apiError);
+            setError(apiError.message || "An error occurred");
         } finally {
             setIsSaving(false);
         }
@@ -263,7 +306,7 @@ const StudentProfile = () => {
         if (originalStudent) {
             setStudent(originalStudent);
             if (originalStudent.profile_picture) {
-                setPreviewUrl(originalStudent.profile_picture);
+                setPreviewUrl(originalStudent.profile_picture.startsWith('http') ? originalStudent.profile_picture : `${process.env.NEXT_PUBLIC_API_BASE_URL}${originalStudent.profile_picture}`);
             } else {
                 setPreviewUrl(null);
             }
@@ -359,10 +402,16 @@ const StudentProfile = () => {
                                 <div className="flex flex-col items-center">
                                     <div className="relative">
                                         {previewUrl ? (
-                                            <img
-                                                src={previewUrl}
+                                            <Image
+                                                src={previewUrl.startsWith('http') ? previewUrl : `${process.env.NEXT_PUBLIC_API_BASE_URL}${previewUrl}`}
+                                                width={96}
+                                                height={96}
                                                 className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
                                                 alt="Profile"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+                                                }}
                                             />
                                         ) : (
                                             <div className="w-24 h-24 rounded-full bg-white bg-opacity-20 border-4 border-white border-opacity-30 flex items-center justify-center">
@@ -386,10 +435,10 @@ const StudentProfile = () => {
                                             </label>
                                         )}
                                     </div>
-                                    <h2 className="text-xl font-bold mt-4 text-center">{student.fullname}</h2>
-                                    <p className="text-blue-100 text-sm mt-1">{student.email}</p>
-                                    <div className="mt-2 px-3 py-1 bg-white bg-opacity-20 rounded-full text-xs">
-                                        ID: {student.student_id}
+                                    <h2 className="text-xl font-bold mt-4 text-center">{student.fullname || "Unnamed Student"}</h2>
+                                    <p className="text-blue-100 text-sm mt-1">{student.email || "No email provided"}</p>
+                                    <div className="mt-2 px-3 py-1 bg-white bg-opacity-20 text-black rounded-full text-xs">
+                                        ID: {student.student_id || "Not assigned"}
                                     </div>
                                 </div>
                             </div>
@@ -400,6 +449,10 @@ const StudentProfile = () => {
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-600 text-sm">Class</span>
                                         <span className="font-semibold text-gray-900">{student.class_id || "Not assigned"}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-600 text-sm">Section</span>
+                                        <span className="font-semibold text-gray-900">{student.section || "Not assigned"}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-600 text-sm">Admission Date</span>
@@ -510,7 +563,7 @@ const StudentProfile = () => {
                                                     </label>
                                                     <input
                                                         name="fullname"
-                                                        value={student.fullname}
+                                                        value={student.fullname || ""}
                                                         onChange={onChange}
                                                         className={`w-full border rounded-lg px-4 py-3 transition-colors ${
                                                             !isEditing 
@@ -531,7 +584,7 @@ const StudentProfile = () => {
                                                         Student ID
                                                     </label>
                                                     <input
-                                                        value={student.student_id}
+                                                        value={student.student_id ?? ""}
                                                         className="w-full border border-gray-300 bg-gray-50 rounded-lg px-4 py-3 text-gray-500"
                                                         readOnly
                                                     />
@@ -543,7 +596,7 @@ const StudentProfile = () => {
                                                     </label>
                                                     <input
                                                         name="email"
-                                                        value={student.email}
+                                                        value={student.email || ""}
                                                         onChange={onChange}
                                                         className={`w-full border rounded-lg px-4 py-3 transition-colors ${
                                                             !isEditing 
@@ -651,6 +704,17 @@ const StudentProfile = () => {
                                                         readOnly={!isEditing}
                                                     />
                                                 </div>
+                                                
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Section
+                                                    </label>
+                                                    <input
+                                                        value={student.section ?? "Not assigned"}
+                                                        className="w-full border border-gray-300 bg-gray-50 rounded-lg px-4 py-3 text-gray-500"
+                                                        readOnly
+                                                    />
+                                                </div>
                                             </div>
 
                                             <div>
@@ -678,7 +742,7 @@ const StudentProfile = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Father's Name
+                                                        Father&apos;s Name
                                                     </label>
                                                     <input
                                                         name="father_name"
@@ -693,7 +757,7 @@ const StudentProfile = () => {
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Mother's Name
+                                                        Mother&apos;s Name
                                                     </label>
                                                     <input
                                                         name="mother_name"

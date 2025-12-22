@@ -146,7 +146,7 @@ const Event = () => {
 
         {/* Gallery */}
         <AnimatedCard
-          icon={<Image className="text-pink-600" size={30} />}
+          icon={<Image className="text-pink-600" size={30} />} // eslint-disable-line jsx-a11y/alt-text
           title="📸 Event Gallery & Highlights"
           list={[
             "Upload and view event media.",

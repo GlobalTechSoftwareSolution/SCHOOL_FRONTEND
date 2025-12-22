@@ -1,78 +1,135 @@
 "use client";
+
 import DashboardLayout from "@/app/components/DashboardLayout";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import Image from "next/image";
 import {
   Users,
   Calendar,
   CheckCircle,
   XCircle,
-  Clock,
   TrendingUp,
   BookOpen,
-  Filter,
   Search,
   Download,
-  Eye,
   ChevronDown,
   ChevronUp,
   User
 } from "lucide-react";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL as string;
+
+/* ===================== TYPES ===================== */
+
+interface Student {
+  email: string;
+  fullname: string;
+  profile_picture?: string;
+  class_id: number;
+  student_id?: string;
+  parent: string;
+  class_name?: string;
+  section?: string;
+  class_teacher?: string;
+  teacher_email?: string;
+}
+
+interface ClassData {
+  id: number;
+  class_name: string;
+  sec: string;
+  class_teacher_name?: string;
+  teacher_email?: string;
+}
+
+interface AttendanceRecord {
+  student: string;
+  student_name?: string;
+  status: "Present" | "Absent";
+  date: string;
+  remarks?: string;
+  teacher?: string;
+  teacher_name?: string;
+  created_time?: string;
+  class_id?: number;
+  class_name?: string;
+  section?: string;
+}
+
+interface UIAttendanceRecord {
+  status: "Present" | "Absent";
+  fullname: string;
+  email: string;
+  class_name: string;
+  section: string;
+  class_teacher: string;
+  teacher_email: string;
+  profile_picture?: string;
+  student_data?: Student;
+  class_data?: {
+    class_id?: number;
+    class_name?: string;
+    section?: string;
+  };
+  date: string;
+  remarks?: string;
+  created_at?: string;
+  marked_by?: string;
+}
+
+/* ===================== COMPONENT ===================== */
 
 const ParentAttendance = () => {
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [parentEmail, setParentEmail] = useState<string | null>(null);
-  const [students, setStudents] = useState<any[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<string>("all");
-  const [dateFilter, setDateFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [expandedRecord, setExpandedRecord] = useState<number | null>(null);
-
-  // ✅ Step 1: Get parent email from localStorage
-  useEffect(() => {
+  const [attendanceData, setAttendanceData] = useState<UIAttendanceRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [parentEmail] = useState<string | null>(() => {
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
-      const parsedData = JSON.parse(storedUserData);
-      const email = parsedData.email;
-      setParentEmail(email);
+      try {
+        const parsedData: { email: string } = JSON.parse(storedUserData);
+        return parsedData.email;
+      } catch (error) {
+        console.error("Failed to parse user data:", error);
+        return null;
+      }
     }
-  }, []);
+    return null;
+  });
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [expandedRecord, setExpandedRecord] = useState<number | null>(null);
 
-  // ✅ Step 2: Fetch students linked to this parent
+
+  /* ===================== FETCH STUDENTS ===================== */
   useEffect(() => {
     if (!parentEmail) return;
 
     const fetchParentStudents = async () => {
       try {
         const [studentRes, classesRes] = await Promise.all([
-          axios.get(`${API_BASE}/students/`),
-          axios.get(`${API_BASE}/classes/`)
+          axios.get<Student[]>(`${API_BASE}/students/`),
+          axios.get<ClassData[]>(`${API_BASE}/classes/`)
         ]);
-        
-        const allStudents = studentRes.data;
-        const allClasses = classesRes.data;
 
-        // ✅ Filter students by parent email
-        const parentStudents = allStudents.filter(
-          (student: any) => student.parent === parentEmail
+        const parentStudents = studentRes.data.filter(
+          (student) => student.parent === parentEmail
         );
 
-        // ✅ Enrich students with class information
-        const enrichedStudents = parentStudents.map((student: any) => {
-          const classDetail = allClasses.find(
-            (c: any) => c.id === student.class_id
+        const enrichedStudents: Student[] = parentStudents.map((student) => {
+          const classDetail = classesRes.data.find(
+            (c) => c.id === student.class_id
           );
-          
+
           return {
             ...student,
-            class_name: classDetail?.class_name ,
+            class_name: classDetail?.class_name,
             section: classDetail?.sec,
-            class_teacher: classDetail?.class_teacher_name ,
-            teacher_email: classDetail?.teacher_email 
+            class_teacher: classDetail?.class_teacher_name,
+            teacher_email: classDetail?.teacher_email
           };
         });
 
@@ -85,37 +142,32 @@ const ParentAttendance = () => {
     fetchParentStudents();
   }, [parentEmail]);
 
-  // ✅ Step 3: Fetch attendance for only those students from student_attendance API
+  /* ===================== FETCH ATTENDANCE ===================== */
   useEffect(() => {
     if (students.length === 0) return;
 
     const fetchAttendance = async () => {
       try {
-        const attendanceRes = await axios.get(`${API_BASE}/student_attendance/`);
-        const allAttendance = attendanceRes.data;
+        const attendanceRes = await axios.get<AttendanceRecord[]>(
+          `${API_BASE}/student_attendance/`
+        );
 
-        // ✅ Keep only attendance matching these students by email (field `student`)
-        const filteredAttendance = allAttendance.filter((record: any) => {
-          const isMatch = students.some((stu: any) => stu.email === record.student);
-          return isMatch;
-        });
+        const filteredAttendance = attendanceRes.data.filter((record) =>
+          students.some((stu) => stu.email === record.student)
+        );
 
-        // ✅ Map to shape used by the UI
-        const merged = filteredAttendance.map((att: any) => {
-          const stu = students.find((s: any) => s.email === att.student);
-          const profilePic = stu?.profile_picture || "";
+        const merged: UIAttendanceRecord[] = filteredAttendance.map((att) => {
+          const stu = students.find((s) => s.email === att.student);
 
           return {
-            ...att,
-            student: att.student,
             status: att.status || "Present",
             fullname: att.student_name || stu?.fullname || "Unknown Student",
-            email: att.student || "N/A",
+            email: att.student,
             class_name: att.class_name || stu?.class_name || "N/A",
             section: att.section || stu?.section || "N/A",
             class_teacher: stu?.class_teacher || att.teacher_name || "N/A",
             teacher_email: att.teacher || stu?.teacher_email || "N/A",
-            profile_picture: profilePic,
+            profile_picture: stu?.profile_picture,
             student_data: stu,
             class_data: {
               class_id: att.class_id,
@@ -123,15 +175,15 @@ const ParentAttendance = () => {
               section: att.section
             },
             date: att.date,
-            remarks: att.remarks || "",
-            created_at: att.created_time,
+            remarks: att.remarks,
+            created_at: att.created_time
           };
         });
 
         setAttendanceData(merged);
         setLoading(false);
       } catch (error) {
-        console.error("❌ Error fetching student attendance:", error);
+        console.error("❌ Error fetching attendance:", error);
         setLoading(false);
       }
     };
@@ -139,53 +191,51 @@ const ParentAttendance = () => {
     fetchAttendance();
   }, [students]);
 
-  // Calculate statistics
+  /* ===================== STATS ===================== */
   const getAttendanceStats = () => {
-    const present = attendanceData.filter(item => item.status === "Present").length;
-    const absent = attendanceData.filter(item => item.status === "Absent").length;
+    const present = attendanceData.filter((i) => i.status === "Present").length;
+    const absent = attendanceData.filter((i) => i.status === "Absent").length;
     const total = present + absent;
     return {
       present,
       absent,
-      percentage: total > 0 ? Math.round((present / total) * 100) : 0,
-      total
+      total,
+      percentage: total ? Math.round((present / total) * 100) : 0
     };
   };
 
-  const getStudentStats = (studentEmail: string) => {
-    const studentAttendance = attendanceData.filter(item => item.email === studentEmail);
-    const present = studentAttendance.filter(item => item.status === "Present").length;
-    const total = studentAttendance.length;
+  const getStudentStats = (email: string) => {
+    const list = attendanceData.filter((i) => i.email === email);
+    const present = list.filter((i) => i.status === "Present").length;
     return {
       present,
-      total,
-      percentage: total > 0 ? Math.round((present / total) * 100) : 0
+      total: list.length,
+      percentage: list.length ? Math.round((present / list.length) * 100) : 0
     };
   };
 
-  // Filter data
-  const filteredAttendance = attendanceData.filter(item => {
-    const matchesStudent = selectedStudent === "all" || item.email === selectedStudent;
-    const matchesDate = !dateFilter || item.date === dateFilter;
-    const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-    const matchesSearch = 
-      item.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.class_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.remarks?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesStudent && matchesDate && matchesStatus && matchesSearch;
+  /* ===================== FILTER ===================== */
+  const filteredAttendance = attendanceData.filter((item) => {
+    return (
+      (selectedStudent === "all" || item.email === selectedStudent) &&
+      (!dateFilter || item.date === dateFilter) &&
+      (statusFilter === "all" || item.status === statusFilter) &&
+      (
+        item.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.class_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.remarks?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
   });
 
   const stats = getAttendanceStats();
 
+  /* ===================== UI ===================== */
   if (loading) {
     return (
       <DashboardLayout role="parents">
         <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading attendance data...</p>
-          </div>
+          <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
         </div>
       </DashboardLayout>
     );
@@ -197,7 +247,7 @@ const ParentAttendance = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Children Attendance</h1>
-          <p className="text-gray-600 mt-2">Track and monitor your children's school attendance</p>
+          <p className="text-gray-600 mt-2">Track and monitor your children&apos;s school attendance</p>
         </div>
 
         {/* Statistics Cards */}
@@ -291,10 +341,12 @@ const ParentAttendance = () => {
                         isSelected ? "bg-blue-200" : "bg-blue-100"
                       }`}>
                         {student.profile_picture ? (
-                          <img
+                          <Image
                             src={student.profile_picture}
                             alt={student.fullname}
-                            className="w-16 h-16 rounded-full object-cover"
+                            width={64}
+                            height={64}
+                            className="rounded-full object-cover"
                           />
                         ) : (
                           <User className="h-8 w-8 text-blue-600" />
@@ -410,10 +462,12 @@ const ParentAttendance = () => {
                     <div className="flex items-start gap-4 flex-1">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                         {record.profile_picture ? (
-                          <img
+                          <Image
                             src={record.profile_picture}
                             alt={record.fullname}
-                            className="w-12 h-12 rounded-full object-cover"
+                            width={48}
+                            height={48}
+                            className="rounded-full object-cover"
                           />
                         ) : (
                           <User className="h-6 w-6 text-blue-600" />
@@ -481,10 +535,12 @@ const ParentAttendance = () => {
                           <div className="flex flex-col items-center">
                             <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-3 overflow-hidden">
                               {record.profile_picture ? (
-                                <img
+                                <Image
                                   src={record.profile_picture}
                                   alt={record.fullname}
-                                  className="w-24 h-24 object-cover"
+                                  width={96}
+                                  height={96}
+                                  className="object-cover"
                                 />
                               ) : (
                                 <User className="h-12 w-12 text-blue-600" />

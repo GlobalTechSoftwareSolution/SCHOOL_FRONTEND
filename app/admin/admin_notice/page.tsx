@@ -2,18 +2,50 @@
 import DashboardLayout from '@/app/components/DashboardLayout'
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import { 
-  Bell, 
-  Plus, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Filter, 
-  Search, 
-  X, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
+
+// Type definitions
+interface Notice {
+  id: number;
+  title?: string;
+  message?: string;
+  posted_date?: string;
+  valid_until?: string;
+  important?: boolean;
+  email?: string;
+  notice_by?: string;
+  notice_to?: string;
+  type?: string;
+  priority?: string;
+  status?: string;
+}
+
+
+
+interface NoticeCardProps {
+  notice: Notice;
+  onView: () => void;
+  onDelete: () => void;
+  getTypeStyles: (type: string) => string;
+  getTypeIcon: (type: string) => React.ReactNode;
+  getPriorityBadge: (priority: string) => string;
+  getPriorityIcon: (priority: string) => React.ReactNode;
+}
+
+interface InfoRowProps {
+  label: string;
+  value: React.ReactNode;
+}
+import {
+  Bell,
+  Plus,
+  Eye,
+  Edit,
+  Trash2,
+  Search,
+  X,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
   Info,
   Users,
   User,
@@ -29,8 +61,8 @@ import {
 } from 'lucide-react'
 
 const Notice_Page = () => {
-  const [notices, setNotices] = useState<any[]>([]);
-  const [selectedNotice, setSelectedNotice] = useState<any | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
@@ -44,17 +76,17 @@ const Notice_Page = () => {
     const fetchNotices = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("https://school.globaltechsoftwaresolutions.cloud/api/notices/");
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/notices/`);
         setNotices(response.data || []);
         
         // Calculate stats
         const userInfo = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userInfo") || "{}") : {};
         const userEmail = userInfo?.email || "admin@school.com";
         
-        const myNotices = response.data.filter((notice: any) => notice.notice_by === userEmail).length;
-        const forMe = response.data.filter((notice: any) => !notice.notice_to || notice.notice_to === userEmail).length;
-        const important = response.data.filter((notice: any) => notice.important).length;
-        const active = response.data.filter((notice: any) => notice.status === 'active').length;
+        const myNotices = response.data.filter((notice: Notice) => notice.notice_by === userEmail).length;
+        const forMe = response.data.filter((notice: Notice) => !notice.notice_to || notice.notice_to === userEmail).length;
+        const important = response.data.filter((notice: Notice) => notice.important).length;
+        const active = response.data.filter((notice: Notice) => notice.status === 'active').length;
 
         setStats({
           total: response.data.length,
@@ -74,8 +106,7 @@ const Notice_Page = () => {
 
   // Get user info from localStorage
   const userInfo = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("userInfo") || "{}") : {};
-  const userEmail = userInfo?.email || "admin@school.com";
-  const userRole = userInfo?.role || "Admin";
+  const userEmail = userInfo?.email || "";
   
   const [newNotice, setNewNotice] = useState({
     title: "",
@@ -133,13 +164,7 @@ const Notice_Page = () => {
     }
   }
 
-  const toggleNoticeStatus = (id: number) => {
-    setNotices(notices.map(notice => 
-      notice.id === id 
-        ? { ...notice, status: notice.status === 'active' ? 'inactive' : 'active' }
-        : notice
-    ))
-  }
+
 
   const deleteNotice = async (id: number) => {
     if (confirm("Are you sure you want to delete this notice?")) {
@@ -192,19 +217,7 @@ const Notice_Page = () => {
     return icons[priority as keyof typeof icons] || icons.medium
   }
 
-  // Filter notices based on active filter and search
-  const filteredNotices = notices.filter(notice => {
-    const matchesSearch = notice.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         notice.message?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = 
-      activeFilter === 'all' ? true :
-      activeFilter === 'my' ? notice.notice_by === userEmail :
-      activeFilter === 'forme' ? (!notice.notice_to || notice.notice_to === userEmail) :
-      activeFilter === 'important' ? notice.important : true;
 
-    return matchesSearch && matchesFilter;
-  });
 
   const myNotices = notices.filter(notice => notice.notice_by === userEmail);
   const forMeNotices = notices.filter(notice => !notice.notice_to || notice.notice_to === userEmail);
@@ -295,33 +308,7 @@ const Notice_Page = () => {
                   <Users className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
                 </div>
               </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-white to-amber-50/50 rounded-xl sm:rounded-2xl shadow-sm border border-amber-200/30 p-3 sm:p-4 lg:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-              <div className="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-amber-500/5 rounded-full -translate-y-4 sm:-translate-y-6 translate-x-4 sm:translate-x-6"></div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Important</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{stats.important}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg sm:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Star className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-white to-green-50/50 rounded-xl sm:rounded-2xl shadow-sm border border-green-200/30 p-3 sm:p-4 lg:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-              <div className="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 bg-green-500/5 rounded-full -translate-y-4 sm:-translate-y-6 translate-x-4 sm:translate-x-6"></div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Active</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{stats.active}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg sm:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
-                </div>
-              </div>
-            </div>
+            </div>  
           </div>
 
           {/* Search and Filters */}
@@ -350,7 +337,7 @@ const Notice_Page = () => {
                   ].map((filter) => (
                     <button
                       key={filter.id}
-                      onClick={() => setActiveFilter(filter.id as any)}
+                      onClick={() => setActiveFilter(filter.id as 'all' | 'my' | 'forme' | 'important')}
                       className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-md sm:rounded-lg font-medium transition-all duration-300 text-xs sm:text-sm ${
                         activeFilter === filter.id
                           ? 'bg-white text-blue-600 shadow-sm border border-blue-200/50'
@@ -390,7 +377,7 @@ const Notice_Page = () => {
                     <p className="text-sm">No notices given by you</p>
                   </div>
                 ) : (
-                  myNotices.map((notice: any) => (
+                  myNotices.map((notice: Notice) => (
                     <NoticeCard 
                       key={notice.id} 
                       notice={notice} 
@@ -428,7 +415,7 @@ const Notice_Page = () => {
                     <p className="text-sm">No notices for you</p>
                   </div>
                 ) : (
-                  forMeNotices.map((notice: any) => (
+                  forMeNotices.map((notice: Notice) => (
                     <NoticeCard 
                       key={notice.id} 
                       notice={notice} 
@@ -682,18 +669,18 @@ const Notice_Page = () => {
 }
 
 // Enhanced Notice Card Component
-const NoticeCard = ({ notice, onView, onDelete, getTypeStyles, getTypeIcon, getPriorityBadge, getPriorityIcon }: any) => (
+const NoticeCard = ({ notice, onView, onDelete, getTypeStyles, getTypeIcon, getPriorityBadge, getPriorityIcon }: NoticeCardProps) => (
   <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200/60 p-3 sm:p-4 hover:shadow-lg transition-all duration-300 group">
     <div className="flex items-start justify-between mb-2 sm:mb-3">
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap gap-1 sm:gap-2 mb-2">
-          <span className={`inline-flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${getTypeStyles(notice.type)}`}>
-            {getTypeIcon(notice.type)}
-            <span className="hidden xs:inline">{notice.type}</span>
+          <span className={`inline-flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${getTypeStyles(notice.type || 'info')}`}>
+            {getTypeIcon(notice.type || 'info')}
+            <span className="hidden xs:inline">{notice.type || 'info'}</span>
           </span>
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPriorityBadge(notice.priority)}`}>
-            {getPriorityIcon(notice.priority)}
-            <span className="hidden xs:inline">{notice.priority}</span>
+          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPriorityBadge(notice.priority || 'medium')}`}>
+            {getPriorityIcon(notice.priority || 'medium')}
+            <span className="hidden xs:inline">{notice.priority || 'medium'}</span>
           </span>
           {notice.important && (
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
@@ -746,7 +733,7 @@ const NoticeCard = ({ notice, onView, onDelete, getTypeStyles, getTypeIcon, getP
 );
 
 // Enhanced InfoRow Component
-const InfoRow = ({ label, value }: { label: string; value: any }) => (
+const InfoRow = ({ label, value }: InfoRowProps) => (
   <div className="flex justify-between items-center py-1 sm:py-2 border-b border-gray-100 last:border-b-0">
     <span className="text-xs sm:text-sm font-medium text-gray-600">{label}</span>
     <span className="text-xs sm:text-sm text-gray-900 text-right font-medium max-w-[60%] truncate">{value}</span>

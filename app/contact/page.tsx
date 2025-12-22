@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import emailjs from "@emailjs/browser";
+import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,41 +34,60 @@ export default function ContactPage() {
   const [sending, setSending] = useState(false);
   const [activeField, setActiveField] = useState<string | null>(null);
 
+  // Check for query parameters and auto-fill form
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('name') || '';
+    const email = urlParams.get('email') || '';
+    const message = urlParams.get('message') || '';
+    
+    if (name || email || message) {
+      setFormData(prev => ({
+        ...prev,
+        from_name: name,
+        from_email: email,
+        message: message || `Hello, I'm interested in learning more about your school ERP system.`
+      }));
+    }
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
 
-    emailjs
-      .send(
-        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "",
-        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || "",
-        formData,
-        process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || ""
-      )
-      .then(
-        () => {
-          setSending(false);
-          setShowPopup(true);
-          setFormData({
-            from_name: "",
-            from_email: "",
-            phone: "",
-            subject: "",
-            message: "",
-            institution: "",
-            department: ""
-          });
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/contact/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        (error) => {
-          console.error("EmailJS Error:", error);
-          setSending(false);
-          alert("❌ Failed to send message. Please try again later.");
-        }
-      );
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setSending(false);
+        setShowPopup(true);
+        setFormData({
+          from_name: "",
+          from_email: "",
+          phone: "",
+          subject: "",
+          message: "",
+          institution: "",
+          department: ""
+        });
+      } else {
+        throw new Error("Failed to send message");
+      }
+    } catch {
+      // Silently handle API errors
+      setSending(false);
+      alert("❌ Failed to send message. Please try again later.");
+    }
   };
 
   const contactFeatures = [
@@ -152,7 +170,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-blue-100">Call Us</h4>
-                    <p className="text-white font-medium">+91 9844282875</p>
+                    <p className="text-white font-medium">+91 8495862494</p>
                     <p className="text-blue-200 text-sm">Mon-Sat, 10AM-6PM </p>
                   </div>
                 </div>

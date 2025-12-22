@@ -6,13 +6,7 @@ import {
   ShieldCheck, 
   Users, 
   GraduationCap, 
-  UserCheck,
-  ArrowRight,
-  Lock,
-  BarChart3,
-  BookOpen,
-  Smartphone,
-  Zap
+  UserCheck
 } from "lucide-react";
 
 const portals = [

@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { 
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+import {
+  BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 // Type definitions
 interface AttendanceData {
@@ -33,13 +33,49 @@ interface RecentActivity {
   avatar: string;
 }
 
-// Color palettes for charts
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+// API Response interfaces
+interface AttendanceRecord {
+  id: number;
+  user_email: string;
+  user_name?: string;
+  date: string;
+  status: string;
+  check_in?: string;
+  check_out?: string;
+}
+
+interface LeaveRecord {
+  id: number;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface ClassRecord {
+  id: number;
+  class_name: string;
+  sec?: string;
+  class_teacher_name?: string;
+}
+
+interface StudentRecord {
+  id: number;
+  email: string;
+  fullname: string;
+  student_id: string;
+  class_id: number;
+}
+
+
+
 const STATUS_COLORS = {
   Present: '#10B981',
   Absent: '#EF4444',
   Late: '#F59E0B',
   Halfday: '#F97316'
+};
+
+const getInitials = (name: string) => {
+  return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
 };
 
 export default function AdminDashboard() {
@@ -57,20 +93,18 @@ export default function AdminDashboard() {
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
   const [classDistribution, setClassDistribution] = useState<ClassDistribution[]>([]);
   const [loading, setLoading] = useState(true);
-  const [adminEmail, setAdminEmail] = useState("");
-
-  // Read admin email from localStorage
-  useEffect(() => {
+  const [adminEmail] = useState(() => {
     try {
       const userData = localStorage.getItem("userData");
       if (userData) {
         const parsed = JSON.parse(userData);
-        setAdminEmail(parsed.email);
+        return parsed.email || "";
       }
-    } catch (err) {
-      console.error("Error reading admin data:", err);
+    } catch {
+      // silently ignore localStorage errors
     }
-  }, []);
+    return "";
+  });
 
   // Fetch all dashboard data
   useEffect(() => {
@@ -97,8 +131,8 @@ export default function AdminDashboard() {
 
         // Calculate stats
         const today = new Date().toISOString().split('T')[0];
-        const todayAttendance = attendance.filter((a: any) => a.date === today);        
-        const presentToday = todayAttendance.filter((a: any) => a.status === 'Present').length;
+        const todayAttendance = attendance.filter((a: AttendanceRecord) => a.date === today);
+        const presentToday = todayAttendance.filter((a: AttendanceRecord) => a.status === 'Present').length;
 
         setStats({
           totalStudents: students.length,
@@ -107,14 +141,14 @@ export default function AdminDashboard() {
           presentToday: presentToday,
           absentToday: todayAttendance.length - presentToday,
           totalLeaves: leaves.length,
-          pendingLeaves: leaves.filter((l: any) => l.status === 'Pending').length,
+          pendingLeaves: leaves.filter((l: LeaveRecord) => l.status === 'Pending').length,
           totalReports: reports.length
         });
 
         // Prepare class distribution data
-        const classData = classes.map((cls: any) => ({
+        const classData = classes.map((cls: ClassRecord) => ({
           name: `${cls.class_name} - ${cls.sec}`,
-          students: students.filter((s: any) => s.class_id == cls.id).length,
+          students: students.filter((s: StudentRecord) => s.class_id == cls.id).length,
           teacher: cls.class_teacher_name
         }));
         setClassDistribution(classData);
@@ -127,10 +161,10 @@ export default function AdminDashboard() {
         }).reverse();
 
         const trendData = last7Days.map(date => {
-          const dayAttendance = attendance.filter((a: any) => a.date === date);
-          const present = dayAttendance.filter((a: any) => a.status === 'Present').length;
-          const absent = dayAttendance.filter((a: any) => a.status === 'Absent').length;
-          
+          const dayAttendance = attendance.filter((a: AttendanceRecord) => a.date === date);
+          const present = dayAttendance.filter((a: AttendanceRecord) => a.status === 'Present').length;
+          const absent = dayAttendance.filter((a: AttendanceRecord) => a.status === 'Absent').length;
+
           return {
             date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             Present: present,
@@ -142,10 +176,10 @@ export default function AdminDashboard() {
 
         // Prepare recent activity
         const sortedAttendance = attendance
-          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .sort((a: AttendanceRecord, b: AttendanceRecord) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 8);
 
-        const activity = sortedAttendance.map((record: any) => ({
+        const activity = sortedAttendance.map((record: AttendanceRecord) => ({
           id: record.id,
           name: record.user_name || record.user_email,
           action: record.status === 'Present' ? 'Checked in' : 'Marked absent',
@@ -166,10 +200,6 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
-  };
-
   if (loading) {
     return (
       <DashboardLayout role="admin">
@@ -188,8 +218,8 @@ export default function AdminDashboard() {
           <div className="mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm sm:text-base text-gray-600 mt-2">Welcome back, {adminEmail || 'Admin'}! Here's your overview.</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome to Admin Dashboard</h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-2">Welcome back, {adminEmail || 'Admin'}!</p>
               </div>
               <div className="text-xs sm:text-sm text-gray-500 bg-white px-3 sm:px-4 py-2 rounded-lg border self-stretch sm:self-auto">
                 Last updated: {new Date().toLocaleString()}
@@ -204,28 +234,21 @@ export default function AdminDashboard() {
               value={stats.totalStudents}
               icon="👨‍🎓"
               color="blue"
-              trend={stats.totalStudents > 0 ? "+" + Math.round(Math.random() * 15 + 5) + "%" : "0%"}
+              trend={stats.totalStudents > 0 ? "+12%" : "0%"}
             />
             <StatCard
               title="Total Teachers"
               value={stats.totalTeachers}
               icon="👨‍🏫"
               color="green"
-              trend={stats.totalTeachers > 0 ? "+" + Math.round(Math.random() * 10 + 2) + "%" : "0%"}
+              trend={stats.totalTeachers > 0 ? "+8%" : "0%"}
             />
             <StatCard
               title="Classes"
               value={stats.totalClasses}
               icon="🏫"
               color="purple"
-              trend={stats.totalClasses > 0 ? "+" + Math.round(Math.random() * 3 + 1) : "0"}
-            />
-            <StatCard
-              title="Present Today"
-              value={stats.presentToday}
-              icon="✅"
-              color="orange"
-              trend={`${stats.absentToday} absent`}
+              trend={stats.totalClasses > 0 ? "+2" : "0"}
             />
           </div>
 
@@ -244,14 +267,7 @@ export default function AdminDashboard() {
               icon="📊"
               color="green"
               trend="Generated"
-            />
-            <StatCard
-              title="Pending Approvals"
-              value={stats.pendingLeaves}
-              icon="⏳"
-              color="orange"
-              trend="Action needed"
-            />
+            />  
           </div>
 
           {/* Charts Section */}
@@ -453,5 +469,3 @@ function QuickActionButton({ icon, title, description, href }: { icon: string; t
     </a>
   );
 }
-
-export { AdminDashboard };

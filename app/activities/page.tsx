@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Navbar from '@/app/components/Navbar';
 import Footer from '@/app/components/Footer';
-import { Calendar, Clock, Users, Trophy, Target, BookOpen, Star, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { Calendar, Clock, Users, Trophy, Target, BookOpen, Star, Image as ImageIcon } from 'lucide-react';
 
 interface Activity {
   id: number;
@@ -18,15 +19,8 @@ interface Activity {
   organizer?: string;
 }
 
-const ActivitiesPage = () => {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Sample data for demonstration
-  const sampleActivities: Activity[] = [
+// Sample data for demonstration
+const sampleActivities: Activity[] = [
     {
       id: 1,
       title: "Annual Science Exhibition",
@@ -107,11 +101,16 @@ const ActivitiesPage = () => {
     }
   ];
 
+const ActivitiesPage = () => {
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+
   useEffect(() => {
     // Simulate API call
     setTimeout(() => {
       setActivities(sampleActivities);
-      setLoading(false);
     }, 1000);
   }, []);
 
@@ -171,10 +170,10 @@ const ActivitiesPage = () => {
                 <h1 className="text-3xl font-bold text-gray-900">School Activities</h1>
                 <p className="text-gray-600 mt-1">Discover and participate in various school events and activities</p>
               </div>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 font-medium">
+              {/* <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 font-medium">
                 <Calendar className="w-4 h-4" />
                 Add Activity
-              </button>
+              </button> */}
             </div>
 
         {/* Stats Cards */}
@@ -291,13 +290,15 @@ const ActivitiesPage = () => {
           {filteredActivities.map(activity => (
             <div key={activity.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition">
               <div className="h-48 relative">
-                <img 
-                  src={activity.image} 
+                <Image
+                  src={activity.image}
                   alt={activity.title}
+                  width={400}
+                  height={192}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     // Fallback to gradient if image fails to load
-                    const target = e.currentTarget;
+                    const target = e.currentTarget as HTMLImageElement;
                     target.style.display = 'none';
                     const nextElement = target.nextElementSibling as HTMLElement;
                     if (nextElement) {

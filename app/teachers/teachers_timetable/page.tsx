@@ -7,11 +7,9 @@ import {
   Calendar, 
   Clock, 
   BookOpen, 
-  MapPin, 
   Users, 
   Search, 
   Filter, 
-  Download,
   RefreshCw,
   AlertCircle,
   CheckCircle2,
@@ -42,11 +40,18 @@ interface TeacherStats {
   weeklyHours: number;
 }
 
+interface ClassInfo {
+  id: number;
+  class_name: string;
+  sec: string;
+}
+
 const TeachersTimetablePage = () => {
   const [teacherEmail, setTeacherEmail] = useState<string | null>(null);
   const [teacherName, setTeacherName] = useState<string>("");
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [filteredTimetable, setFilteredTimetable] = useState<TimetableEntry[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +65,9 @@ const TeachersTimetablePage = () => {
   const [filters, setFilters] = useState({
     day: "all",
     search: "",
-    timeRange: "all"
+    timeRange: "all",
+    classId: "all",
+    section: "all"
   });
 
   // Read teacher info from localStorage
@@ -88,6 +95,19 @@ const TeachersTimetablePage = () => {
     };
 
     getTeacherInfo();
+  }, []);
+
+  // Fetch classes for filtering
+  const fetchClasses = useCallback(async () => {
+    try {
+      console.log("📡 Fetching classes");
+      const res = await axios.get(`${API_BASE}classes/`);
+      const allClasses: ClassInfo[] = res.data || [];
+      console.log("📋 Total classes:", allClasses.length);
+      setClasses(allClasses);
+    } catch (err: unknown) {
+      console.error("❌ Error fetching classes:", err);
+    }
   }, []);
 
   // Calculate teacher statistics
@@ -126,27 +146,43 @@ const TeachersTimetablePage = () => {
     
     try {
       console.log("📡 Fetching timetable for teacher:", teacherEmail);
-      const res = await axios.get(`${API_BASE}timetable/`);
-      const allEntries: TimetableEntry[] = res.data || [];
+      const [timetableRes, classesRes] = await Promise.all([
+        axios.get(`${API_BASE}timetable/`),
+        axios.get(`${API_BASE}classes/`)
+      ]);
+      
+      const allEntries: TimetableEntry[] = timetableRes.data || [];
+      const allClasses: ClassInfo[] = classesRes.data || [];
       console.log("📋 Total timetable entries:", allEntries.length);
+      console.log("📚 Total classes:", allClasses.length);
 
       const teacherEntries = allEntries.filter(
         (t) => t.teacher.toLowerCase() === teacherEmail.toLowerCase()
       );
       
-      console.log("✅ Filtered teacher timetable entries:", teacherEntries);
-      setTimetable(teacherEntries);
-      setFilteredTimetable(teacherEntries);
+      // Enhance timetable entries with class information
+      const enhancedEntries = teacherEntries.map(entry => {
+        const classInfo = allClasses.find(cls => cls.id === entry.class_id);
+        return {
+          ...entry,
+          class_name: classInfo?.class_name || entry.class_name || `Class ${entry.class_id}`,
+          section: classInfo?.sec || entry.section || ""
+        };
+      });
+      
+      console.log("✅ Filtered and enhanced teacher timetable entries:", enhancedEntries);
+      setTimetable(enhancedEntries);
+      setFilteredTimetable(enhancedEntries);
       
       // Calculate statistics
-      if (teacherEntries.length > 0) {
-        setStats(calculateStats(teacherEntries));
+      if (enhancedEntries.length > 0) {
+        setStats(calculateStats(enhancedEntries));
       }
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("❌ Error fetching teacher timetable:", err);
       setError(
-        err.response?.data?.message || 
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 
         "Failed to load timetable. Please check your connection and try again."
       );
     } finally {
@@ -194,6 +230,20 @@ const TeachersTimetablePage = () => {
       });
     }
 
+    // Filter by class ID
+    if (filters.classId !== "all") {
+      filtered = filtered.filter(entry => 
+        entry.class_id === parseInt(filters.classId)
+      );
+    }
+
+    // Filter by section
+    if (filters.section !== "all") {
+      filtered = filtered.filter(entry => 
+        entry.section?.toLowerCase() === filters.section.toLowerCase()
+      );
+    }
+
     setFilteredTimetable(filtered);
   }, [timetable, filters]);
 
@@ -201,8 +251,19 @@ const TeachersTimetablePage = () => {
   useEffect(() => {
     if (teacherEmail) {
       fetchTimetable();
+      fetchClasses();
     }
-  }, [teacherEmail, fetchTimetable]);
+  }, [teacherEmail, fetchTimetable, fetchClasses]);
+
+  // Get unique sections for filter
+  const uniqueSections = Array.from(
+    new Set(timetable.map(entry => entry.section).filter(Boolean))
+  ) as string[];
+
+  // Get unique classes for filter
+  const uniqueClasses = Array.from(
+    new Set(timetable.map(entry => entry.class_id))
+  );
 
   // Group entries by day of week
   const groupedByDay = filteredTimetable.reduce<Record<string, TimetableEntry[]>>(
@@ -406,8 +467,8 @@ const TeachersTimetablePage = () => {
                 <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Filter Schedule</h3>
               </div>
               
-              <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 w-full lg:w-auto">
-                <div className="relative flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 w-full">
+                <div className="relative">
                   <Search className="h-3 w-3 sm:h-4 sm:w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
@@ -421,7 +482,7 @@ const TeachersTimetablePage = () => {
                 <select
                   value={filters.day}
                   onChange={(e) => setFilters(prev => ({ ...prev, day: e.target.value }))}
-                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full xs:w-auto"
+                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
                 >
                   <option value="all">All Days</option>
                   {orderedDays.map(day => (
@@ -432,11 +493,35 @@ const TeachersTimetablePage = () => {
                 <select
                   value={filters.timeRange}
                   onChange={(e) => setFilters(prev => ({ ...prev, timeRange: e.target.value }))}
-                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full xs:w-auto"
+                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
                 >
-                  <option value="all">All Day</option>
+                  <option value="all">Today</option>
                   <option value="morning">Morning</option>
                   <option value="afternoon">Afternoon</option>
+                </select>
+                
+                <select
+                  value={filters.classId}
+                  onChange={(e) => setFilters(prev => ({ ...prev, classId: e.target.value }))}
+                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                >
+                  <option value="all">All Classes</option>
+                  {uniqueClasses.map(classId => (
+                    <option key={classId} value={classId}>
+                      {classes.find(c => c.id === classId)?.class_name || `Class ${classId}`}
+                    </option>
+                  ))}
+                </select>
+                
+                <select
+                  value={filters.section}
+                  onChange={(e) => setFilters(prev => ({ ...prev, section: e.target.value }))}
+                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                >
+                  <option value="all">All Sections</option>
+                  {uniqueSections.map(section => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
                 </select>
               </div>
             </div>

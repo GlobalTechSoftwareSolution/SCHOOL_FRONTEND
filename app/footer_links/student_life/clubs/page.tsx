@@ -144,7 +144,7 @@ const Club = () => {
 
         {/* Gallery */}
         <AnimatedCard
-          icon={<Image className="text-pink-600" size={30} />}
+          icon={<Image className="text-pink-600" size={30} aria-hidden="true" alt="" />}
           title="📷 Media Gallery"
           list={[
             "Upload event photos, videos, and posters.",

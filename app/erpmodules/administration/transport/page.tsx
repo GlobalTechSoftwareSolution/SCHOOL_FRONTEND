@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   MapPin,
@@ -121,9 +122,11 @@ const Transport = () => {
             >
               {/* IMAGE BOX (Same layout you wanted) */}
               <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4 flex justify-center">
-                <img
+                <Image
                   src={item.image}
                   alt={item.title}
+                  width={300}
+                  height={192}
                   className="max-h-48 w-auto object-contain"
                 />
               </div>

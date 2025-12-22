@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -16,6 +16,15 @@ interface AttendanceRecord {
   section?: string;
   class_id?: number;
   class_name?: string;
+  student?: string;
+  student_email?: string;
+  user_email?: string;
+  // Timing fields from API
+  start_time?: string;
+  end_time?: string;
+  created_time?: string;
+  subject_name?: string;
+  teacher_name?: string;
 }
 
 interface ClassDetails {
@@ -41,7 +50,7 @@ const AttendancePage = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [studentInfo, setStudentInfo] = useState<StudentData | null>(null);
 
-  const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+  const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
   // Get user data from localStorage
   const getUserData = () => {
@@ -62,63 +71,50 @@ const AttendancePage = () => {
         email: storedEmail || "", 
         role: storedRole || "Student" 
       };
-    } catch (error) {
-      console.error("Error reading user data from localStorage:", error);
+    } catch {
       return { email: "", role: "" };
     }
   };
 
   // Fetch student details by email
-  const fetchStudentDetails = async (email: string): Promise<StudentData | null> => {
-    console.log(`🔍 Fetching student details for email: ${email}`);
-    
+  const fetchStudentDetails = useCallback(async (email: string): Promise<StudentData | null> => {
+
     try {
       const response = await axios.get(
         `${API_BASE}/students/?email=${encodeURIComponent(email)}`
       );
-      
-      console.log("📥 Student details response:", response.data);
-      
-      const studentData = Array.isArray(response.data) 
-        ? response.data[0] 
+
+      const studentData = Array.isArray(response.data)
+        ? response.data[0]
         : response.data;
 
-      console.log("✅ Student data extracted:", studentData);
       return studentData || null;
-    } catch (error) {
-      console.error("❌ Error fetching student details:", error);
+    } catch {
       return null;
     }
-  };
+  }, [API_BASE]);
 
   // Fetch all classes
-  const fetchClasses = async (): Promise<Map<number, ClassDetails>> => {
-    console.log("🔍 Fetching all classes...");
-    
+  const fetchClasses = useCallback(async (): Promise<Map<number, ClassDetails>> => {
+
     try {
       const response = await axios.get(`${API_BASE}/classes/`);
-      console.log("📥 Classes response:", response.data);
-      
+
       const classList: ClassDetails[] = response.data || [];
       const classMap = new Map(classList.map((cls: ClassDetails) => [cls.id, cls]));
-      
-      console.log("✅ Classes map created with", classMap.size, "entries");
+
       return classMap;
-    } catch (error) {
-      console.error("❌ Error fetching classes:", error);
+    } catch {
       return new Map();
     }
-  };
+  }, [API_BASE]);
 
   // Fetch attendance data
-  const fetchAttendanceData = async (email: string, studentData: StudentData, classMap: Map<number, ClassDetails>) => {
-    console.log(`🔍 Fetching attendance data for student: ${email}`);
-    
+  const fetchAttendanceData = useCallback(async (email: string, studentData: StudentData, classMap: Map<number, ClassDetails>) => {
     try {
-      const response = await axios.get(`${API_BASE}/student_attendance/`);
-      const rawAttendance: any[] = response.data || [];
-      
-      console.log("📋 Total student_attendance records:", rawAttendance.length);
+      const response = await axios.get<AttendanceRecord[]>(`${API_BASE}/student_attendance/`);
+      const rawAttendance = response.data || [];
+
 
       // Filter attendance for the logged-in student
       const filteredAttendance: AttendanceRecord[] = rawAttendance
@@ -126,20 +122,19 @@ const AttendancePage = () => {
           if (!record) return false;
 
           const recordEmail = (
-            record.student || 
-            record.student_email || 
-            record.user_email || 
+            record.student ||
+            record.student_email ||
+            record.user_email ||
             ""
           ).toLowerCase().trim();
 
           const isMatch = recordEmail === email.toLowerCase().trim();
-          console.log(`🔍 Record email: ${recordEmail}, User email: ${email}, Match: ${isMatch}`);
           return isMatch;
         })
         .map((record) => {
           const classDetails = record.class_id ? classMap.get(record.class_id) : undefined;
-          
-          const mappedRecord = {
+
+          const mappedRecord: AttendanceRecord = {
             id: record.id,
             student_name: record.student_name || studentData.fullname || email,
             date: record.date,
@@ -149,24 +144,24 @@ const AttendancePage = () => {
             section: record.section || classDetails?.sec || studentData.section || "N/A",
             class_id: record.class_id,
             class_name: record.class_name || classDetails?.class_name || studentData.class_name || "Unknown",
+            subject_name: record.subject_name || "",
+            teacher_name: record.teacher_name || "",
+            // Using created_time from API response as the marking time
+            created_time: record.created_time || ""
           };
-          
-          console.log("📄 Mapped attendance record:", mappedRecord);
+
           return mappedRecord;
         });
 
-      console.log("✅ Filtered attendance records:", filteredAttendance.length);
+
       return filteredAttendance;
     } catch (error) {
-      console.error("❌ Error fetching attendance data:", error);
       throw error;
     }
-  };
+  }, [API_BASE]);
 
   // Main data fetching function
-  const fetchAttendance = async () => {
-    console.log("🔄 Starting attendance fetch process...");
-    
+  const fetchAttendance = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -174,7 +169,6 @@ const AttendancePage = () => {
       const { email, role } = getUserData();
       
       if (!email) {
-        console.warn("⚠️ No logged-in user found");
         setError("⚠️ No logged-in user found. Please log in again.");
         return;
       }
@@ -182,18 +176,15 @@ const AttendancePage = () => {
       setUserEmail(email);
       setUserRole(role);
 
-      console.log("🎓 Fetching attendance for:", email);
 
       // Fetch student details
       const studentData = await fetchStudentDetails(email);
       if (!studentData) {
-        console.warn("⚠️ No student data found for user");
         setError("❌ No student data found for your account.");
         return;
       }
 
       setStudentInfo(studentData);
-      console.log("✅ Student found:", studentData);
 
       // Fetch classes and create mapping
       const classMap = await fetchClasses();
@@ -202,24 +193,20 @@ const AttendancePage = () => {
       const attendanceRecords = await fetchAttendanceData(email, studentData, classMap);
       
       if (attendanceRecords.length === 0) {
-        console.warn("⚠️ No attendance records found for student");
         setError("📝 No attendance records found for your account.");
       }
 
       setAttendanceData(attendanceRecords);
-      console.log("✅ Attendance data updated with", attendanceRecords.length, "records");
-    } catch (err) {
-      console.error("❌ Error in fetchAttendance:", err);
+    } catch {
       setError("Failed to fetch attendance data. Please try again later.");
     } finally {
       setLoading(false);
-      console.log("🏁 Attendance fetch process completed");
     }
-  };
+  }, [fetchAttendanceData, fetchClasses, fetchStudentDetails]);
 
   useEffect(() => {
     fetchAttendance();
-  }, []);
+  }, [fetchAttendance]);
 
   // Calculate attendance statistics
   const presentCount = attendanceData.filter(att => att.status === "Present").length;
@@ -254,6 +241,41 @@ const AttendancePage = () => {
     }
   };
 
+  // Format time from created_time (e.g., "2025-12-04 16:41:02")
+  const formatCreatedTime = (createdTime: string | undefined) => {
+    if (!createdTime) return "N/A";
+
+    try {
+      // Split date and time
+      const time = createdTime.split(' ')[1];
+      if (!time) return "N/A";
+
+      // Extract just the time part (HH:MM:SS)
+      const [hours, minutes] = time.split(':');
+      if (hours && minutes) {
+        return `${hours}:${minutes}`;
+      }
+      return time;
+    } catch {
+      return createdTime;
+    }
+  };
+
+  // Format date display
+  const formatDisplayDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
   // Card component for attendance records
   const AttendanceCard = ({ record }: { record: AttendanceRecord }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
@@ -264,8 +286,50 @@ const AttendancePage = () => {
               {record.class_name}
             </h3>
             <p className="text-gray-600 text-sm mb-2">
-              Section {record.section} • {record.date}
+              Section {record.section} • {formatDisplayDate(record.date)}
             </p>
+            {record.subject_name && (
+              <p className="text-gray-700 text-sm mb-1">
+                <span className="font-medium">Subject:</span> {record.subject_name}
+              </p>
+            )}
+            
+            {/* Display timing information from created_time */}
+            <div className="text-sm text-gray-600 mt-2 space-y-1">
+              {record.created_time && (
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>
+                    <span className="font-medium">Marked at:</span> {formatCreatedTime(record.created_time)}
+                  </span>
+                </div>
+              )}
+              
+              {/* Additional timing info if available from other fields */}
+              {record.start_time && (
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>
+                    <span className="font-medium">Start Time:</span> {formatCreatedTime(record.start_time)}
+                  </span>
+                </div>
+              )}
+              
+              {record.end_time && (
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>
+                    <span className="font-medium">End Time:</span> {formatCreatedTime(record.end_time)}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           <span
             className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusBadgeClass(record.status)}`}
@@ -275,9 +339,15 @@ const AttendancePage = () => {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+          {record.teacher_name && (
+            <div>
+              <span className="text-gray-500">Teacher:</span>
+              <span className="ml-2 text-gray-700">{record.teacher_name}</span>
+            </div>
+          )}
           <div>
             <span className="text-gray-500">Marked By:</span>
-            <span className="ml-2 text-gray-700">{record.marked_by_role || "—"}</span>
+            <span className="ml-2 text-gray-700">{record.marked_by_role || record.teacher_name || "—"}</span>
           </div>
           <div className="sm:col-span-2">
             <span className="text-gray-500">Remarks:</span>
@@ -318,7 +388,9 @@ const AttendancePage = () => {
                   </h1>
                   <p className="text-gray-600 mt-1 text-sm sm:text-base">
                     Welcome,{" "}
-                    <span className="font-semibold text-blue-600">{userEmail}</span>
+                    <span className="font-semibold text-blue-600">
+                      {studentInfo?.fullname || userEmail || "Student"}
+                    </span>
                     <span className="ml-1 sm:ml-2 px-2 sm:px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs sm:text-sm font-medium">
                       {userRole}
                     </span>
@@ -397,21 +469,53 @@ const AttendancePage = () => {
                       {dayAttendance.map((attendance) => (
                         <div
                           key={attendance.id}
-                          className="flex items-center justify-between bg-white rounded-xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm border border-gray-100"
+                          className="flex flex-col bg-white rounded-xl px-3 sm:px-4 py-2 sm:py-3 shadow-sm border border-gray-100"
                         >
-                          <div className="flex-1">
-                            <p className="font-semibold text-gray-800 text-sm sm:text-base">
-                              {attendance.class_name}
-                            </p>
-                            <p className="text-xs sm:text-sm text-gray-500">
-                              Section {attendance.section}
-                            </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-800 text-sm sm:text-base">
+                                {attendance.class_name}
+                              </p>
+                              <p className="text-xs sm:text-sm text-gray-500">
+                                Section {attendance.section}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getStatusBadgeClass(attendance.status)}`}
+                            >
+                              {attendance.status}
+                            </span>
                           </div>
-                          <span
-                            className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getStatusBadgeClass(attendance.status)}`}
-                          >
-                            {attendance.status}
-                          </span>
+                          
+                          {/* Display timing information for selected date */}
+                          <div className="text-xs sm:text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100 space-y-1">
+                            {attendance.created_time && (
+                              <div className="flex items-center">
+                                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span><span className="font-medium">Marked at:</span> {formatCreatedTime(attendance.created_time)}</span>
+                              </div>
+                            )}
+                            
+                            {attendance.start_time && (
+                              <div className="flex items-center">
+                                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span><span className="font-medium">Start Time:</span> {formatCreatedTime(attendance.start_time)}</span>
+                              </div>
+                            )}
+                            
+                            {attendance.end_time && (
+                              <div className="flex items-center">
+                                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span><span className="font-medium">End Time:</span> {formatCreatedTime(attendance.end_time)}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

@@ -1,9 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface Principal {
   email: string;
@@ -33,15 +34,15 @@ const PrincipalProfilePage = () => {
     try {
       const userData = localStorage.getItem("userData");
       return userData ? JSON.parse(userData)?.email : "";
-    } catch (error) {
+    } catch {
       return "";
     }
   };
 
   const email = getPrincipalEmail();
   
-  // 🔄 TEMPORARY: Override to test with test8@example.com
-  const testEmail = "test8@example.com";
+  // Use email from localStorage
+  const testEmail = email;
 
   // ✅ Fetch principal info by email
   useEffect(() => {
@@ -54,7 +55,7 @@ const PrincipalProfilePage = () => {
       setIsLoading(true);
       setError("");
       try {
-        const res = await axios.get(`${API_BASE}/principals/${encodeURIComponent(testEmail)}/`);
+        const res = await axios.get<Principal>(`${API_BASE}/principals/${encodeURIComponent(testEmail)}/`);
         
         if (res.data && res.data.email) {
           const principalData = res.data;
@@ -63,18 +64,19 @@ const PrincipalProfilePage = () => {
         } else {
           setError("Principal not found");
         }
-      } catch (error: any) {
-        if (error.response?.status === 404) {
+      } catch (error: unknown) {
+        const axiosError = error as { response?: { status?: number; data?: { message?: string } } };
+        if (axiosError.response?.status === 404) {
           // Try to fetch all principals to see what's available
           try {
-            const allPrincipalsRes = await axios.get(`${API_BASE}/principals/`);
-            const availableEmails = allPrincipalsRes.data.map((p: any) => p.email).join(", ");
+            const allPrincipalsRes = await axios.get<Principal[]>(`${API_BASE}/principals/`);
+            const availableEmails = allPrincipalsRes.data.map((p) => p.email).join(", ");
             setError(`Principal with email "${testEmail}" not found. Available principals: ${availableEmails}`);
-          } catch (fallbackError) {
+          } catch {
             setError("Principal not found in database and couldn't fetch available principals");
           }
         } else {
-          setError("Failed to load profile data: " + (error.response?.data?.message || error.message));
+          setError("Failed to load profile data: " + (axiosError.response?.data?.message || "Unknown error"));
         }
       } finally {
         setIsLoading(false);
@@ -148,7 +150,7 @@ const PrincipalProfilePage = () => {
       );
 
       // 🔄 Refresh data after save
-      const refreshed = await axios.get(`${API_BASE}/principals/${encodeURIComponent(testEmail)}/`);
+      const refreshed = await axios.get<Principal>(`${API_BASE}/principals/${encodeURIComponent(testEmail)}/`);
       if (refreshed.data) {
         setPrincipal(refreshed.data);
         setPreviewImage(refreshed.data.profile_picture || "/default-avatar.png");
@@ -160,7 +162,7 @@ const PrincipalProfilePage = () => {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
       
-    } catch (error) {
+    } catch {
       setError("Failed to update profile. Please try again.");
     } finally {
       setIsLoading(false);
@@ -249,11 +251,16 @@ const PrincipalProfilePage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile Image Section */}
           <div className="flex flex-col items-center space-y-4">
-            <img
-              src={previewImage || "/default-avatar.png"}
-              alt="Profile"
-              className="w-40 h-40 rounded-full object-cover border-2 border-gray-200"
-            />
+            <div className="relative w-40 h-40 rounded-full overflow-hidden border-2 border-gray-200">
+              <Image
+                src={previewImage || "/default-avatar.png"}
+                alt="Profile"
+                fill
+                className="object-cover"
+                sizes="160px"
+                priority
+              />
+            </div>
             {isEditing && (
               <div className="text-center">
                 <input

@@ -2,23 +2,19 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
-import { 
-  Bell, 
-  Plus, 
-  Send, 
-  User, 
+import {
+  Bell,
+  Plus,
+  Send,
+  User,
   Calendar,
   Search,
-  Filter,
-  Eye,
   Trash2,
   Mail,
-  BookOpen,
   Loader2,
   Users,
   MessageSquare,
   Clock,
-  ChevronDown,
   X,
   CheckCircle,
   AlertCircle
@@ -43,6 +39,10 @@ interface Student {
   section?: string;
 }
 
+interface User {
+  email: string;
+}
+
 const TeacherNoticePage = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -52,7 +52,7 @@ const TeacherNoticePage = () => {
     message: "",
     notice_to: "",
   });
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -169,7 +169,7 @@ const TeacherNoticePage = () => {
     try {
       setSubmitting(true);
       setError("");
-      const res = await axios.post(`${API_BASE}notices/`, noticePayload);
+      await axios.post(`${API_BASE}notices/`, noticePayload);
 
       // Refresh notices list after adding
       await fetchNotices();

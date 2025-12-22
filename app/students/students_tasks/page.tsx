@@ -106,7 +106,7 @@ export default function StudentTasksPage() {
         return;
       }
 
-      const apiUrl = "https://school.globaltechsoftwaresolutions.cloud/api/tasks/";
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/tasks/`;
 
       const res = await fetch(apiUrl, {
         method: "GET",
@@ -125,10 +125,10 @@ export default function StudentTasksPage() {
 
       const filteredTasks: Task[] = Array.isArray(data)
         ? data
-            .filter((task: any) =>
+            .filter((task: Task) =>
               task.assigned_to_email?.toLowerCase() === email.toLowerCase()
             )
-            .map((task: any) => ({
+            .map((task: Task) => ({
               ...task,
               status: task.status || "Pending",
               priority: task.priority || "Medium"
@@ -137,9 +137,10 @@ export default function StudentTasksPage() {
 
       setTasks(filteredTasks);
       calculateStats(filteredTasks);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching tasks:", err);
-      setError(err.message || "Failed to fetch tasks. Please try again.");
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch tasks. Please try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -228,17 +229,13 @@ export default function StudentTasksPage() {
               <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
               <div className="text-sm text-gray-600 font-medium">In Progress</div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-              <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-              <div className="text-sm text-gray-600 font-medium">Overdue</div>
-            </div>
           </div>
 
           {/* Filters and Search */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
               <div className="flex flex-wrap gap-2">
-                {["all", "Pending", "In Progress", "Completed", "Overdue"].map((status) => (
+                {["all", "Pending", "In Progress", "Completed"].map((status) => (
                   <button
                     key={status}
                     onClick={() => setFilter(status === "all" ? "all" : status)}
@@ -360,17 +357,6 @@ export default function StudentTasksPage() {
                             👨‍🏫 {task.teacher_name}
                           </span>
                         )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2 min-w-[180px]">
-                      <div className={`text-sm font-medium ${
-                        isOverdue(task.due_date, task.status) ? 'text-red-600' : 'text-gray-700'
-                      }`}>
-                        {isOverdue(task.due_date, task.status) ? '⏰ Overdue' : '📅 Due'} {formatDate(task.due_date)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Created: {task.created_at ? formatDate(task.created_at) : 'N/A'}
                       </div>
                     </div>
                   </div>

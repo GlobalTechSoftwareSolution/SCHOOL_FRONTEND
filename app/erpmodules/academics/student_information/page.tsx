@@ -1,9 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { 
-  ChevronLeftIcon,
   UserGroupIcon,
   AcademicCapIcon,
   DocumentChartBarIcon,
@@ -17,7 +15,6 @@ import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 
 export default function StudentInformationSection() {
-  const router = useRouter();
 
   const features = [
     {

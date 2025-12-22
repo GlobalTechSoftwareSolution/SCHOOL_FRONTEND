@@ -5,14 +5,12 @@ import {
   FiSearch,
   FiPlus,
   FiX,
-  FiEdit,
   FiTrash2,
   FiCheckCircle,
   FiClock,
   FiAlertTriangle,
   FiEye,
   FiMessageSquare,
-  FiPaperclip,
   FiUser,
   FiCalendar,
   FiSend,
@@ -21,7 +19,7 @@ import {
   FiTrendingUp
 } from "react-icons/fi";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/issues/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/issues/`;
 
 interface Issue {
   id: number;
@@ -36,12 +34,7 @@ interface Issue {
   closed_description?: string;
 }
 
-interface Comment {
-  id?: number;
-  text: string;
-  author: string;
-  created_at: string;
-}
+
 
 const Issues_Page = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -57,7 +50,6 @@ const Issues_Page = () => {
   });
   const [search, setSearch] = useState("");
   const [newComment, setNewComment] = useState("");
-  const [comments, setComments] = useState<Comment[]>([]);
   const [activeTab, setActiveTab] = useState("details");
 
   // Stats calculation

@@ -1,18 +1,30 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 
+// Type definitions
+interface Notice {
+  id: number;
+  title: string;
+  content: string;
+  type: string;
+  date: string;
+  priority: string;
+  author: string;
+  category: string;
+}
+
 const AllNotice = () => {
-  const [notices, setNotices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    fetch('https://school.globaltechsoftwaresolutions.cloud/api/notices/')
-      .then(async (res) => {
+    const fetchNotices = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/notices/`);
         if (!res.ok) throw new Error('Failed to fetch notices');
         const data = await res.json();
+
         // Get logged-in user email from localStorage or from stored token
         let userEmail = "";
         if (typeof window !== "undefined") {
@@ -28,29 +40,48 @@ const AllNotice = () => {
             userEmail = (localStorage.getItem("email") || "").trim().toLowerCase();
           }
         }
+
         // Filter notices for user
-        const filteredData = (Array.isArray(data) ? data : []).filter((notice: any) => {
-          const noticeTo = (notice.notice_to || "").trim().toLowerCase();
+        const filteredData = (Array.isArray(data) ? data : []).filter((notice: unknown) => {
+          const n = notice as { notice_to?: string };
+          const noticeTo = (n.notice_to || "").trim().toLowerCase();
           return noticeTo === "" || noticeTo === "null" || noticeTo === userEmail;
         });
+
         // Map API fields to UI fields
-        const mapped = filteredData.map((notice: any) => ({
-          id: notice.id,
-          title: notice.title,
-          content: notice.message,
-          type: notice.type || 'general',
-          date: notice.posted_date,
-          priority: notice.important === true ? 'high' : 'low',
-          author: notice.notice_by,
-          category: notice.category || 'General'
-        }));
+        const mapped = filteredData.map((notice: unknown): Notice => {
+          const n = notice as {
+            id: number;
+            title: string;
+            message: string;
+            type?: string;
+            posted_date: string;
+            important?: boolean;
+            notice_by: string;
+            category?: string;
+          };
+          return {
+            id: n.id,
+            title: n.title,
+            content: n.message,
+            type: n.type || 'general',
+            date: n.posted_date,
+            priority: n.important === true ? 'high' : 'low',
+            author: n.notice_by,
+            category: n.category || 'General'
+          };
+        });
+
         setNotices(mapped);
-        setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err: unknown) {
+        console.error('Error fetching notices:', err);
         setError('Could not load notices.');
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchNotices();
   }, []);
 
   const [filter, setFilter] = useState('all');
@@ -349,7 +380,7 @@ const AllNotice = () => {
               <div className="text-3xl sm:text-4xl lg:text-5xl mb-2 sm:mb-3">🔍</div>
               <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-2">No notices found</h3>
               <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
-                Try adjusting your search terms or filters to find what you're looking for.
+                Try adjusting your search terms or filters to find what you&#39;re looking for.
               </p>
               <button
                 onClick={clearFilters}

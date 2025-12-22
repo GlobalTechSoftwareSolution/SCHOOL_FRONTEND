@@ -12,6 +12,7 @@ import {
   Search,
   ClipboardList,
 } from "lucide-react";
+import Image from "next/image";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 
@@ -120,9 +121,11 @@ const Library = () => {
             >
               {/* IMAGE BOX LIKE YOUR UI STYLE */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4 flex justify-center">
-                <img
+                <Image
                   src={item.image}
                   alt={item.title}
+                  width={500}
+                  height={300}
                   className="max-h-48 w-auto object-contain"
                 />
               </div>

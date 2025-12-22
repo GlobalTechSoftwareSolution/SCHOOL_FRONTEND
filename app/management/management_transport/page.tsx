@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface TransportDetail {
   id: number;
@@ -87,12 +87,13 @@ const TransportPage = () => {
       });
       fetchTransportDetails();
       setActiveTab("list");
-    } catch (error: any) {
-      console.error("❌ Error adding transport:", error.response?.data || error);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: unknown } };
+      console.error("❌ Error adding transport:", axiosError.response?.data || error);
       setMessage(
         `❌ Failed to add transport. ${
-          error.response?.data
-            ? JSON.stringify(error.response.data)
+          axiosError.response?.data
+            ? JSON.stringify(axiosError.response.data)
             : "Unknown server error"
         }`
       );
@@ -101,29 +102,29 @@ const TransportPage = () => {
 
   return (
     <DashboardLayout role="management">
-      <div className="p-6 space-y-8">
-        <div className="flex justify-between items-center">
+      <div className="p-4 sm:p-6 space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Transport Management</h1>
-            <p className="text-gray-600 mt-2">Manage bus routes, drivers, and student transport</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Transport Management</h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage bus routes, drivers, and student transport</p>
           </div>
           <button
             onClick={() => setActiveTab(activeTab === "add" ? "list" : "add")}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
+            className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
-            {activeTab === "add" ? "View All Transports" : "Add New Transport"}
+            <span className="text-sm sm:text-base">{activeTab === "add" ? "View All Transports" : "Add New Transport"}</span>
           </button>
         </div>
 
         {/* Tab Navigation */}
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto">
             <button
               onClick={() => setActiveTab("list")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`whitespace-nowrap py-2 px-1 sm:px-1 border-b-2 font-medium text-sm ${
                 activeTab === "list"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -131,22 +132,12 @@ const TransportPage = () => {
             >
               All Transports
             </button>
-            <button
-              onClick={() => setActiveTab("add")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "add"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Add New
-            </button>
           </nav>
         </div>
 
         {/* Message Display */}
         {message && (
-          <div className={`p-4 rounded-lg ${message.includes("✅") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+          <div className={`p-3 sm:p-4 rounded-lg text-sm sm:text-base ${message.includes("✅") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
             {message}
           </div>
         )}
@@ -154,11 +145,11 @@ const TransportPage = () => {
         {/* Add Transport Form */}
         {activeTab === "add" && (
           <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
-              <h2 className="text-xl font-bold">Add New Transport Route</h2>
-              <p className="text-blue-100 mt-1">Fill in the details to create a new transport route</p>
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 sm:p-6 text-white">
+              <h2 className="text-lg sm:text-xl font-bold">Add New Transport Route</h2>
+              <p className="text-blue-100 mt-1 text-sm sm:text-base">Fill in the details to create a new transport route</p>
             </div>
-            <form onSubmit={handleAddTransport} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleAddTransport} className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">User Email</label>
                 <input
@@ -169,7 +160,7 @@ const TransportPage = () => {
                     setNewTransport({ ...newTransport, user: e.target.value })
                   }
                   required
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
               </div>
               
@@ -183,7 +174,7 @@ const TransportPage = () => {
                     setNewTransport({ ...newTransport, route_name: e.target.value })
                   }
                   required
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
               </div>
               
@@ -197,7 +188,7 @@ const TransportPage = () => {
                     setNewTransport({ ...newTransport, bus_number: e.target.value })
                   }
                   required
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
               </div>
               
@@ -211,7 +202,7 @@ const TransportPage = () => {
                     setNewTransport({ ...newTransport, pickup_point: e.target.value })
                   }
                   required
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
               </div>
               
@@ -225,7 +216,7 @@ const TransportPage = () => {
                     setNewTransport({ ...newTransport, drop_point: e.target.value })
                   }
                   required
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
               </div>
               
@@ -239,7 +230,7 @@ const TransportPage = () => {
                     setNewTransport({ ...newTransport, driver_name: e.target.value })
                   }
                   required
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
               </div>
               
@@ -253,7 +244,7 @@ const TransportPage = () => {
                     setNewTransport({ ...newTransport, driver_phone: e.target.value })
                   }
                   required
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
               </div>
               
@@ -267,23 +258,23 @@ const TransportPage = () => {
                     setNewTransport({ ...newTransport, transport_fee: e.target.value })
                   }
                   required
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg p-2 sm:p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
               </div>
               
-              <div className="md:col-span-2 flex justify-end space-x-4 pt-4">
+              <div className="md:col-span-2 flex flex-col sm:flex-row justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setActiveTab("list")}
-                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-md"
+                  className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md text-sm sm:text-base"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                   Add Transport Route
@@ -296,7 +287,7 @@ const TransportPage = () => {
         {/* Transport List */}
         {activeTab === "list" && (
           <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
               <h2 className="text-xl font-semibold text-gray-800">Transport Routes</h2>
               <div className="text-sm text-gray-500">
                 {transports.length} {transports.length === 1 ? 'route' : 'routes'} total
@@ -304,18 +295,18 @@ const TransportPage = () => {
             </div>
 
             {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="flex justify-center items-center h-48 sm:h-64">
+                <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-t-2 border-b-2 border-blue-500"></div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {transports.map((item) => (
                   <div
                     key={item.id}
-                    className="border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow bg-white"
+                    className="border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow bg-white"
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                    <div className="flex justify-between items-start mb-3 sm:mb-4">
+                      <div className="bg-blue-100 text-blue-800 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium">
                         {item.bus_number}
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -327,9 +318,9 @@ const TransportPage = () => {
                       </span>
                     </div>
                     
-                    <h3 className="font-bold text-lg text-gray-800 mb-2">{item.route_name}</h3>
+                    <h3 className="font-bold text-base sm:text-lg text-gray-800 mb-2">{item.route_name}</h3>
                     
-                    <div className="space-y-3 text-sm text-gray-600">
+                    <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
@@ -377,7 +368,7 @@ const TransportPage = () => {
                       </div>
                       
                       <div className="pt-2 border-t border-gray-100">
-                        <span className="font-medium">User:</span> {item.user}
+                        <span className="font-medium text-xs sm:text-sm">User:</span> <span className="text-xs sm:text-sm">{item.user}</span>
                       </div>
                     </div>
                   </div>

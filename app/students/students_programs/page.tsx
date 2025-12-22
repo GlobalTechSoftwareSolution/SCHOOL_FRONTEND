@@ -3,9 +3,9 @@
 import DashboardLayout from "@/app/components/DashboardLayout";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Calendar, Users, DollarSign, Clock, AlertCircle, RefreshCw, Filter } from "lucide-react";
+import { Calendar, Users, DollarSign, Clock, AlertCircle, RefreshCw } from "lucide-react";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface Program {
   id: number;
@@ -20,21 +20,39 @@ interface Program {
   budget?: number;
 }
 
+interface ProgramWithStatus extends Program {
+  calculatedStatus: string;
+}
+
 const ProgramsPage = () => {
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
+  const [filteredPrograms, setFilteredPrograms] = useState<ProgramWithStatus[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
+  // Determine program status based on dates
+  const getProgramStatus = (startDate: string, endDate: string) => {
+    const today = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (today < start) {
+      return "Upcoming";
+    } else if (today >= start && today <= end) {
+      return "Active";
+    } else {
+      return "Completed";
+    }
+  };
+
   // Status colors and icons
   const statusConfig = {
-    Planned: { color: "bg-blue-100 text-blue-800 border-blue-200", icon: "📅" },
     Active: { color: "bg-green-100 text-green-800 border-green-200", icon: "🚀" },
     Completed: { color: "bg-gray-100 text-gray-800 border-gray-200", icon: "✅" },
-    Cancelled: { color: "bg-red-100 text-red-800 border-red-200", icon: "❌" }
+    Upcoming: { color: "bg-blue-100 text-blue-800 border-blue-200", icon: "📅" }
   };
 
   // Fetch all programs
@@ -42,9 +60,9 @@ const ProgramsPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_URL}programs/`);
+      const response = await axios.get(`${API_URL}/programs/`);
       setPrograms(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching programs:", err);
       setError("Failed to load programs. Please try again later.");
     } finally {
@@ -61,11 +79,14 @@ const ProgramsPage = () => {
 
   // Filter programs based on status and search term
   useEffect(() => {
-    let filtered = programs;
+    let filtered: ProgramWithStatus[] = programs.map(program => ({
+      ...program,
+      calculatedStatus: getProgramStatus(program.start_date, program.end_date)
+    }));
 
     // Filter by status
     if (selectedStatus !== "all") {
-      filtered = filtered.filter(program => program.status === selectedStatus);
+      filtered = filtered.filter(program => program.calculatedStatus === selectedStatus);
     }
 
     // Filter by search term
@@ -85,13 +106,21 @@ const ProgramsPage = () => {
     fetchPrograms();
   }, []);
 
-  // Calculate statistics
+  // Calculate statistics based on calculated status
   const stats = {
     total: programs.length,
-    planned: programs.filter(p => p.status === "Planned").length,
-    active: programs.filter(p => p.status === "Active").length,
-    completed: programs.filter(p => p.status === "Completed").length,
-    cancelled: programs.filter(p => p.status === "Cancelled").length,
+    active: programs.filter(p => {
+      const status = getProgramStatus(p.start_date, p.end_date);
+      return status === "Active";
+    }).length,
+    completed: programs.filter(p => {
+      const status = getProgramStatus(p.start_date, p.end_date);
+      return status === "Completed";
+    }).length,
+    upcoming: programs.filter(p => {
+      const status = getProgramStatus(p.start_date, p.end_date);
+      return status === "Upcoming";
+    }).length,
   };
 
   // Format date
@@ -109,7 +138,7 @@ const ProgramsPage = () => {
     const today = new Date();
     const diffTime = end.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return diffDays > 0 ? diffDays : 0;
   };
 
   if (loading) {
@@ -175,8 +204,8 @@ const ProgramsPage = () => {
             </div>
           </div>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          {/* Statistics Cards - Updated with Active, Completed, Upcoming */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
               <div className="flex items-center justify-between">
                 <div>
@@ -185,18 +214,6 @@ const ProgramsPage = () => {
                 </div>
                 <div className="p-3 bg-blue-100 rounded-xl">
                   <Users className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Planned</p>
-                  <p className="text-2xl font-bold text-blue-600 mt-1">{stats.planned}</p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-xl">
-                  <Calendar className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
             </div>
@@ -221,18 +238,6 @@ const ProgramsPage = () => {
                 </div>
                 <div className="p-3 bg-gray-100 rounded-xl">
                   <span className="text-2xl">✅</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Cancelled</p>
-                  <p className="text-2xl font-bold text-red-600 mt-1">{stats.cancelled}</p>
-                </div>
-                <div className="p-3 bg-red-100 rounded-xl">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
                 </div>
               </div>
             </div>
@@ -268,17 +273,7 @@ const ProgramsPage = () => {
                   }`}
                 >
                   All
-                </button>
-                <button
-                  onClick={() => setSelectedStatus("Planned")}
-                  className={`px-4 py-2 rounded-xl font-medium transition-all ${
-                    selectedStatus === "Planned" 
-                      ? "bg-blue-600 text-white shadow-md" 
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  📅 Planned
-                </button>
+                </button> 
                 <button
                   onClick={() => setSelectedStatus("Active")}
                   className={`px-4 py-2 rounded-xl font-medium transition-all ${
@@ -341,9 +336,10 @@ const ProgramsPage = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredPrograms.map((program) => {
+                const calculatedStatus = getProgramStatus(program.start_date, program.end_date);
                 const daysRemaining = getDaysRemaining(program.end_date);
-                const isActive = program.status === "Active";
-                const isUpcoming = program.status === "Planned";
+                const isActive = calculatedStatus === "Active";
+                const isUpcoming = calculatedStatus === "Upcoming";
                 
                 return (
                   <div
@@ -357,9 +353,9 @@ const ProgramsPage = () => {
                           🎯
                         </div>
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border ${
-                          statusConfig[program.status].color
+                          statusConfig[calculatedStatus].color
                         }`}>
-                          {statusConfig[program.status].icon} {program.status}
+                          {statusConfig[calculatedStatus].icon} {calculatedStatus}
                         </span>
                       </div>
 
@@ -392,6 +388,13 @@ const ProgramsPage = () => {
                           <div className="flex items-center gap-2 text-sm text-blue-600 font-semibold">
                             <Clock className="h-4 w-4" />
                             <span>Starting soon</span>
+                          </div>
+                        )}
+
+                        {calculatedStatus === "Completed" && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600 font-semibold">
+                            <span className="text-2xl">✅</span>
+                            <span>Program completed</span>
                           </div>
                         )}
                       </div>
@@ -444,10 +447,6 @@ const ProgramsPage = () => {
                 </div>
                 <div className="mt-2 sm:mt-0">
                   <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span>Planned: {stats.planned}</span>
-                    </div>
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                       <span>Active: {stats.active}</span>

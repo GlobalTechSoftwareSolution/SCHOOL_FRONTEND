@@ -10,7 +10,6 @@ import {
   Database, 
   Globe, 
   Eye,
-  Download,
   Cookie,
   Server,
   ChevronLeftIcon
@@ -392,10 +391,10 @@ export default function PrivacyPolicyPage() {
                 <p className="mb-2 text-black">
                 📞 Contact:{" "}
                 <a
-                    href="tel:+919844281875"
+                    href="tel:+918495862494"
                     className="text-blue-600 hover:underline hover:text-blue-800 transition-colors duration-200"
                 >
-                    +91 98442 81875
+                    +91 8495862494
                 </a>
                 </p>
               </div>
@@ -413,7 +412,7 @@ export default function PrivacyPolicyPage() {
           <h3 className="font-bold text-gray-800 mb-2">Compliance Standards</h3>
           <p className="text-gray-600 text-sm">
             GlobalTech School ERP complies with major privacy regulations including FERPA (Family Educational Rights and Privacy Act), 
-            GDPR (General Data Protection Regulation), COPPA (Children's Online Privacy Protection Act), and other applicable 
+            GDPR (General Data Protection Regulation), COPPA (Children&apos;s Online Privacy Protection Act), and other applicable 
             educational data protection laws.
           </p>
         </motion.div>

@@ -4,17 +4,12 @@ import React from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { 
-  ChevronLeftIcon,
+import {
   CloudArrowUpIcon,
   ShieldCheckIcon,
   ChartBarIcon,
   UserGroupIcon,
   AcademicCapIcon,
-  DevicePhoneMobileIcon,
-  CogIcon,
-  ArrowPathIcon,
   BuildingLibraryIcon,
   RocketLaunchIcon,
   CheckBadgeIcon
@@ -23,8 +18,6 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 const AboutUs: React.FC = () => {
-  const router = useRouter();
-
   const features = [
     {
       icon: <CloudArrowUpIcon className="h-8 w-8" />,

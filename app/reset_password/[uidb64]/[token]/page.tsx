@@ -52,7 +52,7 @@ export default function ResetPasswordPage() {
       } else {
         setMessage("error:" + (data.error || JSON.stringify(data)));
       }
-    } catch (err) {
+    } catch {
       setMessage("error:Network error. Try again.");
     }
 

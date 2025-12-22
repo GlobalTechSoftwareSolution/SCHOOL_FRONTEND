@@ -6,7 +6,6 @@ import DashboardLayout from "@/app/components/DashboardLayout";
 import { 
   Calendar, 
   Clock, 
-  FileText, 
   Download, 
   Send, 
   AlertCircle, 
@@ -208,9 +207,10 @@ const SubmitAssignmentModal: React.FC<{
 
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { error?: string } } };
       const msg =
-        err.response?.data?.error ||
+        axiosError.response?.data?.error ||
         "Failed to submit assignment. Please check your class or try again.";
       setError(msg);
     } finally {
@@ -491,20 +491,20 @@ const StudentAssignmentsPage = () => {
   const [sortBy, setSortBy] = useState<SortType>("due_date");
   const [showFilters, setShowFilters] = useState(false);
 
-  const fetchStudent = async () => {
+  const fetchStudent = useCallback(async () => {
     const email = getUserEmail();
     if (!email) throw new Error("No student email found.");
     const res = await axios.get(`${API_BASE}/students/${email}/`);
     return res.data;
-  };
+  }, []);
 
-  const fetchAssignments = async (class_id: number) => {
+  const fetchAssignments = useCallback(async (class_id: number) => {
     const res = await axios.get(`${API_BASE}/assignments/?class_id=${class_id}`);
     return res.data;
-  };
+  }, []);
 
-  const fetchSubmittedAssignments = async (email: string) => {
-    const res = await axios.get(`${API_BASE}/submitted_assignments/`).catch((err) => {
+  const fetchSubmittedAssignments = useCallback(async (email: string) => {
+    const res = await axios.get(`${API_BASE}/submitted_assignments/`).catch(() => {
       return { data: [] };
     });
 
@@ -513,7 +513,7 @@ const StudentAssignmentsPage = () => {
       (record) => record?.student?.toLowerCase?.() === email.toLowerCase()
     );
     return filtered;
-  };
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -526,12 +526,12 @@ const StudentAssignmentsPage = () => {
       ]);
       setAssignments(assignList);
       setSubmitted(submittedList);
-    } catch (err) {
+    } catch {
       setPopup({ message: "Failed to load assignments. Please try again.", type: "error" });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchStudent, fetchAssignments, fetchSubmittedAssignments]);
 
   useEffect(() => {
     loadData();
@@ -542,11 +542,13 @@ const StudentAssignmentsPage = () => {
     setPopup({ message: "Assignment submitted successfully!", type: "success" });
   }, [loadData]);
 
-  const isSubmitted = (assignmentId: number) =>
-    submitted.some((s) => s.assignment === assignmentId);
+  const isSubmitted = useCallback(
+    (assignmentId: number) => submitted.some((s) => s.assignment === assignmentId),
+    [submitted]
+  );
 
   const filteredAndSortedAssignments = useMemo(() => {
-    let filtered = assignments.filter(assignment => {
+    const filtered = assignments.filter(assignment => {
       const matchesSearch = assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            assignment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            assignment.subject_name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -577,14 +579,17 @@ const StudentAssignmentsPage = () => {
     });
 
     return filtered;
-  }, [assignments, tab, submitted, searchTerm, sortBy]);
+  }, [assignments, tab, searchTerm, sortBy, isSubmitted]);
 
-  const stats = useMemo(() => ({
-    total: assignments.length,
-    pending: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) >= new Date()).length,
-    overdue: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) < new Date()).length,
-    submitted: assignments.filter(a => isSubmitted(a.id)).length,
-  }), [assignments, submitted]);
+  const stats = useMemo(
+    () => ({
+      total: assignments.length,
+      pending: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) >= new Date()).length,
+      overdue: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) < new Date()).length,
+      submitted: assignments.filter(a => isSubmitted(a.id)).length,
+    }),
+    [assignments, isSubmitted]
+  );
 
   if (loading) {
     return (
@@ -665,7 +670,7 @@ const StudentAssignmentsPage = () => {
               { label: "Pending", value: stats.pending, color: "bg-yellow-500" },
               { label: "Overdue", value: stats.overdue, color: "bg-red-500" },
               { label: "Submitted", value: stats.submitted, color: "bg-green-500" },
-            ].map((stat, index) => (
+            ].map((stat) => (
               <div key={stat.label} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>

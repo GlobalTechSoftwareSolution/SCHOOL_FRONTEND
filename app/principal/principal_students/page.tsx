@@ -5,12 +5,9 @@ import DashboardLayout from '@/app/components/DashboardLayout'
 
 const page = () => {
   return (
-    
-
-<DashboardLayout role='principal'>
-<StudentsPage />
-</DashboardLayout>
-    
+    <DashboardLayout role='principal'>
+      <StudentsPage />
+    </DashboardLayout>
   )
 }
 

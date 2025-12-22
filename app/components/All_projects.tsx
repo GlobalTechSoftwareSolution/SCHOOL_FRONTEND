@@ -1,10 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { Plus, X, Edit, Trash2, Search, Filter, Calendar, Users, Clock, AlertCircle, CheckCircle, PlayCircle, MoreVertical } from "lucide-react";
-import { createDecipheriv } from "crypto";
+import { Plus, X, Edit, Trash2, Search, Filter, Calendar, Users, Clock, CheckCircle, PlayCircle, MoreVertical } from "lucide-react";
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/api/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
 interface Project {
   id: number;
@@ -14,7 +13,7 @@ interface Project {
   description: string;
   start_date: string;
   end_date: string;
-  status: "Planned" | "In Progress" | "Completed" | "On Hold";
+  status: "In Progress" | "Completed";
   class_name: string;
   section: string;
   created_at?: string;
@@ -24,7 +23,6 @@ const ProjectsPage = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -33,10 +31,8 @@ const ProjectsPage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [stats, setStats] = useState({
     total: 0,
-    planned: 0,
     inProgress: 0,
-    completed: 0,
-    onHold: 0
+    completed: 0
   });
 
   const [newProject, setNewProject] = useState({
@@ -46,42 +42,57 @@ const ProjectsPage = () => {
     description: "",
     start_date: "",
     end_date: "",
-    status: "Planned" as const,
+    status: "In Progress" as const,
     class_name: "",
     section: "",
   });
 
+  // Function to calculate status based on current date
+  const calculateStatus = (endDate: string): "In Progress" | "Completed" => {
+    const today = new Date();
+    const end = new Date(endDate);
+    
+    // Reset time parts to compare only dates
+    today.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    
+    return today <= end ? "In Progress" : "Completed";
+  };
+
   // ✅ Fetch all projects
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API_URL}projects/`);
-      setProjects(res.data);
-      setFilteredProjects(res.data);
-      calculateStats(res.data);
-      setError(null);
-    } catch (err: any) {
+
+      // Calculate status for each project based on end date
+      const projectsWithCalculatedStatus = res.data.map((project: Record<string, unknown>) => ({
+        ...project,
+        status: calculateStatus(project.end_date as string)
+      }));
+
+      setProjects(projectsWithCalculatedStatus);
+      setFilteredProjects(projectsWithCalculatedStatus);
+      calculateStats(projectsWithCalculatedStatus);
+    } catch (err: unknown) {
       console.error("Error fetching projects:", err);
-      setError("Failed to load projects. Try again later.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const calculateStats = (projectsData: Project[]) => {
     const stats = {
       total: projectsData.length,
-      planned: projectsData.filter(p => p.status === "Planned").length,
       inProgress: projectsData.filter(p => p.status === "In Progress").length,
-      completed: projectsData.filter(p => p.status === "Completed").length,
-      onHold: projectsData.filter(p => p.status === "On Hold").length
+      completed: projectsData.filter(p => p.status === "Completed").length
     };
     setStats(stats);
   };
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [fetchProjects]);
 
   // ✅ Filter projects
   useEffect(() => {
@@ -111,12 +122,17 @@ const ProjectsPage = () => {
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_URL}projects/`, newProject);
+      const projectToAdd = {
+        ...newProject,
+        status: calculateStatus(newProject.end_date)
+      };
+      
+      await axios.post(`${API_URL}projects/`, projectToAdd);
       alert("✅ Project added successfully!");
       setShowAddForm(false);
       resetForm();
       fetchProjects();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error adding project:", err);
       alert("❌ Failed to add project. Check console for details.");
     }
@@ -128,11 +144,16 @@ const ProjectsPage = () => {
     if (!editingProject) return;
 
     try {
-      await axios.put(`${API_URL}projects/${editingProject.id}/`, editingProject);
+      const projectToUpdate = {
+        ...editingProject,
+        status: calculateStatus(editingProject.end_date)
+      };
+      
+      await axios.put(`${API_URL}projects/${editingProject.id}/`, projectToUpdate);
       alert("✅ Project updated successfully!");
       setEditingProject(null);
       fetchProjects();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating project:", err);
       alert("❌ Failed to update project. Check console for details.");
     }
@@ -145,7 +166,7 @@ const ProjectsPage = () => {
       alert("✅ Project deleted successfully!");
       setDeleteConfirm(null);
       fetchProjects();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error deleting project:", err);
       alert("❌ Failed to delete project. Check console for details.");
     }
@@ -159,7 +180,7 @@ const ProjectsPage = () => {
       description: "",
       start_date: "",
       end_date: "",
-      status: "Planned",
+      status: "In Progress",
       class_name: "",
       section: "",
     });
@@ -167,20 +188,16 @@ const ProjectsPage = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Planned": return <Calendar className="h-4 w-4" />;
       case "In Progress": return <PlayCircle className="h-4 w-4" />;
       case "Completed": return <CheckCircle className="h-4 w-4" />;
-      case "On Hold": return <AlertCircle className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Planned": return "bg-blue-50 text-blue-700 border-blue-200";
       case "In Progress": return "bg-yellow-50 text-yellow-700 border-yellow-200";
       case "Completed": return "bg-green-50 text-green-700 border-green-200";
-      case "On Hold": return "bg-red-50 text-red-700 border-red-200";
       default: return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
@@ -216,7 +233,7 @@ const ProjectsPage = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
@@ -225,18 +242,6 @@ const ProjectsPage = () => {
               </div>
               <div className="p-3 bg-blue-50 rounded-xl">
                 <Users className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Planned</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.planned}</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <Calendar className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </div>
@@ -264,18 +269,6 @@ const ProjectsPage = () => {
               </div>
             </div>
           </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">On Hold</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.onHold}</p>
-              </div>
-              <div className="p-3 bg-red-50 rounded-xl">
-                <AlertCircle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Filters and Search */}
@@ -299,10 +292,8 @@ const ProjectsPage = () => {
                 className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
               >
                 <option value="all">All Status</option>
-                <option value="Planned">Planned</option>
                 <option value="In Progress">In Progress</option>
                 <option value="Completed">Completed</option>
-                <option value="On Hold">On Hold</option>
               </select>
 
               <select
@@ -512,25 +503,21 @@ const ProjectsPage = () => {
                     />
                   </div>
 
-                  {/* Status */}
+                  {/* Status Display (Read-only) */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status *
+                      Current Status
                     </label>
-                    <select
-                      value={editingProject ? (editingProject.status ?? "Planned") : newProject.status}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, status: e.target.value as any })
-                          : setNewProject({ ...newProject, status: e.target.value as any })
-                      }
-                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    >
-                      <option value="Planned">Planned</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                      <option value="On Hold">On Hold</option>
-                    </select>
+                    <div className="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-700">
+                      {editingProject 
+                        ? calculateStatus(editingProject.end_date)
+                        : newProject.end_date 
+                          ? calculateStatus(newProject.end_date)
+                          : "In Progress (default)"}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Status is automatically calculated based on end date
+                    </p>
                   </div>
 
                   {/* Class Name */}

@@ -8,20 +8,16 @@ import {
   Trash2, 
   X, 
   IndianRupee,
-  Calendar,
   BookOpen,
-  Filter,
   Search,
-  Download,
-  Upload,
   Shield,
   AlertTriangle,
   CheckCircle,
   Info
 } from 'lucide-react';
 
-const API_URL = "https://school.globaltechsoftwaresolutions.cloud/fee_structures/";
-const CLASSES_API_URL = "https://school.globaltechsoftwaresolutions.cloud/classes/";
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/fee_structures/`;
+const CLASSES_API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/classes/`;
 
 // ================= TYPES =================
 type Fee = {
@@ -52,9 +48,9 @@ type FormData = {
 const ManagementFeeStructure = () => {
   const [fees, setFees] = useState<Fee[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [selectedClass, setSelectedClass] = useState('');
+  // const [selectedClass, setSelectedClass] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  // const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [feeTypeFilter, setFeeTypeFilter] = useState('all');
 
@@ -82,10 +78,8 @@ const ManagementFeeStructure = () => {
   // ================= FETCH CLASSES =================
   const fetchClasses = async () => {
     try {
-      console.log("🔍 [FETCH] Fetching classes...");
       const res = await fetch(CLASSES_API_URL);
       const data: SchoolClass[] = await res.json();
-      console.log("✅ [FETCH] Successfully fetched classes:", data);
       setClasses(data);
     } catch (err) {
       console.error("❌ [FETCH] Error fetching classes:", err);
@@ -112,7 +106,7 @@ const ManagementFeeStructure = () => {
   }, []);
 
   // ================= HANDLE CHANGE =================
-  const handleChange = (e: React.ChangeEvent<any>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -207,7 +201,7 @@ const ManagementFeeStructure = () => {
           }
           showPopup("Successfully deleted fee structure", "success");
           fetchFees();
-        } catch (error) {
+        } catch {
           showPopup("Delete failed. Please try again.", "error");
         } finally {
           closePopup();

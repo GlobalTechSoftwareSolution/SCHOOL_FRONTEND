@@ -3,13 +3,13 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-  Fingerprint,
   Clock,
   BarChart3,
   Bell,
   UserCheck,
   CalendarDays,
 } from "lucide-react";
+import Image from "next/image";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 
@@ -97,9 +97,11 @@ const Attendence_Information = () => {
             >
               {/* FIXED CLEAN IMAGE BOX */}
               <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4 flex justify-center">
-                <img
+                <Image
                   src={item.image}
                   alt={item.title}
+                  width={500}
+                  height={300}
                   className="max-h-48 w-auto object-contain"
                 />
               </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`
 
 interface FeePayment {
   id: number;
@@ -15,6 +15,24 @@ interface FeePayment {
   remaining_amount: string | null;
   payment_date: string;
   status: string;
+  fee_type?: string;
+  class_name?: string;
+  section?: string;
+}
+
+interface Student {
+  id: number;
+  email?: string;
+  fullname?: string;
+  class_id?: number;
+  class_name?: string;
+  sec?: string;
+}
+
+interface Class {
+  id: number;
+  class_name: string;
+  sec: string;
 }
 
 interface FeeStructure {
@@ -24,17 +42,31 @@ interface FeeStructure {
 }
 
 const ManagementPendingFees = () => {
-  const [pendingFees, setPendingFees] = useState<any[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  
+  interface ExtendedFeePayment {
+    id: number;
+    student_name: string;
+    fee_structure: number;
+    amount_paid: string;
+    total_amount: number;
+    remaining_amount: number;
+    payment_date: string;
+    status: string;
+    fee_type: string;
+    class_name: string;
+    section: string;
+  }
+  
+  const [pendingFees, setPendingFees] = useState<ExtendedFeePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedFee, setSelectedFee] = useState<any>(null);
+  const [selectedFee, setSelectedFee] = useState<ExtendedFeePayment | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [students, setStudents] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
   const [classFilter, setClassFilter] = useState<string>("all");
   const [sectionFilter, setSectionFilter] = useState<string>("all");
 
-  const fetchPendingFees = async () => {
+  const fetchPendingFees = useCallback(async () => {
     try {
       setLoading(true);
       const [paymentsRes, structuresRes, studentsRes, classesRes] = await Promise.all([
@@ -49,7 +81,6 @@ const ManagementPendingFees = () => {
       const studentsData = studentsRes.data || [];
       const classesData = classesRes.data || [];
 
-      setStudents(studentsData);
       setClasses(classesData);
 
       const pending = payments
@@ -57,14 +88,14 @@ const ManagementPendingFees = () => {
           const structure = structures.find((s) => s.id === pay.fee_structure);
 
           // Find matching student by email or name
-          const student = studentsData.find((s: any) =>
-            s.email === (pay as any).student ||
+          const student = studentsData.find((s: Student) =>
+            s.email === (pay as { student?: string }).student ||
             s.fullname === pay.student_name
           );
 
           // Resolve class info via class_id
           const classInfo = student?.class_id
-            ? classesData.find((c: any) => c.id === student.class_id)
+            ? classesData.find((c: Class) => c.id === student.class_id)
             : null;
 
           // Total from fee structure (treat missing/invalid as 0)
@@ -85,25 +116,25 @@ const ManagementPendingFees = () => {
             remaining_amount: remaining,
             class_name: classInfo?.class_name || "Unknown",
             section: classInfo?.sec || "Unknown",
-          };
+          } as ExtendedFeePayment;
         })
-        .filter((p) => p.remaining_amount > 0);
+        .filter((p) => (p as ExtendedFeePayment).remaining_amount > 0);
 
       setPendingFees(pending);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching pending fees:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPendingFees();
-  }, []);
+  }, [fetchPendingFees]);
 
   // Derived filter options from classes
   const uniqueClasses = Array.from(
-    new Set(classes.map((cls: any) => cls.class_name).filter(Boolean))
+    new Set(classes.map((cls: Class) => cls.class_name).filter(Boolean))
   );
 
   const sectionsForSelectedClass = classFilter === "all"
@@ -111,8 +142,8 @@ const ManagementPendingFees = () => {
     : Array.from(
         new Set(
           classes
-            .filter((cls: any) => cls.class_name === classFilter)
-            .map((cls: any) => cls.sec)
+            .filter((cls: Class) => cls.class_name === classFilter)
+            .map((cls: Class) => cls.sec)
             .filter(Boolean)
         )
       );
@@ -133,11 +164,11 @@ const ManagementPendingFees = () => {
   });
 
   const totalPendingAmount = filteredFees.reduce(
-    (sum, fee) => sum + fee.remaining_amount,
+    (sum, fee) => sum + (fee as ExtendedFeePayment).remaining_amount,
     0
   );
 
-  const handleCardClick = (fee: any) => {
+  const handleCardClick = (fee: ExtendedFeePayment) => {
     setSelectedFee(fee);
     setShowModal(true);
   };
@@ -346,7 +377,7 @@ const ManagementPendingFees = () => {
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Total Amount</span>
                           <span className="font-semibold text-gray-900">
-                            ₹{fee.total_amount?.toLocaleString()}
+                            ₹{(fee as ExtendedFeePayment).total_amount?.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -358,7 +389,7 @@ const ManagementPendingFees = () => {
                         <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                           <span className="text-sm font-medium text-gray-700">Remaining</span>
                           <span className="font-bold text-red-600 text-lg">
-                            ₹{fee.remaining_amount?.toLocaleString()}
+                            ₹{(fee as ExtendedFeePayment).remaining_amount?.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -433,7 +464,7 @@ const ManagementPendingFees = () => {
                   <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                     <h4 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Total Amount</h4>
                     <p className="text-base sm:text-lg font-semibold text-gray-900">
-                      ₹{selectedFee.total_amount?.toLocaleString()}
+                      ₹{selectedFee?.total_amount?.toLocaleString()}
                     </p>
                   </div>
 
@@ -449,7 +480,7 @@ const ManagementPendingFees = () => {
                   <div className="bg-red-50 rounded-lg p-3 sm:p-4">
                     <h4 className="text-xs sm:text-sm font-medium text-red-600 mb-1">Remaining Amount</h4>
                     <p className="text-xl sm:text-2xl font-bold text-red-600">
-                      ₹{selectedFee.remaining_amount?.toLocaleString()}
+                      ₹{selectedFee?.remaining_amount?.toLocaleString()}
                     </p>
                   </div>
 
@@ -477,16 +508,16 @@ const ManagementPendingFees = () => {
                   <div 
                     className="bg-blue-600 h-3 sm:h-4 rounded-full transition-all duration-300"
                     style={{ 
-                      width: `${((parseFloat(selectedFee.amount_paid) / selectedFee.total_amount) * 100).toFixed(1)}%` 
+                      width: `${((parseFloat(selectedFee?.amount_paid || '0') / (selectedFee?.total_amount || 1)) * 100).toFixed(1)}%` 
                     }}
                   ></div>
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-xs sm:text-sm text-gray-600">
-                    {((parseFloat(selectedFee.amount_paid) / selectedFee.total_amount) * 100).toFixed(1)}% Paid
+                    {((parseFloat(selectedFee?.amount_paid || '0') / (selectedFee?.total_amount || 1)) * 100).toFixed(1)}% Paid
                   </span>
                   <span className="text-xs sm:text-sm font-semibold text-gray-900">
-                    {selectedFee.remaining_amount > 0 ? 'Pending' : 'Completed'}
+                    {(selectedFee?.remaining_amount || 0) > 0 ? 'Pending' : 'Completed'}
                   </span>
                 </div>
               </div>

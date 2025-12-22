@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { Download, IdCardIcon, ShieldCheck, Users } from 'lucide-react';
 
-const API_BASE = 'http://school.globaltechsoftwaresolutions.cloud';
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface IdCardRecord {
   id: number;
@@ -28,11 +28,10 @@ interface StudentRecord {
 interface IdCardFormProps {
   onSubmit: () => Promise<void>;
   onCancel: () => void;
-  defaultName: string;
   defaultEmail: string;
 }
 
-const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultName, defaultEmail }) => {
+const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultEmail }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,12 +42,15 @@ const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultName
       setSubmitting(true);
       setError('');
       await onSubmit();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('ID card generation failed:', err);
-      const errorMessage = err?.response?.data?.detail || 
-                          err?.response?.data?.error || 
-                          err?.response?.data?.message || 
-                          'Unable to generate ID card. The backend service may be experiencing issues. Please contact your administrator or try again later.';
+      const errorMessage = axios.isAxiosError(err) 
+        ? err.response?.data?.detail || 
+          err.response?.data?.error || 
+          err.response?.data?.message || 
+          err.message ||
+          'Unable to generate ID card. The backend service may be experiencing issues. Please contact your administrator or try again later.'
+        : 'An unexpected error occurred. Please try again later.';
       setError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -137,11 +139,13 @@ const AllIdCards = () => {
           console.warn('Failed to fetch students:', studErr);
           // Continue even if students fetch fails
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('ID cards fetch error:', err);
-        console.error('Error response:', err?.response);
-        console.error('Error status:', err?.response?.status);
-        console.error('Error data:', err?.response?.data);
+        if (axios.isAxiosError(err)) {
+          console.error('Error response:', err.response);
+          console.error('Error status:', err.response?.status);
+          console.error('Error data:', err.response?.data);
+        }
         setError('Unable to load ID cards. Please try again later.');
       } finally {
         setLoading(false);
@@ -161,7 +165,6 @@ const AllIdCards = () => {
     return map;
   }, [students]);
 
-  const loggedStudent = userEmail ? studentMap.get(userEmail.toLowerCase()) : undefined;
   const isStudent = (userRole || '').toLowerCase() === 'student';
 
   const filteredCards = useMemo(() => {
@@ -179,24 +182,21 @@ const AllIdCards = () => {
         throw new Error('No user email found in localStorage. Please log in again.');
       }
 
-      
       // Use the correct API endpoint for generating ID cards
-      const response = await axios.post(`${API_BASE}/id_cards/generate/`, { 
-        email: userEmail 
+      await axios.post(`${API_BASE}/id_cards/generate/`, {
+        email: userEmail
       });
-      
-      
-      
+
       // Refresh the ID cards list after generation
       const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
       setIdCards(cardsRes.data || []);
       setShowForm(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('ID card generation error details:', {
-        message: err?.message,
-        response: err?.response?.data,
-        status: err?.response?.status,
-        statusText: err?.response?.statusText
+        message: err instanceof Error ? err.message : 'Unknown error',
+        response: axios.isAxiosError(err) ? err.response?.data : undefined,
+        status: axios.isAxiosError(err) ? err.response?.status : undefined,
+        statusText: axios.isAxiosError(err) ? err.response?.statusText : undefined
       });
       // Re-throw so the form can handle it
       throw err;
@@ -350,8 +350,11 @@ const AllIdCards = () => {
                             const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
                             setIdCards(cardsRes.data || []);
                             alert('ID card regeneration started. Please refresh in a moment.');
-                          } catch (err: any) {
+                          } catch (err: unknown) {
                             console.error('Regeneration error:', err);
+                            if (axios.isAxiosError(err)) {
+                              console.error('Error response:', err.response?.data);
+                            }
                             alert('Failed to regenerate ID card. Please try again.');
                           }
                         }}
@@ -372,7 +375,6 @@ const AllIdCards = () => {
       {showForm && (
         <IdCardForm
           defaultEmail={userEmail}
-          defaultName={parsedUser?.name || parsedUser?.fullname || 'Student'}
           onSubmit={handleCreateCard}
           onCancel={() => setShowForm(false)}
         />

@@ -2,61 +2,115 @@
 import DashboardLayout from "@/app/components/DashboardLayout";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import Image from "next/image";
 import {
   Users,
   Calendar,
   CheckCircle,
-  XCircle,
   Clock,
   TrendingUp,
   BookOpen,
   Award,
   FileText,
-  Download,
-  Eye,
-  Filter,
   Search,
   ChevronDown,
   ChevronUp,
   User,
-  Mail,
-  Phone,
-  MapPin,
   BarChart3,
-  PieChart,
-  LineChart,
   Sparkles,
   Target,
-  Crown,
   Zap,
-  Gem,
-  Rocket
+  Gem
 } from "lucide-react";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
+
+interface Student {
+  email: string;
+  fullname: string;
+  class_id: number;
+  class_name?: string;
+  section?: string;
+  class_teacher?: string;
+  teacher_email?: string;
+  profile_picture?: string;
+  student_id: string;
+}
+
+interface AttendanceRecord {
+  student: string;
+  status: string;
+  student_name?: string;
+  fullname?: string;
+  email?: string;
+  class_name?: string;
+  section?: string;
+  profile_picture?: string;
+  student_data?: Student;
+  date: string;
+  remarks?: string;
+  created_time?: string;
+  marked_by?: string;
+  created_at?: string;
+}
+
+interface Grade {
+  student: string;
+  subject_name: string;
+  fullname?: string;
+  email?: string;
+  section?: string;
+  class_name?: string;
+  exam_type: string;
+  marks_obtained: number;
+  total_marks: number;
+  percentage: number;
+  exam_date: string;
+}
+
+interface Leave {
+  applicant_email: string;
+  status: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  class_name?: string;
+  section?: string;
+  fullname?: string;
+  reason: string;
+  approved_by?: string;
+  created_at: string;
+  remarks?: string;
+}
 
 const ParentDashboard = () => {
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [parentEmail, setParentEmail] = useState<string | null>(null);
-  const [students, setStudents] = useState<any[]>([]);
-  const [grades, setGrades] = useState<any[]>([]);
-  const [leaves, setLeaves] = useState<any[]>([]);
+  // Initialize parentEmail from localStorage during component initialization
+  const [parentEmail] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const storedUserData = localStorage.getItem("userData");
+      if (storedUserData) {
+        try {
+          const parsedData = JSON.parse(storedUserData);
+          return parsedData.email || null;
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+  const [students, setStudents] = useState<Student[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [leaves, setLeaves] = useState<Leave[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedRecord, setExpandedRecord] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
-
-  // ✅ Get parent email from localStorage
-  useEffect(() => {
-    const storedUserData = localStorage.getItem("userData");
-    if (storedUserData) {
-      const parsedData = JSON.parse(storedUserData);
-      setParentEmail(parsedData.email);
-    }
-  }, []);
 
   // ✅ Fetch all data for parent
   useEffect(() => {
@@ -76,13 +130,13 @@ const ParentDashboard = () => {
 
         // Filter students by parent email
         const parentStudents = studentsRes.data.filter(
-          (student: any) => student.parent === parentEmail
+          (student: Record<string, unknown>) => student.parent === parentEmail
         );
 
         // Enrich students with class information
-        const enrichedStudents = parentStudents.map((student: any) => {
+        const enrichedStudents = parentStudents.map((student: Record<string, unknown>) => {
           const classDetail = classesRes.data.find(
-            (c: any) => c.id === student.class_id
+            (c: Record<string, unknown>) => c.id === student.class_id
           );
           
           return {
@@ -99,15 +153,15 @@ const ParentDashboard = () => {
         // Filter attendance for parent's students using student_attendance (field `student`)
         const allStudentAttendance = attendanceRes.data;
         console.log("📋 Total student_attendance records (dashboard):", allStudentAttendance.length);
-        console.log("📝 Dashboard student emails we're looking for:", enrichedStudents.map((s: any) => s.email));
+        console.log("📝 Dashboard student emails we're looking for:", enrichedStudents.map((s: Record<string, unknown>) => s.email));
 
-        const filteredAttendance = allStudentAttendance.filter((record: any) =>
-          enrichedStudents.some((stu: any) => stu.email === record.student)
+        const filteredAttendance = allStudentAttendance.filter((record: Record<string, unknown>) =>
+          enrichedStudents.some((stu: Record<string, unknown>) => stu.email === record.student)
         );
 
         // Merge student info with attendance
-        const mergedAttendance = filteredAttendance.map((att: any) => {
-          const stu = enrichedStudents.find((s: any) => s.email === att.student);
+        const mergedAttendance = filteredAttendance.map((att: Record<string, unknown>) => {
+          const stu = enrichedStudents.find((s: Record<string, unknown>) => s.email === att.student);
           return {
             ...att,
             student: att.student,
@@ -127,13 +181,13 @@ const ParentDashboard = () => {
         setAttendanceData(mergedAttendance);
 
         // Filter grades for parent's students
-        const studentGrades = gradesRes.data.filter((grade: any) =>
-          enrichedStudents.some((student: any) => student.email === grade.student)
+        const studentGrades = gradesRes.data.filter((grade: Record<string, unknown>) =>
+          enrichedStudents.some((student: Record<string, unknown>) => student.email === grade.student)
         );
 
         // Enrich grades with student information
-        const enrichedGrades = studentGrades.map((grade: any) => {
-          const student = enrichedStudents.find((s: any) => s.email === grade.student);
+        const enrichedGrades = studentGrades.map((grade: Record<string, unknown>) => {
+          const student = enrichedStudents.find((s: Record<string, unknown>) => s.email === grade.student);
           return {
             ...grade,
             fullname: student?.fullname ,
@@ -146,13 +200,13 @@ const ParentDashboard = () => {
         setGrades(enrichedGrades);
 
         // Filter leaves for parent's students
-        const studentLeaves = leavesRes.data.filter((leave: any) =>
-          enrichedStudents.some((student: any) => student.email === leave.applicant_email)
+        const studentLeaves = leavesRes.data.filter((leave: Record<string, unknown>) =>
+          enrichedStudents.some((student: Record<string, unknown>) => student.email === leave.applicant_email)
         );
 
         // Enrich leaves with student information
-        const enrichedLeaves = studentLeaves.map((leave: any) => {
-          const student = enrichedStudents.find((s: any) => s.email === leave.applicant_email);
+        const enrichedLeaves = studentLeaves.map((leave: Record<string, unknown>) => {
+          const student = enrichedStudents.find((s: Record<string, unknown>) => s.email === leave.applicant_email);
           return {
             ...leave,
             fullname: student?.fullname ,
@@ -165,7 +219,7 @@ const ParentDashboard = () => {
         setLeaves(enrichedLeaves);
 
         setLoading(false);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Error fetching data:", error);
         setLoading(false);
       }
@@ -232,9 +286,9 @@ const ParentDashboard = () => {
     const matchesDate = !dateFilter || item.date === dateFilter;
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
     const matchesSearch = 
-      item.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.class_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.remarks?.toLowerCase().includes(searchTerm.toLowerCase());
+      (item.fullname || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.class_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.remarks || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     return matchesStudent && matchesDate && matchesStatus && matchesSearch;
   });
@@ -261,7 +315,7 @@ const ParentDashboard = () => {
               <div className="animate-spin rounded-full h-12 w-12 xs:h-16 xs:w-16 border-b-2 border-blue-600 mx-auto mb-3 xs:mb-4"></div>
               <Users className="h-6 w-6 xs:h-8 xs:w-8 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
             </div>
-            <p className="text-gray-600 font-medium text-sm xs:text-base">Loading your children's data...</p>
+            <p className="text-gray-600 font-medium text-sm xs:text-base">Loading your children&#39;s data...</p>
             <p className="text-gray-400 text-xs xs:text-sm mt-1">Getting everything ready for you</p>
           </div>
         </div>
@@ -282,10 +336,10 @@ const ParentDashboard = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl xs:text-3xl sm:text-4xl font-bold bg-gradient-to-br from-gray-900 to-blue-900 bg-clip-text text-transparent">
-                    Parent Dashboard
+                    Welcome to Parent Dashboard
                   </h1>
                   <p className="text-gray-600 text-sm xs:text-base sm:text-lg mt-1 xs:mt-2">
-                    Monitor your children's academic progress and school activities
+                    Monitor your children&#39;s academic progress and school activities
                   </p>
                 </div>
               </div>
@@ -479,9 +533,11 @@ const ParentDashboard = () => {
                           isSelected ? "border-blue-500" : "border-gray-200 group-hover:border-blue-300"
                         }`}>
                           {student.profile_picture ? (
-                            <img
+                            <Image
                               src={student.profile_picture}
                               alt={student.fullname}
+                              width={48}
+                              height={48}
                               className="w-10 h-10 xs:w-12 xs:h-12 rounded-full object-cover"
                             />
                           ) : (
@@ -582,7 +638,7 @@ const ParentDashboard = () => {
                 </div>
                 <div>
                   <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">Attendance Records</h2>
-                  <p className="text-gray-600 text-xs xs:text-sm">Track your children's attendance</p>
+                  <p className="text-gray-600 text-xs xs:text-sm">Track your children&#39;s attendance</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 xs:gap-3">
@@ -619,9 +675,11 @@ const ParentDashboard = () => {
                       <div className="flex items-center gap-2 xs:gap-3">
                         <div className="w-8 h-8 xs:w-10 xs:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
                           {record.profile_picture ? (
-                            <img
+                            <Image
                               src={record.profile_picture}
                               alt={record.fullname}
+                              width={40}
+                              height={40}
                               className="w-8 h-8 xs:w-10 xs:h-10 rounded-full object-cover"
                             />
                           ) : (
@@ -911,7 +969,7 @@ const ParentDashboard = () => {
                             <div className="space-y-2 text-xs">
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Email:</span>
-                                <span className="text-gray-900 font-medium truncate ml-2">{leave.email}</span>
+                                <span className="text-gray-900 font-medium truncate ml-2">{leave.applicant_email}</span>
                               </div>
                             </div>
                           </div>
