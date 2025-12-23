@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 interface Student {
@@ -39,18 +39,14 @@ interface Assignment {
   attachment?: string;
   created_at: string;
   status?: string;
+  assigned_by?: string;
+  sec?: string;
 }
 
 interface Class {
   id: number;
   class_name: string;
   section?: string;
-  [key: string]: string | number | boolean | undefined;
-}
-
-interface Subject {
-  id: number;
-  subject_name: string;
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -63,6 +59,18 @@ interface Submission {
   file_attachment?: string;
   grade?: string;
   feedback?: string;
+  submitted_at?: string;
+  is_late?: boolean;
+  student_email?: string;
+  student?: string;
+  assignment?: number;
+  submission_file?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+interface Subject {
+  id: number;
+  subject_name: string;
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -103,19 +111,23 @@ const TeachersAssignmentsPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submittedAssignments, setSubmittedAssignments] = useState<Submission[]>([]);
   const [showSubmittedAssignments, setShowSubmittedAssignments] = useState(false);
-  // const [selectedAssignmentId, setSelectedAssignmentId] = useState<number | null>(null); // Unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<number | null>(null);
   const [loadingSubmittedAssignments, setLoadingSubmittedAssignments] = useState(false);
   const [studentsData, setStudentsData] = useState<Student[]>([]);
   const [classesData, setClassesData] = useState<Class[]>([]);
-  // const [teacherClasses, setTeacherClasses] = useState<Class[]>([]); // Unused
-  // const [teacherStudents, setTeacherStudents] = useState<Student[]>([]); // Unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [teacherClasses, setTeacherClasses] = useState<Class[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [teacherStudents, setTeacherStudents] = useState<Student[]>([]);
   const [viewMode, setViewMode] = useState<'assignments' | 'total' | 'pending' | 'completed' | 'overdue'>('assignments');
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [currentAssignmentTitle, setCurrentAssignmentTitle] = useState("");
-  const [currentAssignmentClass, setCurrentAssignmentClass] = useState<{class_name: string, section: string} | null>(null);
+  const [currentAssignmentClass, setCurrentAssignmentClass] = useState<{ class_name: string | undefined, section: string | undefined } | null>(null);
   const [currentAssignmentId, setCurrentAssignmentId] = useState<number | null>(null);
-  // const [teacherSubjects, setTeacherSubjects] = useState<Subject[]>([]); // Unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [teacherSubjects, setTeacherSubjects] = useState<Subject[]>([]);
   const [studentSubmissions, setStudentSubmissions] = useState<Record<string, Submission[]>>({});
 
   const [newAssignment, setNewAssignment] = useState({
@@ -173,42 +185,9 @@ const TeachersAssignmentsPage = () => {
       const allStudents = studentsResponse.data || [];
       setStudentsData(allStudents);
 
-    } catch (_) {
+    } catch {
       showPopup('error', "Failed to load teacher information.");
     }
-  }, []);
-
-  // ✅ Fetch Assignments
-  useEffect(() => {
-    fetchAssignments();
-    fetchTeacherData();
-  }, [fetchAssignments, fetchTeacherData]);
-
-  // Fetch submissions when component mounts
-  useEffect(() => {
-    const fetchAllSubmissions = async () => {
-      try {
-        const submittedResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/submitted_assignments/`);
-        const allSubmissions = submittedResponse.data || [];
-
-        // Organize submissions by student email
-        const submissionsByStudent: Record<string, Submission[]> = {};
-        allSubmissions.forEach((submission: Submission) => {
-          const studentEmail = submission.student_email || submission.student;
-          if (studentEmail) {
-            if (!submissionsByStudent[studentEmail]) {
-              submissionsByStudent[studentEmail] = [];
-            }
-            submissionsByStudent[studentEmail].push(submission);
-          }
-        });
-        setStudentSubmissions(submissionsByStudent);
-      } catch (_) {
-        showPopup('error', "Failed to load submission data.");
-      }
-    };
-
-    fetchAllSubmissions();
   }, []);
 
   const fetchAssignments = useCallback(async () => {
@@ -227,24 +206,24 @@ const TeachersAssignmentsPage = () => {
       }
 
       const response = await axios.get(API_URL);
-      
+
       const teacherAssignments = response.data.filter(
         (item: Assignment) => item.assigned_by === teacherEmail
       );
 
       setAssignments(teacherAssignments);
-    } catch (_) {
+    } catch {
       setError("Failed to fetch assignments.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [API_URL]);
 
   // ✅ Filter students by teacher's classes
   const getTeacherStudents = useCallback(async () => {
     try {
       setLoadingStudents(true);
-      
+
       const storedUser = localStorage.getItem("userData");
       const parsedUser = storedUser ? JSON.parse(storedUser) : null;
       const teacherEmail = parsedUser?.email;
@@ -272,23 +251,23 @@ const TeachersAssignmentsPage = () => {
 
       // Filter students based on teacher's classes
       // If no classes found in assignments, show all students
-      const filtered = teacherClassesSet.size > 0 
+      const filtered = teacherClassesSet.size > 0
         ? allStudents.filter((student: Student) => {
-            // Get student's class info
-            const studentClass = classesData.find(cls => cls.id === student.class_id);
-            
-            if (!studentClass) {
-              return false;
-            }
-            
-            const classKey = `${studentClass.class_name}-${studentClass.sec}`;
-            return teacherClassesSet.has(classKey);
-          })
+          // Get student's class info
+          const studentClass = classesData.find(cls => cls.id === student.class_id);
+
+          if (!studentClass) {
+            return false;
+          }
+
+          const classKey = `${studentClass.class_name}-${studentClass.sec}`;
+          return teacherClassesSet.has(classKey);
+        })
         : allStudents;
 
       setTeacherStudents(filtered);
       return filtered;
-    } catch (_) {
+    } catch {
       showPopup('error', "Failed to load students data.");
       return [];
     } finally {
@@ -296,13 +275,50 @@ const TeachersAssignmentsPage = () => {
     }
   }, [classesData, API_URL]);
 
+  // ✅ Fetch Assignments
+  useEffect(() => {
+    fetchAssignments();
+    fetchTeacherData();
+  }, [fetchAssignments, fetchTeacherData]);
+
+  // Fetch submissions when component mounts
+  useEffect(() => {
+    const fetchAllSubmissions = async () => {
+      try {
+        const submittedResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/submitted_assignments/`);
+        const allSubmissions = submittedResponse.data || [];
+
+        // Organize submissions by student email
+        const submissionsByStudent: Record<string, Submission[]> = {};
+        allSubmissions.forEach((submission: Submission) => {
+          const studentEmail = String(submission.student_email || submission.student || "");
+          if (studentEmail) {
+            if (!submissionsByStudent[studentEmail]) {
+              submissionsByStudent[studentEmail] = [];
+            }
+            submissionsByStudent[studentEmail].push(submission);
+          }
+        });
+        setStudentSubmissions(submissionsByStudent);
+      } catch {
+        showPopup('error', "Failed to load submission data.");
+      }
+    };
+
+    fetchAllSubmissions();
+  }, []);
+
+
+
+
+
   // ✅ Handle card clicks for all assignments
   const handleCardClick = async (cardType: 'total' | 'pending' | 'completed' | 'overdue') => {
     setViewMode(cardType);
-    
+
     // Get teacher's students first
     const teacherStudentsList = await getTeacherStudents();
-    
+
     if (!teacherStudentsList || teacherStudentsList.length === 0) {
       showPopup('error', "No students found for your classes.");
       return;
@@ -316,7 +332,7 @@ const TeachersAssignmentsPage = () => {
       // Update student submissions state
       const submissionsByStudent: Record<string, Submission[]> = {};
       allSubmissions.forEach((submission: Submission) => {
-        const studentEmail = submission.student_email || submission.student;
+        const studentEmail = String(submission.student_email || submission.student || "");
         if (studentEmail) {
           if (!submissionsByStudent[studentEmail]) {
             submissionsByStudent[studentEmail] = [];
@@ -338,7 +354,7 @@ const TeachersAssignmentsPage = () => {
           // Show students who haven't submitted ANY assignment
           filteredStudentsList = teacherStudentsList.filter((student: Student) => {
             const hasSubmission = allSubmissions.some(
-              (submission: any) => 
+              (submission: Submission) =>
                 submission.student_email === student.email ||
                 submission.student === student.email
             );
@@ -350,7 +366,7 @@ const TeachersAssignmentsPage = () => {
           // Show students who have submitted at least one assignment
           filteredStudentsList = teacherStudentsList.filter((student: Student) => {
             const hasSubmission = allSubmissions.some(
-              (submission: any) => 
+              (submission: Submission) =>
                 submission.student_email === student.email ||
                 submission.student === student.email
             );
@@ -362,9 +378,9 @@ const TeachersAssignmentsPage = () => {
           // Show students who submitted after due date
           filteredStudentsList = teacherStudentsList.filter((student: Student) => {
             const studentSubmissions = allSubmissions.filter(
-              (submission: Submission) => 
+              (submission: Submission) =>
                 (submission.student_email === student.email ||
-                 submission.student === student.email) &&
+                  submission.student === student.email) &&
                 submission.is_late === true
             );
             return studentSubmissions.length > 0;
@@ -382,16 +398,16 @@ const TeachersAssignmentsPage = () => {
   // ✅ Handle assignment-specific card clicks (only students from specific class)
   const handleAssignmentCardClick = async (
     cardType: 'total' | 'pending' | 'completed' | 'overdue',
-    assignmentClassName: string,
-    assignmentSection: string,
+    assignmentClassName: string | undefined,
+    assignmentSection: string | undefined,
     assignmentId: number
   ) => {
-    
+
     setViewMode(cardType);
     setLoadingStudents(true);
-    setCurrentAssignmentClass({class_name: assignmentClassName, section: assignmentSection});
+    setCurrentAssignmentClass({ class_name: assignmentClassName, section: assignmentSection });
     setCurrentAssignmentId(assignmentId);
-    
+
     try {
       // Find the assignment to get due date and title
       const assignment = assignments.find(a => a.id === assignmentId);
@@ -400,7 +416,7 @@ const TeachersAssignmentsPage = () => {
         setLoadingStudents(false);
         return;
       }
-      
+
       setCurrentAssignmentTitle(assignment.title || `Assignment ${assignmentId}`);
       const assignmentDueDate = new Date(assignment.due_date);
       assignmentDueDate.setHours(23, 59, 59, 999); // Set to end of day for comparison
@@ -413,7 +429,7 @@ const TeachersAssignmentsPage = () => {
       const classSpecificStudents = allStudents.filter((student: Student) => {
         // Find the student's class info from classesData
         const studentClass = classesData.find(cls => cls.id === student.class_id);
-        
+
         if (!studentClass) {
           // If class not found in classesData, try to match directly
           const directMatch = (
@@ -422,16 +438,16 @@ const TeachersAssignmentsPage = () => {
           );
           return directMatch;
         }
-        
+
         // Match with assignment's class and section
         const classMatch = (
           studentClass.class_name === assignmentClassName &&
           studentClass.sec === assignmentSection
         );
-        
+
         return classMatch;
       });
-      
+
       if (classSpecificStudents.length === 0) {
         showPopup('error', `No students found for class ${assignmentClassName} section ${assignmentSection}.`);
         setLoadingStudents(false);
@@ -452,12 +468,12 @@ const TeachersAssignmentsPage = () => {
       // Create a map of student email to their submission for this assignment
       const studentSubmissionMap: Record<string, Submission> = {};
       assignmentSubmissions.forEach((submission: Submission) => {
-        const studentEmail = submission.student_email || submission.student;
+        const studentEmail = String(submission.student_email || submission.student || "");
         if (studentEmail) {
           // Store the submission (if multiple, keep the latest one)
-          if (!studentSubmissionMap[studentEmail] || 
-              new Date(submission.submission_date || submission.submitted_at) > 
-              new Date(studentSubmissionMap[studentEmail].submission_date || studentSubmissionMap[studentEmail].submitted_at)) {
+          if (!studentSubmissionMap[studentEmail] ||
+            new Date(String(submission.submission_date || submission.submitted_at)) >
+            new Date(String(studentSubmissionMap[studentEmail].submission_date || studentSubmissionMap[studentEmail].submitted_at))) {
             studentSubmissionMap[studentEmail] = submission;
           }
         }
@@ -467,7 +483,7 @@ const TeachersAssignmentsPage = () => {
       setStudentSubmissions(prevSubmissions => {
         const updatedSubmissions = { ...prevSubmissions };
         assignmentSubmissions.forEach((submission: Submission) => {
-          const studentEmail = submission.student_email || submission.student;
+          const studentEmail = String(submission.student_email || submission.student || "");
           if (studentEmail) {
             if (!updatedSubmissions[studentEmail]) {
               updatedSubmissions[studentEmail] = [];
@@ -502,20 +518,20 @@ const TeachersAssignmentsPage = () => {
             const hasSubmission = !!studentSubmissionMap[studentEmail];
             return !hasSubmission;
           });
-          break;        case 'completed':
+          break; case 'completed':
           // Show students who submitted THIS assignment ON TIME (submission_date <= due_date)
           filteredStudentsList = classSpecificStudents.filter((student: Student) => {
             const studentEmail = student.email;
             const submission = studentSubmissionMap[studentEmail];
-            
+
             if (!submission) {
               return false;
             }
-            
+
             // Check if submission was on time
-            const submissionDate = new Date(submission.submission_date || submission.submitted_at);
+            const submissionDate = new Date(String(submission.submission_date || submission.submitted_at || ""));
             const isOnTime = submissionDate <= assignmentDueDate && !submission.is_late;
-            
+
             return isOnTime;
           });
           break;
@@ -524,7 +540,7 @@ const TeachersAssignmentsPage = () => {
           // Get current date for checking if assignment is overdue
           const currentDate = new Date();
           const isAssignmentOverdue = assignmentDueDate < currentDate;
-          
+
           if (isAssignmentOverdue) {
             // If assignment is overdue, show:
             // 1. Students who submitted late
@@ -532,16 +548,16 @@ const TeachersAssignmentsPage = () => {
             filteredStudentsList = classSpecificStudents.filter((student: Student) => {
               const studentEmail = student.email;
               const submission = studentSubmissionMap[studentEmail];
-              
+
               if (!submission) {
                 // Student hasn't submitted at all and assignment is overdue
                 return true;
               }
-              
+
               // Student submitted but check if it was late
-              const submissionDate = new Date(submission.submission_date || submission.submitted_at);
+              const submissionDate = new Date(String(submission.submission_date || submission.submitted_at || ""));
               const isLate = submissionDate > assignmentDueDate || submission.is_late === true;
-              
+
               return isLate;
             });
           } else {
@@ -549,22 +565,23 @@ const TeachersAssignmentsPage = () => {
             filteredStudentsList = classSpecificStudents.filter((student: Student) => {
               const studentEmail = student.email;
               const submission = studentSubmissionMap[studentEmail];
-              
+
               if (!submission) {
                 return false; // Not submitted yet, not overdue
               }
-              
+
               // Check if submission was after due date
-              const submissionDate = new Date(submission.submission_date || submission.submitted_at);
+              const submissionDate = new Date(String(submission.submission_date || submission.submitted_at || ""));
               const isLate = submissionDate > assignmentDueDate || submission.is_late === true;
-              
+
               return isLate;
             });
           }
-          break;      }
+          break;
+      }
 
       setFilteredStudents(filteredStudentsList);
-    } catch (_) {
+    } catch {
       showPopup('error', "Failed to fetch students data.");
     } finally {
       setLoadingStudents(false);
@@ -611,7 +628,10 @@ const TeachersAssignmentsPage = () => {
       });
       fetchAssignments();
     } catch (err: unknown) {
-      const errorMessage = err.response?.data?.message || "Failed to add assignment. Please check the form data.";
+      let errorMessage = "Failed to add assignment. Please check the form data.";
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.response?.data?.message || errorMessage;
+      }
       showPopup('error', errorMessage);
     } finally {
       setSubmitting(false);
@@ -636,11 +656,11 @@ const TeachersAssignmentsPage = () => {
   // Filter assignments
   const filteredAssignments = assignments
     .filter(item => {
-      const matchesSearch = 
+      const matchesSearch =
         item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.class_name.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesStatus = statusFilter === "all" || item.status === statusFilter;
       const matchesClass = classFilter === "all" || item.class_name === classFilter;
       const matchesSubject = subjectFilter === "all" || item.subject_name === subjectFilter;
@@ -649,11 +669,11 @@ const TeachersAssignmentsPage = () => {
     })
     .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime());
 
-  const getStatusIcon = (status: string, dueDate: string) => {
-    const isOverdue = new Date(dueDate) < new Date() && status !== "Completed";
-    
+  const getStatusIcon = (status: string | undefined, dueDate: string | undefined) => {
+    const isOverdue = dueDate ? (new Date(dueDate) < new Date() && status !== "Completed") : false;
+
     if (isOverdue) return <AlertCircle className="h-5 w-5 text-red-600" />;
-    
+
     switch (status) {
       case "Completed":
         return <CheckCircle className="h-5 w-5 text-green-600" />;
@@ -664,11 +684,11 @@ const TeachersAssignmentsPage = () => {
     }
   };
 
-  const getStatusColor = (status: string, dueDate: string) => {
-    const isOverdue = new Date(dueDate) < new Date() && status !== "Completed";
-    
+  const getStatusColor = (status: string | undefined, dueDate: string | undefined) => {
+    const isOverdue = dueDate ? (new Date(dueDate) < new Date() && status !== "Completed") : false;
+
     if (isOverdue) return "bg-red-50 text-red-700 border-red-200";
-    
+
     switch (status) {
       case "Completed":
         return "bg-green-50 text-green-700 border-green-200";
@@ -679,7 +699,8 @@ const TeachersAssignmentsPage = () => {
     }
   };
 
-  const isAssignmentOverdue = (dueDate: string, status: string) => {
+  const isAssignmentOverdue = (dueDate: string | undefined, status: string | undefined) => {
+    if (!dueDate) return false;
     return new Date(dueDate) < new Date() && status !== "Completed";
   };
 
@@ -688,13 +709,13 @@ const TeachersAssignmentsPage = () => {
     try {
       setLoadingSubmittedAssignments(true);
       setSelectedAssignmentId(assignmentId);
-      
+
       // Get assignment title
       const assignment = assignments.find(a => a.id === assignmentId);
       setCurrentAssignmentTitle(assignment?.title || `Assignment ${assignmentId}`);
-      
+
       const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/submitted_assignments/`);
-      
+
       // Filter by assignment ID (handle different possible field names)
       const assignmentSubmissions = response.data.filter(
         (item: Submission) => {
@@ -702,10 +723,10 @@ const TeachersAssignmentsPage = () => {
           return itemAssignmentId === assignmentId;
         }
       );
-      
+
       setSubmittedAssignments(assignmentSubmissions);
       setShowSubmittedAssignments(true);
-    } catch (_) {
+    } catch {
       showPopup('error', "Failed to fetch submitted assignments.");
     } finally {
       setLoadingSubmittedAssignments(false);
@@ -716,7 +737,7 @@ const TeachersAssignmentsPage = () => {
   const getStudentClass = (studentEmail: string) => {
     const student = studentsData.find(s => s.email === studentEmail);
     if (!student) return { class_id: null, class_name: 'Unknown', section: '' };
-    
+
     const classInfo = classesData.find(cls => cls.id === student.class_id);
     return classInfo || { class_id: student.class_id, class_name: 'Unknown', section: '' };
   };
@@ -730,12 +751,11 @@ const TeachersAssignmentsPage = () => {
 
   // ✅ Render Students List View
   const renderStudentsView = () => {
-    
+
     let viewTitle = "";
     let viewDescription = "";
     let icon = <Users className="h-6 w-6" />;
     let bgColor = "bg-blue-50";
-    let textColor = "text-blue-600";
 
     switch (viewMode) {
       case 'total':
@@ -743,28 +763,24 @@ const TeachersAssignmentsPage = () => {
         viewDescription = "Students in the specific class for this assignment";
         icon = <Users className="h-6 w-6 text-blue-600" />;
         bgColor = "bg-blue-50";
-        textColor = "text-blue-600";
         break;
       case 'pending':
         viewTitle = "Pending Students";
         viewDescription = "Students in this assignment's class who haven't submitted";
         icon = <Clock className="h-6 w-6 text-yellow-600" />;
         bgColor = "bg-yellow-50";
-        textColor = "text-yellow-600";
         break;
       case 'completed':
         viewTitle = "Completed Students";
         viewDescription = "Students in this assignment's class who have submitted";
         icon = <CheckCircle className="h-6 w-6 text-green-600" />;
         bgColor = "bg-green-50";
-        textColor = "text-green-600";
         break;
       case 'overdue':
         viewTitle = "Overdue Students";
         viewDescription = "Students in this assignment's class with late submissions";
         icon = <AlertCircle className="h-6 w-6 text-red-600" />;
         bgColor = "bg-red-50";
-        // textColor = "text-red-600"; // Unused
         break;
     }
 
@@ -816,9 +832,9 @@ const TeachersAssignmentsPage = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Students Found</h3>
             <p className="text-gray-600 max-w-md mx-auto">
               {viewMode === 'pending' ? "All students have submitted assignments." :
-               viewMode === 'completed' ? "No students have submitted assignments yet." :
-               viewMode === 'overdue' ? "No students have submitted assignments after due date." :
-               "No students found for your classes."}
+                viewMode === 'completed' ? "No students have submitted assignments yet." :
+                  viewMode === 'overdue' ? "No students have submitted assignments after due date." :
+                    "No students found for your classes."}
             </p>
           </div>
         ) : (
@@ -840,7 +856,7 @@ const TeachersAssignmentsPage = () => {
                     <div className="flex items-center gap-2 mt-1">
                       <Book className="h-3 w-3 text-gray-400" />
                       <span className="text-xs text-gray-600">
-                        {getStudentClass(student.email).class_name} - {getStudentClass(student.email).sec}
+                        {getStudentClass(student.email).class_name} - {getStudentClass(student.email).section}
                       </span>
                     </div>
                   </div>
@@ -857,15 +873,14 @@ const TeachersAssignmentsPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Status:</span>
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      viewMode === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${viewMode === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                       viewMode === 'completed' ? 'bg-green-100 text-green-700' :
-                      viewMode === 'overdue' ? 'bg-red-100 text-red-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
+                        viewMode === 'overdue' ? 'bg-red-100 text-red-700' :
+                          'bg-blue-100 text-blue-700'
+                      }`}>
                       {viewMode === 'pending' ? 'Pending' :
-                       viewMode === 'completed' ? 'Completed' :
-                       viewMode === 'overdue' ? 'Overdue' : 'Active'}
+                        viewMode === 'completed' ? 'Completed' :
+                          viewMode === 'overdue' ? 'Overdue' : 'Active'}
                     </span>
                   </div>
                   {/* Display submission information for this assignment */}
@@ -878,14 +893,14 @@ const TeachersAssignmentsPage = () => {
                         return submissionAssignmentId === currentAssignmentId;
                       }
                     );
-                    
+
                     if (assignmentSubmission) {
-                      const submissionDate = new Date(assignmentSubmission.submission_date || assignmentSubmission.submitted_at);
+                      const submissionDate = new Date(String(assignmentSubmission.submission_date || assignmentSubmission.submitted_at || ""));
                       const assignment = assignments.find(a => a.id === currentAssignmentId);
                       const dueDate = assignment ? new Date(assignment.due_date) : null;
                       dueDate?.setHours(23, 59, 59, 999);
                       const isLate = dueDate && submissionDate > dueDate;
-                      
+
                       return (
                         <div className="pt-2 border-t border-gray-100">
                           <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -895,11 +910,10 @@ const TeachersAssignmentsPage = () => {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs mt-1">
-                            <span className={`px-2 py-1 rounded font-semibold ${
-                              isLate || assignmentSubmission.is_late 
-                                ? 'bg-red-100 text-red-700' 
-                                : 'bg-green-100 text-green-700'
-                            }`}>
+                            <span className={`px-2 py-1 rounded font-semibold ${isLate || assignmentSubmission.is_late
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-green-100 text-green-700'
+                              }`}>
                               {isLate || assignmentSubmission.is_late ? 'Late Submission' : 'On Time'}
                             </span>
                             {assignmentSubmission.grade && (
@@ -940,7 +954,7 @@ const TeachersAssignmentsPage = () => {
     <>
       {/* Statistics Cards - For all assignments */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div 
+        <div
           onClick={() => handleCardClick('total')}
           className="bg-white rounded-lg border p-4 cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
         >
@@ -1012,14 +1026,14 @@ const TeachersAssignmentsPage = () => {
           </div>
         </div> */}
       </div>
-      
+
       {/* Info text */}
       {/* <div className="mb-6 text-center text-sm text-gray-500">
         <p>👆 Click above cards to view students across all your assignments</p>
         <p>👇 Within each assignment card, click the colored buttons to view students for that specific class only</p>
       </div> */}
 
-      {/* Rest of the assignments view code remains the same */} 
+      {/* Rest of the assignments view code remains the same */}
       {/* Filters and Search */}
       <div className="bg-white rounded-lg border p-4 mb-6">
         <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
@@ -1081,7 +1095,7 @@ const TeachersAssignmentsPage = () => {
               {assignments.length === 0 ? "No Assignments Created" : "No Matching Assignments"}
             </h3>
             <p className="text-gray-600 max-w-md mx-auto mb-6">
-              {assignments.length === 0 
+              {assignments.length === 0
                 ? "Get started by creating your first assignment for students."
                 : "Try adjusting your search or filters to find what you're looking for."
               }
@@ -1107,15 +1121,15 @@ const TeachersAssignmentsPage = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <div className="mt-1">
-                        {getStatusIcon(assignment.status, assignment.due_date)}
+                        {getStatusIcon(assignment.status || "", assignment.due_date || "")}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 truncate">{assignment.title}</h3>
                         <p className="text-xs text-gray-500 truncate">{assignment.subject_name}</p>
                       </div>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(assignment.status, assignment.due_date)}`}>
-                      {isAssignmentOverdue(assignment.due_date, assignment.status) ? "Overdue" : assignment.status}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(assignment.status || "", assignment.due_date || "")}`}>
+                      {isAssignmentOverdue(assignment.due_date || "", assignment.status || "") ? "Overdue" : assignment.status}
                     </span>
                   </div>
                 </div>
@@ -1140,7 +1154,7 @@ const TeachersAssignmentsPage = () => {
                   </div>
 
                   {/* Overdue Warning */}
-                  {isAssignmentOverdue(assignment.due_date, assignment.status) && (
+                  {isAssignmentOverdue(assignment.due_date || "", assignment.status || "") && (
                     <div className="flex items-center gap-2 text-sm text-red-600">
                       <AlertCircle className="h-4 w-4" />
                       <span className="font-medium">Assignment is overdue</span>
@@ -1150,13 +1164,12 @@ const TeachersAssignmentsPage = () => {
                   {/* Days Remaining */}
                   <div className="text-sm">
                     <span className="text-gray-600">Days Remaining: </span>
-                    <span className={`font-medium ${
-                      isAssignmentOverdue(assignment.due_date, assignment.status) 
-                        ? 'text-red-600' 
-                        : 'text-green-600'
-                    }`}>
-                      {isAssignmentOverdue(assignment.due_date, assignment.status) 
-                        ? 'Overdue' 
+                    <span className={`font-medium ${isAssignmentOverdue(assignment.due_date, assignment.status)
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                      }`}>
+                      {isAssignmentOverdue(assignment.due_date, assignment.status)
+                        ? 'Overdue'
                         : Math.ceil((new Date(assignment.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + ' days'
                       }
                     </span>
@@ -1175,7 +1188,7 @@ const TeachersAssignmentsPage = () => {
                       <span className="hidden sm:inline">View Submissions</span>
                       <span className="sm:hidden">View</span>
                     </button>
-                    
+
                     {/* View Students Buttons - Specific to Assignment's Class */}
                     <div className="flex flex-wrap gap-1">
                       <button
@@ -1207,7 +1220,7 @@ const TeachersAssignmentsPage = () => {
                         Overdue
                       </button>
                     </div>
-                    
+
                     {/* Expand/Collapse Button */}
                     <button
                       onClick={() => setExpandedAssignment(expandedAssignment === assignment.id ? null : assignment.id)}
@@ -1242,18 +1255,18 @@ const TeachersAssignmentsPage = () => {
                           <div className="flex justify-between">
                             <span className="text-gray-600">Created Date:</span>
                             <span className="text-gray-900 font-medium">
-                              {new Date(assignment.created_at).toLocaleDateString()}
+                              {new Date(String(assignment.created_at || "")).toLocaleDateString()}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Due Date:</span>
                             <span className="text-gray-900 font-medium">
-                              {new Date(assignment.due_date).toLocaleDateString()}
+                              {new Date(String(assignment.due_date || "")).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Full Description</h4>
                         <p className="text-gray-700 bg-gray-50 p-3 rounded">
@@ -1292,7 +1305,7 @@ const TeachersAssignmentsPage = () => {
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
             <p className="text-gray-600 mb-4">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-medium"
             >
@@ -1344,18 +1357,18 @@ const TeachersAssignmentsPage = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                {viewMode === 'assignments' ? 'Assignments' : 
-                 viewMode === 'total' ? 'All Students' :
-                 viewMode === 'pending' ? 'Pending Students' :
-                 viewMode === 'completed' ? 'Completed Students' :
-                 'Overdue Students'}
+                {viewMode === 'assignments' ? 'Assignments' :
+                  viewMode === 'total' ? 'All Students' :
+                    viewMode === 'pending' ? 'Pending Students' :
+                      viewMode === 'completed' ? 'Completed Students' :
+                        'Overdue Students'}
               </h1>
               <p className="text-gray-600 mt-1">
                 {viewMode === 'assignments' ? 'Create and manage assignments for your students' :
-                 viewMode === 'total' ? 'Students in the specific class for this assignment' :
-                 viewMode === 'pending' ? 'Students in this assignment\'s class who haven\'t submitted' :
-                 viewMode === 'completed' ? 'Students in this assignment\'s class who have submitted' :
-                 'Students in this assignment\'s class with late submissions'}
+                  viewMode === 'total' ? 'Students in the specific class for this assignment' :
+                    viewMode === 'pending' ? 'Students in this assignment\'s class who haven\'t submitted' :
+                      viewMode === 'completed' ? 'Students in this assignment\'s class who have submitted' :
+                        'Students in this assignment\'s class with late submissions'}
               </p>
             </div>
             {viewMode === 'assignments' && (
@@ -1556,7 +1569,7 @@ const TeachersAssignmentsPage = () => {
                             </p>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-2 text-sm text-gray-600 mb-3">
                           <div className="flex items-center gap-2">
                             <BookOpen className="h-4 w-4" />
@@ -1564,28 +1577,26 @@ const TeachersAssignmentsPage = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
-                            <span>Class: {getStudentClass(submission.student_email).class_name} - {getStudentClass(submission.student_email).sec}</span>
+                            <span>Class: {getStudentClass(submission.student_email || "").class_name} - {getStudentClass(submission.student_email || "").section}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            <span>Submitted: {new Date(submission.submission_date).toLocaleString()}</span>
+                            <span>Submitted: {new Date(String(submission.submission_date || "")).toLocaleString()}</span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 text-sm mb-3">
                           <div className="flex-1">
                             <span className="font-medium text-gray-700">Grade: </span>
-                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                              submission.grade ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
-                            }`}>
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${submission.grade ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                              }`}>
                               {submission.grade || 'Not Graded'}
                             </span>
                           </div>
                           <div className="flex-1">
                             <span className="font-medium text-gray-700">Status: </span>
-                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                              submission.is_late ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                            }`}>
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${submission.is_late ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                              }`}>
                               {submission.is_late ? 'Late' : 'On Time'}
                             </span>
                           </div>
@@ -1599,9 +1610,9 @@ const TeachersAssignmentsPage = () => {
                         </div>
 
                         {submission.submission_file && (
-                          <a 
-                            href={submission.submission_file} 
-                            target="_blank" 
+                          <a
+                            href={submission.submission_file}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
                           >

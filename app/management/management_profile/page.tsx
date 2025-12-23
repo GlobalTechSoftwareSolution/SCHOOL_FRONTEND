@@ -3,7 +3,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 import Image from "next/image";
-import {  User,
+import {
+  User,
   Mail,
   Phone,
   Briefcase,
@@ -64,7 +65,8 @@ interface FormData {
   qualification: string;
   date_of_birth: string;
   date_joined: string;
-  [key: string]: string | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 const ManagementProfilePage = () => {
@@ -96,7 +98,7 @@ const ManagementProfilePage = () => {
       const allManagers = res.data || [];
 
       const profile = allManagers.find(
-        (m) => m.email === email || m.user_details?.email === email
+        (m: ManagementUser) => m.email === email || m.user_details?.email === email
       );
 
       if (profile) {
@@ -167,7 +169,7 @@ const ManagementProfilePage = () => {
     }
 
     setUploadingPhoto(true);
-    
+
     try {
       // Create preview
       const reader = new FileReader();
@@ -259,7 +261,7 @@ const ManagementProfilePage = () => {
       showSuccess();
       setManagement(response.data);
       setEditing(false);
-      
+
       // Update form data with new values
       setFormData({
         ...formData,
@@ -282,7 +284,7 @@ const ManagementProfilePage = () => {
             date_joined: formData.date_joined,
             email: email
           };
-          
+
           const response = await axios.put(
             `${API_BASE}/management/${encodeURIComponent(email!)}/`,
             updateData
@@ -400,9 +402,9 @@ const ManagementProfilePage = () => {
                     <div className="relative">
                       <div className="w-24 h-24 bg-white/20 rounded-2xl border-4 border-white/30 shadow-lg flex items-center justify-center relative overflow-hidden">
                         {profilePhoto || management?.profile_picture ? (
-                          <Image 
-                            src={profilePhoto || management?.profile_picture || ""} 
-                            alt="Profile" 
+                          <Image
+                            src={profilePhoto || management?.profile_picture || ""}
+                            alt="Profile"
                             width={96}
                             height={96}
                             className="w-full h-full object-cover rounded-2xl"
@@ -410,7 +412,7 @@ const ManagementProfilePage = () => {
                         ) : (
                           <User className="w-12 h-12 text-white" />
                         )}
-                        <button 
+                        <button
                           onClick={triggerFileInput}
                           disabled={uploadingPhoto}
                           className="absolute bottom-0 right-0 p-1 bg-blue-600 rounded-full border-2 border-white hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -430,13 +432,13 @@ const ManagementProfilePage = () => {
                         className="hidden"
                       />
                     </div>
-                    
+
                     <div className="flex-1 text-center lg:text-left">
                       <h1 className="text-2xl font-bold mb-2">{management.fullname || "Management User"}</h1>
                       <p className="text-blue-100 text-lg mb-3 font-medium">
                         {management.designation || "Management Staff"}
                       </p>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         <div className="flex items-center gap-2 justify-center lg:justify-start">
                           <Mail className="w-4 h-4 text-blue-200" />
@@ -510,11 +512,10 @@ const ManagementProfilePage = () => {
                               value={formData.fullname || ""}
                               onChange={(e) => setFormData({ ...formData, fullname: e.target.value })}
                               disabled={!editing}
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
-                                editing 
-                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                  : "border-gray-300 bg-gray-50"
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${editing
+                                ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                : "border-gray-300 bg-gray-50"
+                                }`}
                               placeholder="Enter your full name"
                             />
                           </div>
@@ -546,11 +547,10 @@ const ManagementProfilePage = () => {
                               value={formData.phone || ""}
                               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                               disabled={!editing}
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
-                                editing 
-                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                  : "border-gray-300 bg-gray-50"
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${editing
+                                ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                : "border-gray-300 bg-gray-50"
+                                }`}
                               placeholder="Enter your phone number"
                             />
                           </div>
@@ -589,11 +589,10 @@ const ManagementProfilePage = () => {
                               value={formData.date_of_birth || ""}
                               onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
                               disabled={!editing}
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
-                                editing 
-                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                  : "border-gray-300 bg-gray-50"
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${editing
+                                ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                : "border-gray-300 bg-gray-50"
+                                }`}
                             />
                           </div>
                         </div>
@@ -610,11 +609,10 @@ const ManagementProfilePage = () => {
                               value={formData.date_joined || ""}
                               onChange={(e) => setFormData({ ...formData, date_joined: e.target.value })}
                               disabled={!editing}
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
-                                editing 
-                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                  : "border-gray-300 bg-gray-50"
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${editing
+                                ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                : "border-gray-300 bg-gray-50"
+                                }`}
                             />
                           </div>
                         </div>
@@ -641,11 +639,10 @@ const ManagementProfilePage = () => {
                               value={formData.designation || ""}
                               onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
                               disabled={!editing}
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
-                                editing 
-                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                  : "border-gray-300 bg-gray-50"
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${editing
+                                ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                : "border-gray-300 bg-gray-50"
+                                }`}
                               placeholder="Enter your designation"
                             />
                           </div>
@@ -683,11 +680,10 @@ const ManagementProfilePage = () => {
                               value={formData.qualification || ""}
                               onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
                               disabled={!editing}
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${
-                                editing 
-                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                  : "border-gray-300 bg-gray-50"
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all ${editing
+                                ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                : "border-gray-300 bg-gray-50"
+                                }`}
                               placeholder="Enter your qualification"
                             />
                           </div>
@@ -705,11 +701,10 @@ const ManagementProfilePage = () => {
                               onChange={(e) => setFormData({ ...formData, office_address: e.target.value })}
                               disabled={!editing}
                               rows={3}
-                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all resize-none ${
-                                editing 
-                                  ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                  : "border-gray-300 bg-gray-50"
-                              }`}
+                              className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all resize-none ${editing
+                                ? "border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                : "border-gray-300 bg-gray-50"
+                                }`}
                               placeholder="Enter your office address"
                             />
                           </div>
@@ -743,11 +738,10 @@ const ManagementProfilePage = () => {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200">
-                        <div className={`p-2 rounded-lg ${
-                          management.user_details?.is_active 
-                            ? "bg-green-100 text-green-600" 
-                            : "bg-red-100 text-red-600"
-                        }`}>
+                        <div className={`p-2 rounded-lg ${management.user_details?.is_active
+                          ? "bg-green-100 text-green-600"
+                          : "bg-red-100 text-red-600"
+                          }`}>
                           <CheckCircle className="w-5 h-5" />
                         </div>
                         <div>
@@ -759,11 +753,10 @@ const ManagementProfilePage = () => {
                       </div>
 
                       <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200">
-                        <div className={`p-2 rounded-lg ${
-                          management.user_details?.is_approved 
-                            ? "bg-green-100 text-green-600" 
-                            : "bg-yellow-100 text-yellow-600"
-                        }`}>
+                        <div className={`p-2 rounded-lg ${management.user_details?.is_approved
+                          ? "bg-green-100 text-green-600"
+                          : "bg-yellow-100 text-yellow-600"
+                          }`}>
                           {management.user_details?.is_approved ? (
                             <CheckCircle className="w-5 h-5" />
                           ) : (
@@ -785,7 +778,7 @@ const ManagementProfilePage = () => {
                         <div>
                           <div className="text-sm text-gray-500">Member Since</div>
                           <div className="font-semibold">
-                            {management.user_details?.created_at 
+                            {management.user_details?.created_at
                               ? new Date(management.user_details.created_at).toLocaleDateString()
                               : "N/A"
                             }

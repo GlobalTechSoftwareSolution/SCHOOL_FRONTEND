@@ -106,9 +106,9 @@ const ProgramsPage = () => {
       const response = await axios.get(`${API_URL}programs/`);
 
       // Calculate status for each program based on end date
-      const programsWithCalculatedStatus = response.data.map((program: unknown) => ({
+      const programsWithCalculatedStatus = response.data.map((program: Program) => ({
         ...program,
-        status: calculateStatus((program as { end_date: string }).end_date)
+        status: calculateStatus(program.end_date)
       }));
 
       setPrograms(programsWithCalculatedStatus);

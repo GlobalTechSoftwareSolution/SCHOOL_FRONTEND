@@ -129,7 +129,7 @@ export default function MarksManager() {
   // Helper function to get profile image URL from student object
   const getStudentProfileImage = useCallback((student: Student): string | null => {
     if (!student) return null;
-    
+
     // Check all possible image fields
     const imageSources = [
       student.profile_image,
@@ -137,27 +137,27 @@ export default function MarksManager() {
       student.image,
       student.avatar
     ];
-    
+
     for (const source of imageSources) {
       if (source) {
         // If it's already a full URL or data URL
         if (typeof source === 'string' && (source.startsWith('http://') || source.startsWith('https://') || source.startsWith('data:'))) {
           return source;
         }
-        
+
         // If it's a relative path, construct full URL
         if (typeof source === 'string' && source.startsWith('/')) {
           const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api/', '') || '';
           return `${apiBase}${source.substring(1)}`;
         }
-        
+
         // If it's just a filename, construct the full URL
         if (typeof source === 'string') {
           return `${process.env.NEXT_PUBLIC_API_BASE_URL}media/${source}`;
         }
       }
     }
-    
+
     return null; // No image found
   }, []);
 
@@ -166,7 +166,7 @@ export default function MarksManager() {
     // First try to get image from student object
     const imageUrl = getStudentProfileImage(student);
     if (imageUrl) return imageUrl;
-    
+
     // If no image found, return null to trigger initials fallback
     return null;
   }, [getStudentProfileImage]);
@@ -175,22 +175,22 @@ export default function MarksManager() {
   const getStudentInitialsWithFallback = useCallback((student: Student): string => {
     try {
       if (!student) return 'ST';
-      
+
       const firstName = student.first_name || student.name || '';
       const lastName = student.last_name || '';
       const firstInitial = firstName.charAt(0).toUpperCase();
       const lastInitial = lastName.charAt(0).toUpperCase();
-      
+
       // If we have at least one initial, return it
       if (firstInitial) {
         return lastInitial ? `${firstInitial}${lastInitial}` : firstInitial;
       }
-      
+
       // Fallback to email first letter if no name
       if (student.email) {
         return student.email.charAt(0).toUpperCase();
       }
-      
+
       // Ultimate fallback
       return 'ST';
     } catch (error) {
@@ -209,7 +209,8 @@ export default function MarksManager() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
-  // const [subjects, _setSubjects] = useState<Subject[]>([]); // Unused variable
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);  // UI state
   const [editing, setEditing] = useState<Record<number, number>>({});
   const [saving, setSaving] = useState<Record<number, boolean>>({});
@@ -252,9 +253,9 @@ export default function MarksManager() {
       type,
       timestamp: new Date()
     };
-    
+
     setNotifications(prev => [newNotification, ...prev].slice(0, 5));
-    
+
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 5000);
@@ -285,19 +286,6 @@ export default function MarksManager() {
     return grades.filter((g) => (g.student || "").toLowerCase() === studentEmail.toLowerCase());
   }, [grades]);
 
-  // Calculate student average
-  const calculateStudentAverage = useCallback((email: string) => {
-    const studentGrades = gradesForStudent(email).filter(filterByReportType);
-    if (studentGrades.length === 0) return 0;
-    
-    const totalPercentage = studentGrades.reduce((sum, grade) => {
-      const percentage = (grade.marks_obtained / grade.total_marks) * 100;
-      return sum + (isNaN(percentage) ? 0 : percentage);
-    }, 0);
-    
-    return Math.round(totalPercentage / studentGrades.length);
-  }, [gradesForStudent, filterByReportType]);
-
   // report filtering
   const filterByReportType = useCallback((grade: Grade) => {
     if (!grade) return false;
@@ -310,6 +298,19 @@ export default function MarksManager() {
     }
     return true;
   }, [reportType]);
+
+  // Calculate student average
+  const calculateStudentAverage = useCallback((email: string) => {
+    const studentGrades = gradesForStudent(email).filter(filterByReportType);
+    if (studentGrades.length === 0) return 0;
+
+    const totalPercentage = studentGrades.reduce((sum, grade) => {
+      const percentage = (grade.marks_obtained / grade.total_marks) * 100;
+      return sum + (isNaN(percentage) ? 0 : percentage);
+    }, 0);
+
+    return Math.round(totalPercentage / studentGrades.length);
+  }, [gradesForStudent, filterByReportType]);
 
   function generateReportForStudentEmail(email: string) {
     return gradesForStudent(email).filter(filterByReportType);
@@ -368,7 +369,7 @@ export default function MarksManager() {
         setClasses(Array.isArray(cl) ? cl : []);
         setStudents(Array.isArray(st) ? st : []);
         setGrades(Array.isArray(gr) ? gr : []);
-        _setSubjects(Array.isArray(sub) ? sub : []);
+        setSubjects(Array.isArray(sub) ? sub : []);
 
         const record = (Array.isArray(teachers) ? teachers : []).find(
           (t) => t.email?.toLowerCase() === teacherEmail.toLowerCase()
@@ -388,7 +389,7 @@ export default function MarksManager() {
   const teacherSubjects = useMemo(() => {
     if (!Array.isArray(timetable) || !teacherEmail) return new Set<string>();
     const subjectSet = new Set<string>();
-    
+
     timetable.forEach((item) => {
       if (String(item.teacher || "").toLowerCase() === teacherEmail.toLowerCase()) {
         if (item.subject_name) subjectSet.add(item.subject_name.toLowerCase());
@@ -402,7 +403,7 @@ export default function MarksManager() {
         }
       }
     });
-    
+
     return subjectSet;
   }, [timetable, teacherEmail]);
 
@@ -418,7 +419,7 @@ export default function MarksManager() {
   // -------------------- Get teacher's classes where they are class teacher --------------------
   const teacherClassTeacherClasses = useMemo(() => {
     if (!teacherRecord?.is_class_teacher) return new Set<number>();
-    
+
     const classTeacherClasses = new Set<number>();
     classes.forEach((cls) => {
       // Check if this teacher is the class teacher for this class
@@ -427,21 +428,21 @@ export default function MarksManager() {
         classTeacherClasses.add(cls.id);
       }
     });
-    
+
     return classTeacherClasses;
   }, [classes, teacherRecord, teacherEmail]);
 
   // -------------------- Check if teacher can edit a grade --------------------
   const canEditGrade = useCallback((grade: Grade): boolean => {
     if (!teacherEmail || !grade) return false;
-    
+
     // 1. If teacher is a class teacher AND this grade is for their class
     if (teacherRecord?.is_class_teacher) {
       // Find the student for this grade
-      const student = students.find(s => 
+      const student = students.find(s =>
         s.email?.toLowerCase() === grade.student?.toLowerCase()
       );
-      
+
       if (student) {
         // Check if this teacher is class teacher for this student's class
         const isClassTeacherForStudentClass = teacherClassTeacherClasses.has(student.class_id);
@@ -450,13 +451,13 @@ export default function MarksManager() {
         }
       }
     }
-    
+
     // 2. For subject teachers (or class teachers editing grades in other classes)
     // They can only edit grades for subjects they teach
-    
+
     // Check if this teacher teaches this subject
     const teachesSubject = teacherSubjects.has(grade.subject_name?.toLowerCase() || '');
-    
+
     // Subject teacher can edit if they teach this subject
     return teachesSubject;
   }, [teacherEmail, teacherRecord, students, teacherClassTeacherClasses, teacherSubjects]);
@@ -489,7 +490,7 @@ export default function MarksManager() {
   const grouped = useMemo(() => {
     const map: Record<number, { classObj: Class; sections: Record<string, Student[]> }> = {};
     const idxClass: Record<number, Class> = {};
-    
+
     classes.forEach((c) => {
       idxClass[c.id] = c;
       if (assignedClassIds.includes(c.id)) {
@@ -537,7 +538,7 @@ export default function MarksManager() {
       } else {
         Object.assign(filteredGrouped, grouped);
       }
-      
+
       // Filter sections based on selection
       let filteredSections = filteredGrouped;
       if (selectedClassId && selectedSectionName) {
@@ -553,9 +554,9 @@ export default function MarksManager() {
           };
         }
       }
-      
+
       const totalClasses = Object.keys(filteredGrouped).length;
-      
+
       // Calculate total students based on filtered data
       let totalStudents = 0;
       Object.values(filteredSections).forEach(classBlock => {
@@ -563,7 +564,7 @@ export default function MarksManager() {
           totalStudents += studentsList.length;
         });
       });
-      
+
       // Get all students from filtered sections
       const filteredStudents: Student[] = [];
       Object.values(filteredSections).forEach(classBlock => {
@@ -571,7 +572,7 @@ export default function MarksManager() {
           filteredStudents.push(...studentsList);
         });
       });
-      
+
       // Calculate average percentage across filtered students
       let totalPercentage = 0;
       let studentCount = 0;
@@ -585,13 +586,13 @@ export default function MarksManager() {
           const studentAvg = calculateStudentAverage(student.email || '');
           totalPercentage += studentAvg;
           studentCount++;
-          
+
           if (studentAvg > maxPercentage) {
             maxPercentage = studentAvg;
             topPerformerName = student.name || student.first_name || student.email || "";
           }
         }
-        
+
         studentGrades.forEach(grade => {
           if (grade.subject_name) {
             subjectsSet.add(grade.subject_name);
@@ -618,7 +619,7 @@ export default function MarksManager() {
   const startEdit = useCallback((grade: Grade) => {
     setEditing((p) => ({ ...p, [grade.id]: grade.marks_obtained }));
   }, []);
-  
+
   const cancelEdit = useCallback((gradeId: number) => {
     setEditing((p) => {
       const copy = { ...p };
@@ -631,14 +632,14 @@ export default function MarksManager() {
   const saveEdit = useCallback(async (grade: Grade) => {
     const id = grade.id;
     const newMarks = editing[id];
-    
+
     // Check if teacher can edit this grade
     if (!canEditGrade(grade)) {
       addNotification("Permission Denied", "You don't have permission to edit this grade.", "error");
       cancelEdit(id);
       return;
     }
-    
+
     setSaving((s) => ({ ...s, [id]: true }));
     try {
       const res = await fetch(`${API}/grades/${id}/`, {
@@ -678,7 +679,7 @@ export default function MarksManager() {
   // prefill parentOverrides
   useEffect(() => {
     if (!showSendModal || !modalClassId || !modalSection) return;
-    
+
     const sectionStudents = (grouped[modalClassId as number]?.sections[modalSection as string] || []) as Student[];
     const po: Record<number, string> = {};
     sectionStudents.forEach((s: Student) => {
@@ -718,7 +719,7 @@ export default function MarksManager() {
       const tasks = selectedStudentsForSend.map(async (studentId) => {
         const st = students.find((s) => s.id === studentId);
         if (!st) return { studentId, ok: false, message: "Student not found" };
-        
+
         let parentEmail = parentOverrides[studentId];
         if (!parentEmail) {
           const p = st.parent;
@@ -730,7 +731,7 @@ export default function MarksManager() {
             parentEmail = "";
           }
         }
-        
+
         const body = {
           email: st.email || '',
           parent_email: parentEmail,
@@ -742,7 +743,7 @@ export default function MarksManager() {
 
         const res = await fetch(`${API}/marks_card/`, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
             "Accept": "application/json"
           },
@@ -786,7 +787,7 @@ export default function MarksManager() {
 
   // -------------------- Get teacher's subjects list for display --------------------
   const teacherSubjectsList = useMemo(() => {
-    return Array.from(teacherSubjects).map(subject => 
+    return Array.from(teacherSubjects).map(subject =>
       subject.charAt(0).toUpperCase() + subject.slice(1)
     );
   }, [teacherSubjects]);
@@ -845,7 +846,7 @@ export default function MarksManager() {
               <h2 className="text-2xl font-bold text-gray-900 mb-3">No Classes Assigned</h2>
               <p className="text-gray-600 mb-6">You don&apos;t have any classes assigned in the timetable. Please contact the administrator to get assigned to classes.</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button 
+                <button
                   onClick={() => window.location.reload()}
                   className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                 >
@@ -879,34 +880,31 @@ export default function MarksManager() {
           {notifications.map((notification) => (
             <div
               key={notification.id}
-              className={`rounded-xl shadow-2xl p-4 flex items-start gap-3 animate-in slide-in-from-right-8 duration-300 ${
-                notification.type === 'success' 
-                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-l-4 border-emerald-500' 
+              className={`rounded-xl shadow-2xl p-4 flex items-start gap-3 animate-in slide-in-from-right-8 duration-300 ${notification.type === 'success'
+                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-l-4 border-emerald-500'
                   : notification.type === 'error'
-                  ? 'bg-gradient-to-r from-red-50 to-rose-50 border-l-4 border-red-500'
-                  : notification.type === 'warning'
-                  ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500'
-                  : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-l-4 border-blue-500'
-              }`}
+                    ? 'bg-gradient-to-r from-red-50 to-rose-50 border-l-4 border-red-500'
+                    : notification.type === 'warning'
+                      ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500'
+                      : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-l-4 border-blue-500'
+                }`}
             >
-              <div className={`p-1.5 rounded-full ${
-                notification.type === 'success' ? 'bg-emerald-100' :
-                notification.type === 'error' ? 'bg-red-100' :
-                notification.type === 'warning' ? 'bg-amber-100' :
-                'bg-blue-100'
-              }`}>
+              <div className={`p-1.5 rounded-full ${notification.type === 'success' ? 'bg-emerald-100' :
+                  notification.type === 'error' ? 'bg-red-100' :
+                    notification.type === 'warning' ? 'bg-amber-100' :
+                      'bg-blue-100'
+                }`}>
                 {notification.type === 'success' && <CheckCircle className="h-5 w-5 text-emerald-600" />}
                 {notification.type === 'error' && <XCircle className="h-5 w-5 text-red-600" />}
                 {notification.type === 'warning' && <AlertCircle className="h-5 w-5 text-amber-600" />}
                 {notification.type === 'info' && <AlertCircle className="h-5 w-5 text-blue-600" />}
               </div>
               <div className="flex-1">
-                <h4 className={`font-semibold text-sm ${
-                  notification.type === 'success' ? 'text-emerald-800' :
-                  notification.type === 'error' ? 'text-red-800' :
-                  notification.type === 'warning' ? 'text-amber-800' :
-                  'text-blue-800'
-                }`}>
+                <h4 className={`font-semibold text-sm ${notification.type === 'success' ? 'text-emerald-800' :
+                    notification.type === 'error' ? 'text-red-800' :
+                      notification.type === 'warning' ? 'text-amber-800' :
+                        'text-blue-800'
+                  }`}>
                   {notification.title}
                 </h4>
                 <p className="text-sm text-gray-600 mt-0.5">{notification.message}</p>
@@ -947,11 +945,10 @@ export default function MarksManager() {
                       {teacherRecord?.first_name} {teacherRecord?.last_name}
                     </span>
                   </div>
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg backdrop-blur-sm ${
-                    teacherRecord?.is_class_teacher 
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg backdrop-blur-sm ${teacherRecord?.is_class_teacher
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500'
                       : 'bg-gradient-to-r from-green-500 to-emerald-500'
-                  }`}>
+                    }`}>
                     <ShieldCheck className="h-4 w-4" />
                     <span className="text-sm font-medium">
                       {teacherRecord?.is_class_teacher ? 'Class Teacher (Can edit all subjects)' : 'Subject Teacher (Limited edit access)'}
@@ -962,7 +959,7 @@ export default function MarksManager() {
                     <span className="text-sm truncate max-w-xs">{teacherEmail}</span>
                   </div>
                 </div>
-                
+
                 {/* Show teacher's subjects if subject teacher */}
                 {!teacherRecord?.is_class_teacher && teacherSubjectsList.length > 0 && (
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 mt-2">
@@ -972,8 +969,8 @@ export default function MarksManager() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {teacherSubjectsList.map((subject, index) => (
-                        <span 
-                          key={index} 
+                        <span
+                          key={index}
                           className="px-2 py-1 bg-white/20 text-white text-xs rounded-lg backdrop-blur-sm"
                         >
                           {subject}
@@ -982,7 +979,7 @@ export default function MarksManager() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Show class teacher classes if class teacher */}
                 {teacherRecord?.is_class_teacher && teacherClassTeacherClasses.size > 0 && (
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 mt-2">
@@ -994,8 +991,8 @@ export default function MarksManager() {
                       {Array.from(teacherClassTeacherClasses).map((classId) => {
                         const classObj = classes.find(c => c.id === classId);
                         return (
-                          <span 
-                            key={classId} 
+                          <span
+                            key={classId}
                             className="px-2 py-1 bg-purple-500/30 text-white text-xs rounded-lg backdrop-blur-sm"
                           >
                             {classObj?.class_name || `Class ${classId}`} - {classObj?.sec || 'All Sections'}
@@ -1043,8 +1040,8 @@ export default function MarksManager() {
                 </div>
               </div>
               <div className="mt-3 h-2 bg-blue-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full" 
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
                   style={{ width: `${Math.min(100, (overallStats.totalClasses / 10) * 100)}%` }}
                 ></div>
               </div>
@@ -1061,8 +1058,8 @@ export default function MarksManager() {
                 </div>
               </div>
               <div className="mt-3 h-2 bg-green-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full" 
+                <div
+                  className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full"
                   style={{ width: `${Math.min(100, (overallStats.totalStudents / 100) * 100)}%` }}
                 ></div>
               </div>
@@ -1109,7 +1106,7 @@ export default function MarksManager() {
                     );
                   })}
                 </select>
-                
+
                 {/* Section Selection Dropdown */}
                 <select
                   value={selectedSectionName || ""}
@@ -1124,9 +1121,9 @@ export default function MarksManager() {
                     </option>
                   ))}
                 </select>
-                
+
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => {
                       setSelectedClassId(null);
                       setSelectedSectionName(null);
@@ -1151,488 +1148,484 @@ export default function MarksManager() {
           {Object.keys(grouped)
             .filter(cidKey => !selectedClassId || Number(cidKey) === selectedClassId)
             .map((cidKey) => {
-            const cid = Number(cidKey);
-            const classBlock = grouped[cid];
-            const classObj = classBlock.classObj || {};
-            
-            // Check if teacher is class teacher for this class
-            const isClassTeacherForThisClass = isClassTeacherForClass(cid);
-            
-            // Filter sections based on selected section
-            const filteredSections = selectedSectionName 
-              ? { [selectedSectionName]: classBlock.sections[selectedSectionName] || [] } 
-              : classBlock.sections;
-              
-            const classStudentsCount = Object.values(filteredSections).flat().length;
-            
-            // Skip rendering if filtering results in no students
-            if (selectedSectionName && !classBlock.sections[selectedSectionName]) {
-              return null;
-            }
-            
-            return (
-              <div key={cid} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                {/* Class Header */}
-                <div className={`p-6 border-b ${
-                  isClassTeacherForThisClass 
-                    ? 'bg-gradient-to-r from-purple-50 to-pink-50' 
-                    : 'bg-gradient-to-r from-gray-50 to-gray-100'
-                }`}>
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          isClassTeacherForThisClass
-                            ? 'bg-gradient-to-br from-purple-500 to-pink-600'
-                            : 'bg-gradient-to-br from-blue-500 to-indigo-600'
-                        }`}>
-                          <Book className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full border-2 border-gray-100 flex items-center justify-center">
-                          <span className="text-xs font-bold text-blue-600">{Object.keys(filteredSections).length}</span>
-                        </div>
-                        {isClassTeacherForThisClass && (
-                          <div className="absolute -top-2 -left-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
-                            <ShieldCheck className="h-3 w-3 text-white" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-gray-900">
-                          {classObj.class_name || `Class ${cid}`}
-                          <span className="ml-2 text-sm font-normal text-gray-500">
-                            • Section {classObj.sec || "All"}
-                          </span>
-                          {isClassTeacherForThisClass && (
-                            <span className="ml-2 text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
-                              Your Class (Class Teacher)
-                            </span>
-                          )}
-                          {!isClassTeacherForThisClass && teacherRecord?.is_class_teacher && (
-                            <span className="ml-2 text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                              Subject Teacher
-                            </span>
-                          )}
-                        </h2>
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <span className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                            Class ID: {cid}
-                          </span>
-                          <span className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full font-medium flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {classStudentsCount} Students
-                          </span>
-                          {classObj.class_teacher && (
-                            <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${
-                              teacherEmail && classObj.class_teacher_email?.toLowerCase() === teacherEmail.toLowerCase()
-                                ? 'bg-purple-100 text-purple-700'
-                                : 'bg-gray-100 text-gray-700'
-                            }`}>
-                              <User className="h-3 w-3" />
-                              {classObj.class_teacher}
-                              {teacherEmail && classObj.class_teacher_email?.toLowerCase() === teacherEmail.toLowerCase() && (
-                                <span className="ml-1 text-xs">(You)</span>
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              const cid = Number(cidKey);
+              const classBlock = grouped[cid];
+              const classObj = classBlock.classObj || {};
 
-                    {/* Class Actions */}
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          const firstSection = Object.keys(filteredSections)[0] || null;
-                          openSendModal(cid, firstSection);
-                        }}
-                        className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl font-medium flex items-center gap-2 transition-all hover:shadow-lg shadow-green-200"
-                      >
-                        <Send className="h-4 w-4" />
-                        <span className="hidden sm:inline">Send Reports</span>
-                      </button>
+              // Check if teacher is class teacher for this class
+              const isClassTeacherForThisClass = isClassTeacherForClass(cid);
+
+              // Filter sections based on selected section
+              const filteredSections = selectedSectionName
+                ? { [selectedSectionName]: classBlock.sections[selectedSectionName] || [] }
+                : classBlock.sections;
+
+              const classStudentsCount = Object.values(filteredSections).flat().length;
+
+              // Skip rendering if filtering results in no students
+              if (selectedSectionName && !classBlock.sections[selectedSectionName]) {
+                return null;
+              }
+
+              return (
+                <div key={cid} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                  {/* Class Header */}
+                  <div className={`p-6 border-b ${isClassTeacherForThisClass
+                      ? 'bg-gradient-to-r from-purple-50 to-pink-50'
+                      : 'bg-gradient-to-r from-gray-50 to-gray-100'
+                    }`}>
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isClassTeacherForThisClass
+                              ? 'bg-gradient-to-br from-purple-500 to-pink-600'
+                              : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                            }`}>
+                            <Book className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full border-2 border-gray-100 flex items-center justify-center">
+                            <span className="text-xs font-bold text-blue-600">{Object.keys(filteredSections).length}</span>
+                          </div>
+                          {isClassTeacherForThisClass && (
+                            <div className="absolute -top-2 -left-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                              <ShieldCheck className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-bold text-gray-900">
+                            {classObj.class_name || `Class ${cid}`}
+                            <span className="ml-2 text-sm font-normal text-gray-500">
+                              • Section {classObj.sec || "All"}
+                            </span>
+                            {isClassTeacherForThisClass && (
+                              <span className="ml-2 text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
+                                Your Class (Class Teacher)
+                              </span>
+                            )}
+                            {!isClassTeacherForThisClass && teacherRecord?.is_class_teacher && (
+                              <span className="ml-2 text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                Subject Teacher
+                              </span>
+                            )}
+                          </h2>
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <span className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                              Class ID: {cid}
+                            </span>
+                            <span className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded-full font-medium flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {classStudentsCount} Students
+                            </span>
+                            {classObj.class_teacher && (
+                              <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${teacherEmail && classObj.class_teacher_email?.toLowerCase() === teacherEmail.toLowerCase()
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                <User className="h-3 w-3" />
+                                {classObj.class_teacher}
+                                {teacherEmail && classObj.class_teacher_email?.toLowerCase() === teacherEmail.toLowerCase() && (
+                                  <span className="ml-1 text-xs">(You)</span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Class Actions */}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            const firstSection = Object.keys(filteredSections)[0] || null;
+                            openSendModal(cid, firstSection);
+                          }}
+                          className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl font-medium flex items-center gap-2 transition-all hover:shadow-lg shadow-green-200"
+                        >
+                          <Send className="h-4 w-4" />
+                          <span className="hidden sm:inline">Send Reports</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Sections */}
-                <div className="p-6">
-                  {Object.keys(filteredSections).length > 0 ? (
-                    <div className="space-y-6">
-                      {Object.keys(filteredSections).map((sectionName) => {
-                        const studList = filteredSections[sectionName] || [];
-                        const sectionKey = `${cid}-${sectionName}`;
-                        const isExpanded = expandedSections[sectionKey] || false;
-                        
-                        return (
-                          <div key={sectionKey} className="border border-gray-200 rounded-xl overflow-hidden">
-                            {/* Section Header */}
-                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 flex justify-between items-center border-b">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white border border-gray-200 rounded-lg">
-                                  <Users className="h-5 w-5 text-gray-600" />
+                  {/* Sections */}
+                  <div className="p-6">
+                    {Object.keys(filteredSections).length > 0 ? (
+                      <div className="space-y-6">
+                        {Object.keys(filteredSections).map((sectionName) => {
+                          const studList = filteredSections[sectionName] || [];
+                          const sectionKey = `${cid}-${sectionName}`;
+                          const isExpanded = expandedSections[sectionKey] || false;
+
+                          return (
+                            <div key={sectionKey} className="border border-gray-200 rounded-xl overflow-hidden">
+                              {/* Section Header */}
+                              <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 flex justify-between items-center border-b">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-white border border-gray-200 rounded-lg">
+                                    <Users className="h-5 w-5 text-gray-600" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-semibold text-gray-900">Section: {sectionName}</h3>
+                                    <p className="text-sm text-gray-600">
+                                      {studList.length} students • {generateReportForStudentEmail(studList[0]?.email || '').length} subjects graded
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <h3 className="font-semibold text-gray-900">Section: {sectionName}</h3>
-                                  <p className="text-sm text-gray-600">
-                                    {studList.length} students • {generateReportForStudentEmail(studList[0]?.email || '').length} subjects graded
-                                  </p>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    onClick={() => openSendModal(cid, sectionName)}
+                                    className="px-4 py-2 border border-emerald-600 text-emerald-600 hover:bg-emerald-50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
+                                  >
+                                    <Send className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Send Section</span>
+                                  </button>
+                                  <button
+                                    onClick={() => toggleSection(cid, sectionName)}
+                                    className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                  >
+                                    {isExpanded ?
+                                      <ChevronUp className="h-5 w-5 text-gray-600" /> :
+                                      <ChevronDown className="h-5 w-5 text-gray-600" />
+                                    }
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <button
-                                  onClick={() => openSendModal(cid, sectionName)}
-                                  className="px-4 py-2 border border-emerald-600 text-emerald-600 hover:bg-emerald-50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
-                                >
-                                  <Send className="h-4 w-4" />
-                                  <span className="hidden sm:inline">Send Section</span>
-                                </button>
-                                <button
-                                  onClick={() => toggleSection(cid, sectionName)}
-                                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                                >
-                                  {isExpanded ? 
-                                    <ChevronUp className="h-5 w-5 text-gray-600" /> : 
-                                    <ChevronDown className="h-5 w-5 text-gray-600" />
-                                  }
-                                </button>
-                              </div>
-                            </div>
 
-                            {/* Students Grid */}
-                            <div className={`${isExpanded ? 'block' : 'hidden md:block'} p-4 bg-white`}>
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {studList.map((s, index) => {
-                                  const studentAvg = calculateStudentAverage(s.email || '');
-                                  const studentGrades = generateReportForStudentEmail(s.email || '');
-                                  const gradeBadge = getGradeBadge(studentAvg);
-                                  const gradeColor = getGradeColor(studentAvg);
-                                  const gradeColorClass = gradeColor.split(' ')[0];
-                                  const gradeBgColorClass = gradeColor.split(' ')[1];
-                                  
-                                  return (
-                                    <div key={s.id || s.email || s.student_id || `student-${index}`} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 bg-white">
-                                      {/* Student Header */}
-                                      <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                          {/* Student Profile Picture */}
-                                          <div className="relative">
-                                            {getStudentProfileImageWithFallback(s) ? (
-                                              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                                                <Image
-                                                  src={getStudentProfileImageWithFallback(s) as string}
-                                                  alt={`${s.first_name || ''} ${s.last_name || ''}`}
-                                                  width={40}
-                                                  height={40}
-                                                  className="w-full h-full object-cover"
-                                                  onError={(e) => {
-                                                    // If image fails to load, show initials
-                                                    const target = e.currentTarget;
-                                                    target.style.display = 'none';
-                                                    const parent = target.parentElement;
-                                                    if (parent) {
-                                                      const initials = getStudentInitialsWithFallback(s);
-                                                      parent.innerHTML = '<div class="w-10 h-10 rounded-full flex items-center justify-center ' + gradeBgColorClass + '"><span class="text-xs font-bold text-white">' + initials + '</span></div>';
-                                                    }
-                                                  }}
-                                                />
+                              {/* Students Grid */}
+                              <div className={`${isExpanded ? 'block' : 'hidden md:block'} p-4 bg-white`}>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                  {studList.map((s, index) => {
+                                    const studentAvg = calculateStudentAverage(s.email || '');
+                                    const studentGrades = generateReportForStudentEmail(s.email || '');
+                                    const gradeBadge = getGradeBadge(studentAvg);
+                                    const gradeColor = getGradeColor(studentAvg);
+                                    const gradeColorClass = gradeColor.split(' ')[0];
+                                    const gradeBgColorClass = gradeColor.split(' ')[1];
+
+                                    return (
+                                      <div key={s.id || s.email || s.student_id || `student-${index}`} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 bg-white">
+                                        {/* Student Header */}
+                                        <div className="flex items-start justify-between mb-4">
+                                          <div className="flex items-center gap-3">
+                                            {/* Student Profile Picture */}
+                                            <div className="relative">
+                                              {getStudentProfileImageWithFallback(s) ? (
+                                                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm">
+                                                  <Image
+                                                    src={getStudentProfileImageWithFallback(s) as string}
+                                                    alt={`${s.first_name || ''} ${s.last_name || ''}`}
+                                                    width={40}
+                                                    height={40}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                      // If image fails to load, show initials
+                                                      const target = e.currentTarget;
+                                                      target.style.display = 'none';
+                                                      const parent = target.parentElement;
+                                                      if (parent) {
+                                                        const initials = getStudentInitialsWithFallback(s);
+                                                        parent.innerHTML = '<div class="w-10 h-10 rounded-full flex items-center justify-center ' + gradeBgColorClass + '"><span class="text-xs font-bold text-white">' + initials + '</span></div>';
+                                                      }
+                                                    }}
+                                                  />
+                                                </div>
+                                              ) : (
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${gradeBgColorClass}`}>
+                                                  <span className="font-bold text-sm text-white">{getStudentInitialsWithFallback(s)}</span>
+                                                </div>
+                                              )}
+                                              <div className={`absolute -top-1 -right-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold ${gradeColorClass}`}>
+                                                {gradeBadge}
                                               </div>
-                                            ) : (
-                                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${gradeBgColorClass}`}>
-                                                <span className="font-bold text-sm text-white">{getStudentInitialsWithFallback(s)}</span>
-                                              </div>
-                                            )}
-                                            <div className={`absolute -top-1 -right-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold ${gradeColorClass}`}>
-                                              {gradeBadge}
+                                            </div>
+                                            <div>
+                                              <h4 className="font-bold text-gray-900">
+                                                {s.full_name || s.name || `${s.first_name || ''} ${s.last_name || ''}` || s.email || 'Unknown Student'}
+                                              </h4>
+                                              <p className="text-xs text-gray-500 truncate max-w-[180px]">
+                                                {s.email || 'No email provided'}
+                                              </p>
                                             </div>
                                           </div>
-                                          <div>
-                                            <h4 className="font-bold text-gray-900">
-                                              {s.full_name || s.name || `${s.first_name || ''} ${s.last_name || ''}` || s.email || 'Unknown Student'}
-                                            </h4>
-                                            <p className="text-xs text-gray-500 truncate max-w-[180px]">
-                                              {s.email || 'No email provided'}
-                                            </p>
+                                          <div className="text-right">
+                                            <div className={`text-lg font-bold ${gradeColorClass}`}>
+                                              {studentAvg}%
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              {studentGrades.length} subjects
+                                            </div>
                                           </div>
                                         </div>
-                                        <div className="text-right">
-                                          <div className={`text-lg font-bold ${gradeColorClass}`}>
-                                            {studentAvg}%
-                                          </div>
-                                          <div className="text-xs text-gray-500">
-                                            {studentGrades.length} subjects
-                                          </div>
-                                        </div>
-                                      </div>
 
-                                      {/* Quick Stats */}
-                                      <div className="mb-4">
-                                        <div className="flex items-center justify-between text-xs mb-2">
-                                          <span className="text-gray-600">Performance</span>
-                                          <span className={`font-medium ${gradeColorClass}`}>
-                                            {studentAvg >= 80 ? 'Excellent' : studentAvg >= 60 ? 'Good' : 'Needs Improvement'}
-                                          </span>
+                                        {/* Quick Stats */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between text-xs mb-2">
+                                            <span className="text-gray-600">Performance</span>
+                                            <span className={`font-medium ${gradeColorClass}`}>
+                                              {studentAvg >= 80 ? 'Excellent' : studentAvg >= 60 ? 'Good' : 'Needs Improvement'}
+                                            </span>
+                                          </div>
+                                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <div
+                                              className={`h-full rounded-full ${gradeColorClass.replace('text-', 'bg-')}`}
+                                              style={{ width: `${studentAvg}%` }}
+                                            ></div>
+                                          </div>
                                         </div>
-                                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                          <div 
-                                            className={`h-full rounded-full ${gradeColorClass.replace('text-', 'bg-')}`}
-                                            style={{ width: `${studentAvg}%` }}
-                                          ></div>
-                                        </div>
-                                      </div>
 
-                                      {/* Action Buttons */}
-                                      <div className="flex gap-2 mb-4">
-                                        <button
-                                          onClick={() => setShowStudentDetails(showStudentDetails === s.id ? null : s.id)}
-                                          className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
-                                        >
-                                          {showStudentDetails === s.id ? 
-                                            <ChevronUp className="h-4 w-4" /> : 
-                                            <ChevronDown className="h-4 w-4" />
-                                          }
-                                          Details
-                                        </button>
-                                        <button
-                                          onClick={async () => {
-                                            const studentName = s.name || s.first_name || s.full_name || s.email;
-                                            const parentEmail = studentParentEmail(s);
-                                            
-                                            if (!parentEmail) {
-                                              addNotification("Parent Email Missing", `Parent email required for ${studentName}`, "warning");
-                                              return;
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-2 mb-4">
+                                          <button
+                                            onClick={() => setShowStudentDetails(showStudentDetails === s.id ? null : s.id)}
+                                            className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                                          >
+                                            {showStudentDetails === s.id ?
+                                              <ChevronUp className="h-4 w-4" /> :
+                                              <ChevronDown className="h-4 w-4" />
                                             }
-                                            
-                                            try {
-                                              const body = {
-                                                email: s.email || '',
-                                                parent_email: parentEmail,
-                                                report_type: reportType,
-                                                from_teacher: teacherEmail,
-                                                student_id: s.student_id || s.id || '',
-                                                student_name: s.name || s.full_name || s.first_name || ''
-                                              };
+                                            Details
+                                          </button>
+                                          <button
+                                            onClick={async () => {
+                                              const studentName = s.name || s.first_name || s.full_name || s.email;
+                                              const parentEmail = studentParentEmail(s);
 
-                                              const res = await fetch(`${API}/marks_card/`, {
-                                                method: "POST",
-                                                headers: { 
-                                                  "Content-Type": "application/json",
-                                                  "Accept": "application/json"
-                                                },
-                                                body: JSON.stringify(body),
-                                                credentials: 'include'
-                                              });
-
-                                              if (!res.ok) {
-                                                throw new Error(`Failed to send: ${res.status}`);
+                                              if (!parentEmail) {
+                                                addNotification("Parent Email Missing", `Parent email required for ${studentName}`, "warning");
+                                                return;
                                               }
-                                              
-                                              addNotification("Report Sent", `Report sent to ${parentEmail}`, "success");
-                                            } catch (err: unknown) {
-                                              addNotification("Send Failed", `Failed to send report: ${(err as Error).message}`, "error");
-                                            }
-                                          }}
-                                          className="flex-1 px-3 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
-                                        >
-                                          <Send className="h-4 w-4" />
-                                          Send
-                                        </button>
-                                      </div>
 
-                                      {/* Student Details Panel */}
-                                      {showStudentDetails === s.id && (
-                                        <div className="border-t pt-4">
-                                          <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                                            {s.student_id && (
-                                              <div className="flex items-center gap-2">
-                                                <Hash className="h-4 w-4 text-gray-400" />
-                                                <div>
-                                                  <div className="text-xs text-gray-500">Student ID</div>
-                                                  <div className="font-medium">{s.student_id}</div>
-                                                </div>
-                                              </div>
-                                            )}
-                                            {s.phone && (
-                                              <div className="flex items-center gap-2">
-                                                <Mail className="h-4 w-4 text-gray-400" />
-                                                <div>
-                                                  <div className="text-xs text-gray-500">Phone</div>
-                                                  <div className="font-medium">{s.phone}</div>
-                                                </div>
-                                              </div>
-                                            )}
-                                            {s.parent_name && (
-                                              <div className="col-span-2 flex items-center gap-2">
-                                                <UserCheck className="h-4 w-4 text-gray-400" />
-                                                <div>
-                                                  <div className="text-xs text-gray-500">Parent</div>
-                                                  <div className="font-medium">{s.parent_name}</div>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
+                                              try {
+                                                const body = {
+                                                  email: s.email || '',
+                                                  parent_email: parentEmail,
+                                                  report_type: reportType,
+                                                  from_teacher: teacherEmail,
+                                                  student_id: s.student_id || s.id || '',
+                                                  student_name: s.name || s.full_name || s.first_name || ''
+                                                };
 
-                                          {/* Marks Table */}
-                                          <div className="mt-4">
-                                            <div className="flex items-center justify-between mb-3">
-                                              <span className="text-sm font-semibold text-gray-700">
-                                                Marks ({reportType})
-                                              </span>
-                                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                                {studentGrades.length} records
-                                              </span>
+                                                const res = await fetch(`${API}/marks_card/`, {
+                                                  method: "POST",
+                                                  headers: {
+                                                    "Content-Type": "application/json",
+                                                    "Accept": "application/json"
+                                                  },
+                                                  body: JSON.stringify(body),
+                                                  credentials: 'include'
+                                                });
+
+                                                if (!res.ok) {
+                                                  throw new Error(`Failed to send: ${res.status}`);
+                                                }
+
+                                                addNotification("Report Sent", `Report sent to ${parentEmail}`, "success");
+                                              } catch (err: unknown) {
+                                                addNotification("Send Failed", `Failed to send report: ${(err as Error).message}`, "error");
+                                              }
+                                            }}
+                                            className="flex-1 px-3 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                                          >
+                                            <Send className="h-4 w-4" />
+                                            Send
+                                          </button>
+                                        </div>
+
+                                        {/* Student Details Panel */}
+                                        {showStudentDetails === s.id && (
+                                          <div className="border-t pt-4">
+                                            <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                                              {s.student_id && (
+                                                <div className="flex items-center gap-2">
+                                                  <Hash className="h-4 w-4 text-gray-400" />
+                                                  <div>
+                                                    <div className="text-xs text-gray-500">Student ID</div>
+                                                    <div className="font-medium">{s.student_id}</div>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {s.phone && (
+                                                <div className="flex items-center gap-2">
+                                                  <Mail className="h-4 w-4 text-gray-400" />
+                                                  <div>
+                                                    <div className="text-xs text-gray-500">Phone</div>
+                                                    <div className="font-medium">{s.phone}</div>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {s.parent_name && (
+                                                <div className="col-span-2 flex items-center gap-2">
+                                                  <UserCheck className="h-4 w-4 text-gray-400" />
+                                                  <div>
+                                                    <div className="text-xs text-gray-500">Parent</div>
+                                                    <div className="font-medium">{s.parent_name}</div>
+                                                  </div>
+                                                </div>
+                                              )}
                                             </div>
-                                            
-                                            {studentGrades.length === 0 ? (
-                                              <div className="text-center py-4 bg-gray-50 rounded-lg border border-gray-200">
-                                                <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                                                <p className="text-sm text-gray-500">No marks recorded</p>
+
+                                            {/* Marks Table */}
+                                            <div className="mt-4">
+                                              <div className="flex items-center justify-between mb-3">
+                                                <span className="text-sm font-semibold text-gray-700">
+                                                  Marks ({reportType})
+                                                </span>
+                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                  {studentGrades.length} records
+                                                </span>
                                               </div>
-                                            ) : (
-                                              <div className="space-y-2">
-                                                {studentGrades.map((g) => {
-                                                  const canEditThisGrade = canEditGrade(g);
-                                                  const isSubjectTeacherGrade = teacherSubjects.has(g.subject_name?.toLowerCase() || '');
-                                                  // const _isCreatedByTeacher = g.teacher?.toLowerCase() === teacherEmail?.toLowerCase(); // Unused variable
-                                                  const isClassTeacherGrade = isClassTeacherForThisClass;
-                                                  
-                                                  return (
-                                                    <div key={g.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                                      <div className="flex-1">
-                                                        <div className="font-medium text-gray-900">{g.subject_name}</div>
-                                                        <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-                                                          <span>Exam: {g.exam_type}</span>
-                                                          {isSubjectTeacherGrade && (
-                                                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs">
-                                                              Your Subject
-                                                            </span>
-                                                          )}
-                                                          {isClassTeacherGrade && (
-                                                            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
-                                                              Class Teacher Access
-                                                            </span>
-                                                          )}
-                                                          {!canEditThisGrade && (
-                                                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
-                                                              View Only
-                                                            </span>
-                                                          )}
-                                                        </div>
-                                                      </div>
-                                                      <div className="flex items-center gap-4">
-                                                        <div className="text-right">
-                                                          <div className="font-bold text-gray-900">
-                                                            {editing[g.id] !== undefined ? (
-                                                              <input
-                                                                type="number"
-                                                                min="0"
-                                                                max={g.total_marks}
-                                                                className="w-20 px-2 py-1 border rounded text-sm text-center"
-                                                                value={editing[g.id]}
-                                                                onChange={(e) =>
-                                                                  setEditing((p) => ({ ...p, [g.id]: Number(e.target.value) }))
-                                                                }
-                                                                onKeyDown={(e) => {
-                                                                  if (e.key === 'Enter') saveEdit(g);
-                                                                  if (e.key === 'Escape') cancelEdit(g.id);
-                                                                }}
-                                                              />
-                                                            ) : (
-                                                              <span>{g.marks_obtained}</span>
+
+                                              {studentGrades.length === 0 ? (
+                                                <div className="text-center py-4 bg-gray-50 rounded-lg border border-gray-200">
+                                                  <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                                                  <p className="text-sm text-gray-500">No marks recorded</p>
+                                                </div>
+                                              ) : (
+                                                <div className="space-y-2">
+                                                  {studentGrades.map((g) => {
+                                                    const canEditThisGrade = canEditGrade(g);
+                                                    const isSubjectTeacherGrade = teacherSubjects.has(g.subject_name?.toLowerCase() || '');
+                                                    // const _isCreatedByTeacher = g.teacher?.toLowerCase() === teacherEmail?.toLowerCase(); // Unused variable
+                                                    const isClassTeacherGrade = isClassTeacherForThisClass;
+
+                                                    return (
+                                                      <div key={g.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                                        <div className="flex-1">
+                                                          <div className="font-medium text-gray-900">{g.subject_name}</div>
+                                                          <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+                                                            <span>Exam: {g.exam_type}</span>
+                                                            {isSubjectTeacherGrade && (
+                                                              <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs">
+                                                                Your Subject
+                                                              </span>
+                                                            )}
+                                                            {isClassTeacherGrade && (
+                                                              <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                                                                Class Teacher Access
+                                                              </span>
+                                                            )}
+                                                            {!canEditThisGrade && (
+                                                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
+                                                                View Only
+                                                              </span>
                                                             )}
                                                           </div>
-                                                          <div className="text-xs text-gray-500">/ {g.total_marks}</div>
                                                         </div>
-                                                        {canEditThisGrade ? (
-                                                          editing[g.id] !== undefined ? (
-                                                            <div className="flex gap-2">
-                                                              <button
-                                                                onClick={() => saveEdit(g)}
-                                                                disabled={!!saving[g.id]}
-                                                                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium"
-                                                              >
-                                                                {saving[g.id] ? (
-                                                                  <div className="flex items-center gap-1">
-                                                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                                  </div>
-                                                                ) : "Save"}
-                                                              </button>
-                                                              <button
-                                                                onClick={() => cancelEdit(g.id)}
-                                                                className="px-3 py-1 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
-                                                              >
-                                                                Cancel
-                                                              </button>
-                                                            </div>
-                                                          ) : (
-                                                            <div className="relative group">
-                                                              <button
-                                                                onClick={() => startEdit(g)}
-                                                                disabled={!canEditThisGrade}
-                                                                className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                                                                  isClassTeacherForThisClass
-                                                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                                                    : isSubjectTeacherGrade
-                                                                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                                                      : 'bg-gray-400 cursor-not-allowed'
-                                                                }`}
-                                                                title={isClassTeacherForThisClass
-                                                                  ? "Class Teacher: Edit all subjects in your class"
-                                                                  : isSubjectTeacherGrade
-                                                                    ? "Subject Teacher: Edit " + g.subject_name + " marks"
-                                                                    : "View Only: You don't teach " + g.subject_name}
-                                                              >
-                                                                Edit
-                                                              </button>
-                                                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 z-10">
-                                                                <div className="text-center">
-                                                                  {isClassTeacherForThisClass 
-                                                                    ? 'As Class Teacher, you can edit all subjects in this class' 
-                                                                    : isSubjectTeacherGrade 
-                                                                      ? `As Subject Teacher, you can only edit ${g.subject_name} marks` 
-                                                                      : `View Only: You don't teach ${g.subject_name}`
+                                                        <div className="flex items-center gap-4">
+                                                          <div className="text-right">
+                                                            <div className="font-bold text-gray-900">
+                                                              {editing[g.id] !== undefined ? (
+                                                                <input
+                                                                  type="number"
+                                                                  min="0"
+                                                                  max={g.total_marks}
+                                                                  className="w-20 px-2 py-1 border rounded text-sm text-center"
+                                                                  value={editing[g.id]}
+                                                                  onChange={(e) =>
+                                                                    setEditing((p) => ({ ...p, [g.id]: Number(e.target.value) }))
                                                                   }
-                                                                </div>
-                                                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-                                                              </div>
+                                                                  onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') saveEdit(g);
+                                                                    if (e.key === 'Escape') cancelEdit(g.id);
+                                                                  }}
+                                                                />
+                                                              ) : (
+                                                                <span>{g.marks_obtained}</span>
+                                                              )}
                                                             </div>
-                                                          )
-                                                        ) : (
-                                                          <span className="text-xs text-gray-400 italic">View only</span>
-                                                        )}
+                                                            <div className="text-xs text-gray-500">/ {g.total_marks}</div>
+                                                          </div>
+                                                          {canEditThisGrade ? (
+                                                            editing[g.id] !== undefined ? (
+                                                              <div className="flex gap-2">
+                                                                <button
+                                                                  onClick={() => saveEdit(g)}
+                                                                  disabled={!!saving[g.id]}
+                                                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium"
+                                                                >
+                                                                  {saving[g.id] ? (
+                                                                    <div className="flex items-center gap-1">
+                                                                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                                    </div>
+                                                                  ) : "Save"}
+                                                                </button>
+                                                                <button
+                                                                  onClick={() => cancelEdit(g.id)}
+                                                                  className="px-3 py-1 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
+                                                                >
+                                                                  Cancel
+                                                                </button>
+                                                              </div>
+                                                            ) : (
+                                                              <div className="relative group">
+                                                                <button
+                                                                  onClick={() => startEdit(g)}
+                                                                  disabled={!canEditThisGrade}
+                                                                  className={`px-3 py-1 rounded-lg text-sm font-medium ${isClassTeacherForThisClass
+                                                                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                                                      : isSubjectTeacherGrade
+                                                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                                        : 'bg-gray-400 cursor-not-allowed'
+                                                                    }`}
+                                                                  title={isClassTeacherForThisClass
+                                                                    ? "Class Teacher: Edit all subjects in your class"
+                                                                    : isSubjectTeacherGrade
+                                                                      ? "Subject Teacher: Edit " + g.subject_name + " marks"
+                                                                      : "View Only: You don't teach " + g.subject_name}
+                                                                >
+                                                                  Edit
+                                                                </button>
+                                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 z-10">
+                                                                  <div className="text-center">
+                                                                    {isClassTeacherForThisClass
+                                                                      ? 'As Class Teacher, you can edit all subjects in this class'
+                                                                      : isSubjectTeacherGrade
+                                                                        ? `As Subject Teacher, you can only edit ${g.subject_name} marks`
+                                                                        : `View Only: You don't teach ${g.subject_name}`
+                                                                    }
+                                                                  </div>
+                                                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                                                                </div>
+                                                              </div>
+                                                            )
+                                                          ) : (
+                                                            <span className="text-xs text-gray-400 italic">View only</span>
+                                                          )}
+                                                        </div>
                                                       </div>
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            )}
+                                                    );
+                                                  })}
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Users className="h-12 w-12 text-gray-300" />
+                          );
+                        })}
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Students Found</h3>
-                      <p className="text-gray-600 max-w-md mx-auto">
-                        No students are currently enrolled in this class. Students will appear here once they are added to the system.
-                      </p>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Users className="h-12 w-12 text-gray-300" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Students Found</h3>
+                        <p className="text-gray-600 max-w-md mx-auto">
+                          No students are currently enrolled in this class. Students will appear here once they are added to the system.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
 
         {/* Send Report Modal */}
@@ -1709,12 +1702,12 @@ export default function MarksManager() {
                       </button>
                     </div>
                   </div>
-                  
+
                   {modalClassId && modalSection && (grouped[modalClassId]?.sections[modalSection] || []).map((st: Student) => {
                     const studentAvg = calculateStudentAverage(st.email || '');
                     const gradeColorClass = getGradeColor(studentAvg).split(' ')[0];
                     // const _gradeBgColorClass = getGradeColor(studentAvg).split(' ')[1]; // Unused variable
-                    
+
                     return (
                       <div key={st.id} className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
                         <div className="flex items-start gap-4">
@@ -1769,7 +1762,7 @@ export default function MarksManager() {
                                 <div className="text-xs text-gray-500">Average</div>
                               </div>
                             </div>
-                            
+
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium text-gray-700 min-w-24">
@@ -1815,11 +1808,10 @@ export default function MarksManager() {
                     <button
                       onClick={sendReportToParents}
                       disabled={sending || selectedStudentsForSend.length === 0}
-                      className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all ${
-                        selectedStudentsForSend.length === 0
+                      className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all ${selectedStudentsForSend.length === 0
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl'
-                      }`}
+                        }`}
                     >
                       {sending ? (
                         <>
@@ -1847,8 +1839,8 @@ export default function MarksManager() {
             <div>
               <h3 className="font-semibold text-blue-900 mb-1">Editing Permissions</h3>
               <p className="text-sm text-blue-800">
-                {teacherRecord?.is_class_teacher 
-                  ? 'As a Class Teacher, you can edit marks for all subjects in your assigned classes.' 
+                {teacherRecord?.is_class_teacher
+                  ? 'As a Class Teacher, you can edit marks for all subjects in your assigned classes.'
                   : 'As a Subject Teacher, you can only edit marks for subjects you teach.'}
                 <br />
                 <span className="font-medium">Grayed-out &quot;View only&quot; buttons indicate restricted access.</span>

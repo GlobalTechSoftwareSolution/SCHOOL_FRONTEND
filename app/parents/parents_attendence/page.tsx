@@ -84,14 +84,16 @@ const ParentAttendance = () => {
   const [attendanceData, setAttendanceData] = useState<UIAttendanceRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [parentEmail] = useState<string | null>(() => {
-    const storedUserData = localStorage.getItem("userData");
-    if (storedUserData) {
-      try {
-        const parsedData: { email: string } = JSON.parse(storedUserData);
-        return parsedData.email;
-      } catch (error) {
-        console.error("Failed to parse user data:", error);
-        return null;
+    if (typeof window !== "undefined") {
+      const storedUserData = localStorage.getItem("userData");
+      if (storedUserData) {
+        try {
+          const parsedData: { email: string } = JSON.parse(storedUserData);
+          return parsedData.email;
+        } catch (error) {
+          console.error("Failed to parse user data:", error);
+          return null;
+        }
       }
     }
     return null;
@@ -327,19 +329,17 @@ const ParentAttendance = () => {
                 const studentStat = getStudentStats(student.email);
                 const isSelected = selectedStudent === student.email;
                 return (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     onClick={() => setSelectedStudent(student.email)}
-                    className={`border rounded-xl p-6 transition-all cursor-pointer ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-50 shadow-md"
-                        : "border-gray-200 hover:shadow-md"
-                    }`}
+                    className={`border rounded-xl p-6 transition-all cursor-pointer ${isSelected
+                      ? "border-blue-500 bg-blue-50 shadow-md"
+                      : "border-gray-200 hover:shadow-md"
+                      }`}
                   >
                     <div className="flex items-center gap-4 mb-4">
-                      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                        isSelected ? "bg-blue-200" : "bg-blue-100"
-                      }`}>
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isSelected ? "bg-blue-200" : "bg-blue-100"
+                        }`}>
                         {student.profile_picture ? (
                           <Image
                             src={student.profile_picture}
@@ -358,7 +358,7 @@ const ParentAttendance = () => {
                         <p className="text-xs text-gray-500 mt-1">Roll No: {student.student_id || "N/A"}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-2xl font-bold text-blue-600">{studentStat.percentage}%</p>
@@ -444,7 +444,7 @@ const ParentAttendance = () => {
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No attendance records found</h3>
               <p className="text-gray-600">
-                {attendanceData.length === 0 
+                {attendanceData.length === 0
                   ? "No attendance records available for your children."
                   : "Try adjusting your filters to find what you're looking for."
                 }
@@ -476,18 +476,17 @@ const ParentAttendance = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-gray-900 text-lg">{record.fullname}</h3>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                            record.status === "Present"
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : record.status === "Absent"
-                                ? "bg-red-50 text-red-700 border-red-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200"
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${record.status === "Present"
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : record.status === "Absent"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
                             {record.status}
                           </span>
 
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                           <div className="flex items-center gap-2">
                             <BookOpen className="h-4 w-4" />
@@ -495,11 +494,11 @@ const ParentAttendance = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            <span>{new Date(record.date).toLocaleDateString('en-US', { 
-                              weekday: 'long', 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric' 
+                            <span>{new Date(record.date).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
                             })}</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -518,8 +517,8 @@ const ParentAttendance = () => {
                         }}
                         className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                       >
-                        {expandedRecord === index ? 
-                          <ChevronUp className="h-4 w-4 text-gray-600" /> : 
+                        {expandedRecord === index ?
+                          <ChevronUp className="h-4 w-4 text-gray-600" /> :
                           <ChevronDown className="h-4 w-4 text-gray-600" />
                         }
                       </button>
@@ -567,7 +566,7 @@ const ParentAttendance = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div>
                           <h4 className="font-medium text-gray-900 mb-3">Remarks</h4>
                           <p className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm">

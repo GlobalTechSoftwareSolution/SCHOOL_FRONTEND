@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
-import { 
-  DollarSign, 
-  Users, 
-  UserCheck, 
-  Clock, 
+import {
+  DollarSign,
+  Users,
+  UserCheck,
+  Clock,
   Calendar
 } from "lucide-react";
 import Link from "next/link";
@@ -62,6 +62,9 @@ interface ActivityData {
   marks?: string;
   related_user?: string;
   priority?: string;
+  amount?: string;
+  amount_paid?: string;
+  name?: string;
 }
 
 interface Notice {
@@ -130,7 +133,7 @@ interface DepartmentFee {
 }
 
 interface Activity {
-  id: number;
+  id: string | number;
   type: string;
   message: string;
   time: string;
@@ -214,28 +217,28 @@ const ManagementDashboard = () => {
           axios.get<Notice[]>(`${API_BASE}/notices/`).catch(() => { console.log('Notices API not available'); return { data: [] }; })
         ];
         const [
-          studentsRes, 
-          teachersRes, 
-          feePaymentsRes, 
+          studentsRes,
+          teachersRes,
+          feePaymentsRes,
           feeStructuresRes,
           activitiesRes,
-          attendanceRes, 
-          classesRes, 
+          attendanceRes,
+          classesRes,
           gradesRes,
           reportsRes,
           noticesRes
         ] = await Promise.all(apiCalls);
 
-        const students: Student[] = studentsRes.data || [];
-        const teachers: Teacher[] = teachersRes.data || [];
-        const feePayments: FeePayment[] = feePaymentsRes.data || [];
-        const feeStructures: FeeStructure[] = feeStructuresRes.data || [];
-        const activities: ActivityData[] = activitiesRes.data || [];
-        const attendance: AttendanceRecord[] = attendanceRes.data || [];
-        const classes: Class[] = classesRes.data || [];
-        const grades: GradeReport[] = gradesRes.data || [];
-        const reports: GradeReport[] = reportsRes.data || [];
-        const noticesData: Notice[] = noticesRes.data || [];        
+        const students: Student[] = (studentsRes.data as unknown as Student[]) || [];
+        const teachers: Teacher[] = (teachersRes.data as unknown as Teacher[]) || [];
+        const feePayments: FeePayment[] = (feePaymentsRes.data as unknown as FeePayment[]) || [];
+        const feeStructures: FeeStructure[] = (feeStructuresRes.data as unknown as FeeStructure[]) || [];
+        const activities: ActivityData[] = (activitiesRes.data as unknown as ActivityData[]) || [];
+        const attendance: AttendanceRecord[] = (attendanceRes.data as unknown as AttendanceRecord[]) || [];
+        const classes: Class[] = (classesRes.data as unknown as Class[]) || [];
+        const grades: GradeReport[] = (gradesRes.data as unknown as GradeReport[]) || [];
+        const reports: GradeReport[] = (reportsRes.data as unknown as GradeReport[]) || [];
+        const noticesData: Notice[] = (noticesRes.data as unknown as Notice[]) || [];
         // Set notices in state for use in render
         setNotices(noticesData);
 
@@ -243,7 +246,7 @@ const ManagementDashboard = () => {
         const totalStudents = students.length;
         const totalTeachers = teachers.length;
         const totalClasses = classes.length;
-        
+
         // Calculate department-wise fee statistics
         const departmentFees = feeStructures.reduce((acc: Record<string, DepartmentFee>, fee: FeeStructure) => {
           const department = fee.department || fee.class_name || fee.category || 'General';
@@ -269,10 +272,10 @@ const ManagementDashboard = () => {
           const paymentId = payment.id || payment.fee_structure_id || payment.fee_id;
           if (paymentId) {
             // Find matching fee structure
-            const matchingFee = feeStructures.find((fee: FeeStructure) => 
-              fee.id === paymentId || fee.fee_structure_id === paymentId
+            const matchingFee = feeStructures.find((fee: FeeStructure) =>
+              fee.id === paymentId || fee.fee_structure === paymentId
             );
-            
+
             if (matchingFee) {
               const department = matchingFee.department || matchingFee.class_name || matchingFee.category || 'General';
               if (departmentFees[department]) {
@@ -286,10 +289,10 @@ const ManagementDashboard = () => {
           departmentFees[dept].pendingFees = departmentFees[dept].totalFees - departmentFees[dept].paidFees;
           departmentFees[dept].averageFee = departmentFees[dept].totalFees / departmentFees[dept].feeCount;
         });
-        
+
         // Merge fee structures into payments to compute accurate totals and pending amounts
         const mergedPayments = feePayments.map((pay: FeePayment) => {
-          const structure = feeStructures.find((s: FeeStructure) => s.id === pay.fee_structure);
+          const structure = feeStructures.find((s: FeeStructure) => s.id === pay.fee_structure_id);
 
           const totalRaw = structure?.amount ?? "0";
           const total = Number(totalRaw) || 0;
@@ -317,11 +320,11 @@ const ManagementDashboard = () => {
           (sum: number, payment: FeePayment) => sum + (Number(payment.remaining_amount) || 0),
           0
         );
-        
+
         // Calculate attendance rate
         const presentAttendance = attendance.filter((record: AttendanceRecord) => record.status === "Present").length;
         const attendanceRate = attendance.length > 0 ? Math.round((presentAttendance / attendance.length) * 100) : 0;
-        
+
         // Calculate pass percentage from grades/reports
         const allGrades = [...grades, ...reports];
         const passingGrades = allGrades.filter((report: GradeReport) => {
@@ -339,7 +342,7 @@ const ManagementDashboard = () => {
           // Determine icon based on activity type
           let icon = '📋'; // Default icon
           const type = activity.type || 'general';
-          
+
           switch (type.toLowerCase()) {
             case 'fee_payment':
             case 'payment':
@@ -384,10 +387,10 @@ const ManagementDashboard = () => {
           // Calculate time difference
           let timeText = 'Recently';
           if (activity.created_at || activity.timestamp || activity.date) {
-            const activityDate = new Date(activity.created_at || activity.timestamp || activity.date);
+            const activityDate = new Date(activity.created_at || activity.timestamp || activity.date || "");
             const now = new Date();
             const diffInHours = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60 * 60));
-            
+
             if (diffInHours < 1) {
               timeText = 'Just now';
             } else if (diffInHours < 24) {
@@ -463,7 +466,7 @@ const ManagementDashboard = () => {
 
         // Generate chart data based on real trends
         const chartData: ChartData = {
-          revenue: Array.from({length: 12}, (_, i) => {
+          revenue: Array.from({ length: 12 }, (_, i) => {
             const monthPayments = mergedPayments.filter((payment: FeePayment) => {
               const paymentDate = new Date(payment.payment_date || payment.paid_at || payment.created_at || "");
               const paymentMonth = paymentDate.getMonth();
@@ -476,11 +479,11 @@ const ManagementDashboard = () => {
               ) / 1000
             ); // Convert to thousands
           }),
-          students: Array.from({length: 12}, (_, i) => {
+          students: Array.from({ length: 12 }, (_, i) => {
             // Simulate student growth over months based on current data
             return Math.floor(totalStudents * (0.7 + (i * 0.025)));
           }),
-          expenses: Array.from({length: 12}, () => Math.floor(Math.random() * 40) + 20) // Simulated expenses
+          expenses: Array.from({ length: 12 }, () => Math.floor(Math.random() * 40) + 20) // Simulated expenses
         };
 
         setDashboardData({
@@ -579,11 +582,11 @@ const ManagementDashboard = () => {
               <h1 className="text-3xl font-bold text-gray-800">Management Dashboard</h1>
               <div className="flex items-center gap-4">
                 <span className="text-gray-600">
-                  {new Date().toLocaleDateString('en-IN', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {new Date().toLocaleDateString('en-IN', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                   })}
                 </span>
               </div>
@@ -685,8 +688,8 @@ const ManagementDashboard = () => {
                 </div>
                 <div className="space-y-4">
                   {safeRecentActivities.map((activity: Activity) => (
-                    <div 
-                      key={activity.id} 
+                    <div
+                      key={activity.id}
                       className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer hover:shadow-md"
                       onClick={() => {
                         setSelectedActivity(activity);
@@ -719,7 +722,7 @@ const ManagementDashboard = () => {
                 {notices.length > 0 ? (
                   <div className="space-y-4">
                     {notices.slice(0, 4).map((notice: Notice, index: number) => (
-                      <div 
+                      <div
                         key={index}
                         onClick={() => {
                           setSelectedNotice(notice);
@@ -742,19 +745,18 @@ const ManagementDashboard = () => {
                             </p>
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-gray-500">
-                                {notice.posted_date || notice.created_at || notice.date ? 
-                                  new Date(notice.posted_date || notice.created_at || notice.date).toLocaleDateString() : 
+                                {notice.posted_date || notice.created_at || notice.date ?
+                                  new Date(notice.posted_date || notice.created_at || notice.date || "").toLocaleDateString() :
                                   'No date'
                                 }
                               </span>
                               <div className="flex items-center gap-2">
                                 {notice.priority && (
-                                  <span className={`text-xs px-2 py-1 rounded-full ${
-                                    notice.priority.toLowerCase() === 'urgent' ? 'bg-red-100 text-red-700' :
+                                  <span className={`text-xs px-2 py-1 rounded-full ${notice.priority.toLowerCase() === 'urgent' ? 'bg-red-100 text-red-700' :
                                     notice.priority.toLowerCase() === 'high' ? 'bg-orange-100 text-orange-700' :
-                                    notice.priority.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-gray-100 text-gray-700'
-                                  }`}>
+                                      notice.priority.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-gray-100 text-gray-700'
+                                    }`}>
                                     {notice.priority}
                                   </span>
                                 )}
@@ -816,7 +818,7 @@ const ManagementDashboard = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               {/* General Activity Details */}
               <div className="space-y-6">
@@ -848,7 +850,7 @@ const ManagementDashboard = () => {
                         <div className="font-semibold">{selectedActivity.fullData?.status || 'Completed'}</div>
                       </div>
                     </div>
-                    
+
                     {/* Additional fields based on activity type */}
                     {selectedActivity.type === 'fee_payment' && selectedActivity.fullData && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -858,11 +860,11 @@ const ManagementDashboard = () => {
                         </div>
                         <div className="bg-gray-50 p-4 rounded-xl">
                           <label className="text-sm text-gray-600">Amount</label>
-                          <div className="font-semibold text-green-600">{formatCurrency(parseFloat(selectedActivity.fullData.amount) || parseFloat(selectedActivity.fullData.amount_paid) || 0)}</div>
+                          <div className="font-semibold text-green-600">{formatCurrency(parseFloat(selectedActivity.fullData.amount || "0") || parseFloat(selectedActivity.fullData.amount_paid || "0") || 0)}</div>
                         </div>
                       </div>
                     )}
-                    
+
                     {selectedActivity.type === 'admission' && selectedActivity.fullData && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="bg-gray-50 p-4 rounded-xl">
@@ -875,7 +877,7 @@ const ManagementDashboard = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {selectedActivity.type === 'exam' && selectedActivity.fullData && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="bg-gray-50 p-4 rounded-xl">
@@ -888,14 +890,14 @@ const ManagementDashboard = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {selectedActivity.fullData?.related_user && (
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <label className="text-sm text-gray-600">Related User</label>
                         <div className="font-semibold">{selectedActivity.fullData.related_user}</div>
                       </div>
                     )}
-                    
+
                     {selectedActivity.fullData?.priority && (
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <label className="text-sm text-gray-600">Priority</label>
@@ -953,7 +955,7 @@ const ManagementDashboard = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="space-y-6">
                 <div>
@@ -971,8 +973,8 @@ const ManagementDashboard = () => {
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <label className="text-sm text-gray-600">Posted Date</label>
                         <div className="font-semibold">
-                          {selectedNotice.posted_date || selectedNotice.created_at || selectedNotice.date ? 
-                            new Date(selectedNotice.posted_date || selectedNotice.created_at || selectedNotice.date).toLocaleDateString('en-IN', {
+                          {selectedNotice.posted_date || selectedNotice.created_at || selectedNotice.date ?
+                            new Date(selectedNotice.posted_date || selectedNotice.created_at || selectedNotice.date || "").toLocaleDateString('en-IN', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'
@@ -984,33 +986,32 @@ const ManagementDashboard = () => {
                         <label className="text-sm text-gray-600">Priority</label>
                         <div className="font-semibold capitalize">
                           {selectedNotice.priority ? (
-                            <span className={`px-3 py-1 rounded-full text-sm ${
-                              selectedNotice.priority.toLowerCase() === 'urgent' ? 'bg-red-100 text-red-700' :
+                            <span className={`px-3 py-1 rounded-full text-sm ${selectedNotice.priority.toLowerCase() === 'urgent' ? 'bg-red-100 text-red-700' :
                               selectedNotice.priority.toLowerCase() === 'high' ? 'bg-orange-100 text-orange-700' :
-                              selectedNotice.priority.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
+                                selectedNotice.priority.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-gray-100 text-gray-700'
+                              }`}>
                               {selectedNotice.priority}
                             </span>
                           ) : 'Normal'}
                         </div>
                       </div>
                     </div>
-                    
+
                     {selectedNotice.target_audience && (
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <label className="text-sm text-gray-600">Target Audience</label>
                         <div className="font-semibold capitalize">{selectedNotice.target_audience}</div>
                       </div>
                     )}
-                    
+
                     {selectedNotice.category && (
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <label className="text-sm text-gray-600">Category</label>
                         <div className="font-semibold capitalize">{selectedNotice.category}</div>
                       </div>
                     )}
-                    
+
                     {selectedNotice.valid_until && (
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <label className="text-sm text-gray-600">Valid Until</label>
@@ -1023,14 +1024,14 @@ const ManagementDashboard = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {selectedNotice.attachment_url && (
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <label className="text-sm text-gray-600">Attachment</label>
                         <div className="font-semibold">
-                          <a 
-                            href={selectedNotice.attachment_url} 
-                            target="_blank" 
+                          <a
+                            href={selectedNotice.attachment_url}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800 underline flex items-center gap-2"
                           >
@@ -1042,7 +1043,7 @@ const ManagementDashboard = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {selectedNotice.posted_by && (
                       <div className="bg-gray-50 p-4 rounded-xl">
                         <label className="text-sm text-gray-600">Posted By</label>

@@ -168,17 +168,22 @@ export default function Admin_ProfilePage() {
       window.dispatchEvent(event);
     } catch (error: unknown) {
       console.error("Error uploading profile picture:", error);
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        console.error("Response headers:", error.response.headers);
-        alert(`Failed to upload profile picture. Server error: ${error.response.status}. Please try again.`);
-      } else if (error.request) {
-        console.error("Request data:", error.request);
-        alert(`Failed to upload profile picture. Network error. Please check your connection and try again.`);
+      // Type guard to check if error is an Axios error
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          console.error("Response data:", error.response.data);
+          console.error("Response status:", error.response.status);
+          console.error("Response headers:", error.response.headers);
+          alert(`Failed to upload profile picture. Server error: ${error.response.status}. Please try again.`);
+        } else if (error.request) {
+          console.error("Request data:", error.request);
+          alert(`Failed to upload profile picture. Network error. Please check your connection and try again.`);
+        } else {
+          console.error("Error message:", error.message);
+          alert(`Failed to upload profile picture. Please try again. (${error.message || error})`);
+        }
       } else {
-        console.error("Error message:", error.message);
-        alert(`Failed to upload profile picture. Please try again. (${error.message || error})`);
+        alert(`Failed to upload profile picture. Please try again.`);
       }
     } finally {
       setIsLoading(false);
@@ -252,17 +257,22 @@ export default function Admin_ProfilePage() {
       setTimeout(() => setShowSuccessPopup(false), 3000);
     } catch (error: unknown) {
       console.error("Error saving profile:", error);
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        console.error("Response headers:", error.response.headers);
-        alert(`Failed to update profile. Server error: ${error.response.status}. Please try again.`);
-      } else if (error.request) {
-        console.error("Request data:", error.request);
-        alert(`Failed to update profile. Network error. Please check your connection and try again.`);
+      // Type guard to check if error is an Axios error
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          console.error("Response data:", error.response.data);
+          console.error("Response status:", error.response.status);
+          console.error("Response headers:", error.response.headers);
+          alert(`Failed to update profile. Server error: ${error.response.status}. Please try again.`);
+        } else if (error.request) {
+          console.error("Request data:", error.request);
+          alert(`Failed to update profile. Network error. Please check your connection and try again.`);
+        } else {
+          console.error("Error message:", error.message);
+          alert(`Failed to update profile. Please try again. (${error.message || error})`);
+        }
       } else {
-        console.error("Error message:", error.message);
-        alert(`Failed to update profile. Please try again. (${error.message || error})`);
+        alert(`Failed to update profile. Please try again.`);
       }
     } finally {
       setIsLoading(false);

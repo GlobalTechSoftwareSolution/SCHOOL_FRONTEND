@@ -39,7 +39,7 @@ interface ParentData {
 
 const ParentProfilePage = () => {
   const [parentEmail, setParentEmail] = useState("");
-  
+
   const [parentData, setParentData] = useState<ParentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,12 +76,11 @@ const ParentProfilePage = () => {
     }
   };
 
-  // ✅ Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setParentData({
-      ...parentData,
+    setParentData((prev) => prev ? {
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    } : null);
   };
 
   // ✅ Handle profile picture upload
@@ -127,7 +126,10 @@ const ParentProfilePage = () => {
         const uploadData = new FormData();
         uploadData.append("profile_picture", profileFile);
         Object.keys(updatedData).forEach((key) => {
-          uploadData.append(key, updatedData[key]);
+          const value = updatedData[key];
+          if (value !== undefined) {
+            uploadData.append(key, value);
+          }
         });
 
         const res = await axios.patch(`${API_BASE}/parents/${parentData.email}/`, uploadData, {
@@ -262,7 +264,7 @@ const ParentProfilePage = () => {
                     </label>
                   )}
                 </div>
-                
+
                 <div className="text-center md:text-left flex-1">
                   <h2 className="text-2xl font-bold mb-2">{parentData.fullname || "Parent"}</h2>
                   <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
@@ -312,7 +314,7 @@ const ParentProfilePage = () => {
                   <h3 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3">
                     Personal Information
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -325,11 +327,10 @@ const ParentProfilePage = () => {
                         value={parentData.fullname || ""}
                         onChange={handleChange}
                         disabled={!isEditing}
-                        className={`w-full px-4 py-3 border rounded-xl transition-colors ${
-                          isEditing 
-                            ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" 
-                            : "bg-gray-50 border-gray-200 text-gray-600"
-                        }`}
+                        className={`w-full px-4 py-3 border rounded-xl transition-colors ${isEditing
+                          ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          : "bg-gray-50 border-gray-200 text-gray-600"
+                          }`}
                         placeholder="Enter your full name"
                       />
                     </div>
@@ -359,11 +360,10 @@ const ParentProfilePage = () => {
                         value={parentData.phone || ""}
                         onChange={handleChange}
                         disabled={!isEditing}
-                        className={`w-full px-4 py-3 border rounded-xl transition-colors ${
-                          isEditing 
-                            ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" 
-                            : "bg-gray-50 border-gray-200 text-gray-600"
-                        }`}
+                        className={`w-full px-4 py-3 border rounded-xl transition-colors ${isEditing
+                          ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          : "bg-gray-50 border-gray-200 text-gray-600"
+                          }`}
                         placeholder="Enter your phone number"
                       />
                     </div>
@@ -375,7 +375,7 @@ const ParentProfilePage = () => {
                   <h3 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3">
                     Additional Information
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -388,11 +388,10 @@ const ParentProfilePage = () => {
                         value={parentData.occupation || ""}
                         onChange={handleChange}
                         disabled={!isEditing}
-                        className={`w-full px-4 py-3 border rounded-xl transition-colors ${
-                          isEditing 
-                            ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" 
-                            : "bg-gray-50 border-gray-200 text-gray-600"
-                        }`}
+                        className={`w-full px-4 py-3 border rounded-xl transition-colors ${isEditing
+                          ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          : "bg-gray-50 border-gray-200 text-gray-600"
+                          }`}
                         placeholder="Enter your occupation"
                       />
                     </div>
@@ -408,11 +407,10 @@ const ParentProfilePage = () => {
                         value={parentData.relationship_to_student || ""}
                         onChange={handleChange}
                         disabled={!isEditing}
-                        className={`w-full px-4 py-3 border rounded-xl transition-colors ${
-                          isEditing 
-                            ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" 
-                            : "bg-gray-50 border-gray-200 text-gray-600"
-                        }`}
+                        className={`w-full px-4 py-3 border rounded-xl transition-colors ${isEditing
+                          ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          : "bg-gray-50 border-gray-200 text-gray-600"
+                          }`}
                         placeholder="e.g., Father, Mother, Guardian"
                       />
                     </div>
@@ -428,17 +426,16 @@ const ParentProfilePage = () => {
                         onChange={handleChange}
                         disabled={!isEditing}
                         rows={3}
-                        className={`w-full px-4 py-3 border rounded-xl resize-none transition-colors ${
-                          isEditing 
-                            ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" 
-                            : "bg-gray-50 border-gray-200 text-gray-600"
-                        }`}
+                        className={`w-full px-4 py-3 border rounded-xl resize-none transition-colors ${isEditing
+                          ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          : "bg-gray-50 border-gray-200 text-gray-600"
+                          }`}
                         placeholder="Enter your residential address"
                       />
                     </div>
                   </div>
                 </div>
-                </div>
+              </div>
 
               {/* Children Information (Read-only) */}
               {parentData.children_list && parentData.children_list.length > 0 && (

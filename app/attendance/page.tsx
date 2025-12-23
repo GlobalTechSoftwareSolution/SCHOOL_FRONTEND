@@ -286,76 +286,6 @@ const AttendanceSystem = () => {
     fileInputRef.current?.click();
   };
 
-  // Capture image for face recognition
-  const captureAndDetectFace = useCallback(async () => {
-    if (!webcamRef.current || !faceModelRef.current || !currentLocation) {
-      setMessage('Camera or location not ready');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setMessage('');
-      setUserName('');
-      setUserRole('');
-      setScannedEmail(null);
-      setCheckinTime(null);
-      setCheckoutTime(null);
-
-      const imageSrc = webcamRef.current.getScreenshot();
-
-      if (!imageSrc) {
-        setMessage('Failed to capture image. Try again.');
-        return;
-      }
-
-      // convert base64 to Image to run local detection if needed
-      const img = new Image();
-      img.src = imageSrc;
-      await new Promise(resolve => {
-        img.onload = resolve;
-      });
-
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        setMessage('Error processing image');
-        return;
-      }
-      ctx.drawImage(img, 0, 0);
-
-      // run a local face detection pass to provide faster feedback (optional)
-      const predictions = await faceModelRef.current!.estimateFaces(canvas, false);
-      if (!predictions || predictions.length === 0) {
-        setMessage('No face detected. Please position your face clearly.');
-        return;
-      }
-
-      // Convert base64 to blob and send to backend as 'image' (backend expects request.FILES.get('image') or 'file')
-      await markAttendanceWithFace(imageSrc, currentLocation);
-    } catch {
-      setMessage('Error processing face image');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentLocation, markAttendanceWithFace]);
-
-  // Utility: dataURL -> Blob
-  const dataURLtoBlob = (dataURL: string): Blob => {
-    const arr = dataURL.split(',');
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
-  };
-
   // Stop camera & scanning
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -518,6 +448,76 @@ const AttendanceSystem = () => {
       stopCamera();
     }
   }, [lastUserEmail, userCheckedIn, stopCamera, handleBackendResult]);
+
+  // Capture image for face recognition
+  const captureAndDetectFace = useCallback(async () => {
+    if (!webcamRef.current || !faceModelRef.current || !currentLocation) {
+      setMessage('Camera or location not ready');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setMessage('');
+      setUserName('');
+      setUserRole('');
+      setScannedEmail(null);
+      setCheckinTime(null);
+      setCheckoutTime(null);
+
+      const imageSrc = webcamRef.current.getScreenshot();
+
+      if (!imageSrc) {
+        setMessage('Failed to capture image. Try again.');
+        return;
+      }
+
+      // convert base64 to Image to run local detection if needed
+      const img = new Image();
+      img.src = imageSrc;
+      await new Promise(resolve => {
+        img.onload = resolve;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        setMessage('Error processing image');
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+
+      // run a local face detection pass to provide faster feedback (optional)
+      const predictions = await faceModelRef.current!.estimateFaces(canvas, false);
+      if (!predictions || predictions.length === 0) {
+        setMessage('No face detected. Please position your face clearly.');
+        return;
+      }
+
+      // Convert base64 to blob and send to backend as 'image' (backend expects request.FILES.get('image') or 'file')
+      await markAttendanceWithFace(imageSrc, currentLocation);
+    } catch {
+      setMessage('Error processing face image');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentLocation, markAttendanceWithFace]);
+
+  // Utility: dataURL -> Blob
+  const dataURLtoBlob = (dataURL: string): Blob => {
+    const arr = dataURL.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  };
 
   // Mark attendance with barcode (send 'barcode' field — backend treats barcode as email)
   const markAttendanceWithBarcode = async (barcodeData: string, location: { latitude: number; longitude: number }) => {

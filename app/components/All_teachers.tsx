@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Image from "next/image";
-import { 
-  ArrowLeft, 
-  User, 
-  Phone, 
-  Mail, 
-  MapPin, 
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  MapPin,
   Calendar,
   BookOpen,
   Award,
@@ -40,20 +40,40 @@ interface Teacher {
   first_name: string;
   last_name: string;
   full_name: string;
+  fullname?: string; // alternative name field
   phone?: string;
+  residential_address?: string; // for selected teacher view
   address?: string;
   date_of_birth?: string;
   gender?: string;
   department?: string;
+  department_name?: string;
+  department_id?: number;
   qualification?: string;
+  education?: string;
   experience?: string;
+  experience_years?: string | number; // for display
   joining_date?: string;
+  date_joined?: string; // alternative field name
   salary?: number;
   profile_image?: string;
+  profile_picture?: string; // alternative field name
   is_active?: boolean;
+  is_classteacher?: boolean;
   subjects?: string[];
   classes?: string[];
-  [key: string]: string | number | boolean | string[] | undefined;
+  class_teacher_info?: Class[];
+  teacher_id?: number;
+  education_level?: string;
+  education_level_display?: string;
+  emergency_contact_name?: string;
+  emergency_contact_relationship?: string;
+  emergency_contact_no?: string;
+  nationality?: string;
+  blood_group?: string;
+  subject_list?: Subject[];
+  // Add other properties that might be used
+  [key: string]: unknown;
 }
 
 interface Department {
@@ -70,6 +90,13 @@ interface Class {
   section?: string;
   teacher_id?: number;
   [key: string]: string | number | undefined;
+}
+
+interface Subject {
+  id: number;
+  subject_name?: string;
+  subject_code?: string;
+  description?: string;
 }
 
 interface AttendanceRecord {
@@ -104,6 +131,13 @@ interface TimetableEntry {
   [key: string]: string | number | undefined;
 }
 
+interface Subject {
+  id: number;
+  subject_name?: string;
+  subject_code?: string;
+  [key: string]: string | number | undefined;
+}
+
 const TeachersPage = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -115,32 +149,32 @@ const TeachersPage = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [timetableLoading, setTimetableLoading] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [filteredTimetable, setFilteredTimetable] = useState<TimetableEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [educationLevelFilter, setEducationLevelFilter] = useState("all");
-    const [subjectEducationLevelFilter, setSubjectEducationLevelFilter] = useState("all");
+  const [subjectEducationLevelFilter, setSubjectEducationLevelFilter] = useState("all");
 
-  const handleSubjectSelect = async (subject: { id: number }) => {
+  const handleSubjectSelect = async (subject: Subject) => {
     setSelectedSubject(subject);
     setTimetableLoading(true);
 
     try {
       // Get the teacher's email for matching
       const teacherEmail = selectedTeacher?.email?.toLowerCase();
-      
+
       // Filter timetable entries that match both the teacher and the selected subject
       const filtered = timetable.filter((item) => {
         // Match teacher - try multiple possible field names
-        const itemTeacher = (item.teacher || item.teacher_email || '').toLowerCase();
+        const itemTeacher = String(item.teacher || item.teacher_email || '').toLowerCase();
         const matchesTeacher = teacherEmail && itemTeacher === teacherEmail;
 
         // Match subject - check if any of the timetable item's subject fields match the selected subject
         const itemSubjectId = item.subject ?? item.subject_id ?? item.subject_name_id ?? null;
-        
+
         // Check for matches using subject ID
-        const matchesSubject = itemSubjectId !== null && itemSubjectId === subject.id;
+        const matchesSubject = itemSubjectId !== null && Number(itemSubjectId) === subject.id;
 
         return matchesTeacher && matchesSubject;
       });
@@ -160,9 +194,9 @@ const TeachersPage = () => {
         const endpoints = [
           `${API_BASE}/timetable/`
         ];
-        
+
         let timetableData = [];
-        
+
         for (const endpoint of endpoints) {
           try {
             const res = await axios.get(endpoint);
@@ -170,10 +204,10 @@ const TeachersPage = () => {
               timetableData = res.data;
               break;
             }
-        } catch {
+          } catch {
+          }
         }
-        }
-        
+
         setTimetable(timetableData);
       } catch (error) {
         console.error("Error fetching timetable:", error);
@@ -200,7 +234,7 @@ const TeachersPage = () => {
             return { data: [] };
           })
         ]);
-        
+
         setTeachers(teachersRes.data || []);
         setDepartments(departmentsRes.data || []);
         setClasses(classesRes.data || []);
@@ -216,21 +250,21 @@ const TeachersPage = () => {
   // ✅ Helper function to get education level from teacher ID
   const getEducationLevelFromId = (teacherId: string) => {
     if (!teacherId) return "other";
-    
+
     const idLower = teacherId.toLowerCase();
-    
+
     if (idLower.startsWith('n')) return "nursery";
     if (idLower.startsWith('p')) return "primary";
     if (idLower.startsWith('h')) return "highschool";
     if (idLower.startsWith('l')) return "college";
     if (idLower.startsWith('s')) return "school";
-    
+
     return "other";
   };
 
   // ✅ Helper function to get education level display name
   const getEducationLevelDisplayName = (level: string) => {
-    switch(level) {
+    switch (level) {
       case "nursery": return "Nursery School";
       case "primary": return "Primary School";
       case "highschool": return "High School";
@@ -242,7 +276,7 @@ const TeachersPage = () => {
 
   // ✅ Helper function to get education level icon
   const getEducationLevelIcon = (level: string) => {
-    switch(level) {
+    switch (level) {
       case "nursery": return <BookOpenIcon className="w-4 h-4" />;
       case "primary": return <GraduationCapIcon className="w-4 h-4" />;
       case "highschool": return <School className="w-4 h-4" />;
@@ -254,7 +288,7 @@ const TeachersPage = () => {
 
   // ✅ Helper function to get education level color
   const getEducationLevelColor = (level: string) => {
-    switch(level) {
+    switch (level) {
       case "nursery": return "from-pink-500 to-rose-500";
       case "primary": return "from-green-500 to-emerald-500";
       case "highschool": return "from-blue-500 to-indigo-500";
@@ -266,7 +300,7 @@ const TeachersPage = () => {
 
   // ✅ Helper function to get education level badge color
   const getEducationLevelBadgeColor = (level: string) => {
-    switch(level) {
+    switch (level) {
       case "nursery": return "bg-pink-100 text-pink-800 border-pink-200";
       case "primary": return "bg-green-100 text-green-800 border-green-200";
       case "highschool": return "bg-blue-100 text-blue-800 border-blue-200";
@@ -287,24 +321,24 @@ const TeachersPage = () => {
     try {
       // Try to fetch teacher-specific data
       const teacherEmail = teacher.email?.toLowerCase();
-      
+
       // Fetch all required data in parallel
       const [attendanceRes, leavesRes, timetableRes, subjectsRes] = await Promise.all([
-        axios.get(`${API_BASE}/attendance/`).catch(err => { 
+        axios.get(`${API_BASE}/attendance/`).catch(err => {
           console.error("[TEACHER DETAILS] Error fetching attendance:", err);
-          return { data: [] }; 
+          return { data: [] };
         }),
-        axios.get(`${API_BASE}/leaves/`).catch(err => { 
+        axios.get(`${API_BASE}/leaves/`).catch(err => {
           console.error("[TEACHER DETAILS] Error fetching leaves:", err);
-          return { data: [] }; 
+          return { data: [] };
         }),
-        axios.get(`${API_BASE}/timetable/`).catch(err => { 
+        axios.get(`${API_BASE}/timetable/`).catch(err => {
           console.error("[TEACHER DETAILS] Error fetching timetable:", err);
-          return { data: [] }; 
+          return { data: [] };
         }),
-        axios.get(`${API_BASE}/subjects/`).catch(err => { 
+        axios.get(`${API_BASE}/subjects/`).catch(err => {
           console.error("[TEACHER DETAILS] Error fetching subjects:", err);
-          return { data: [] }; 
+          return { data: [] };
         }),
       ]);
 
@@ -312,9 +346,9 @@ const TeachersPage = () => {
       let classTeacherInfo = null;
       if (teacher.is_classteacher === true) {
         // Find classes where this teacher is the class teacher
-        classTeacherInfo = classes.filter(cls => 
-          cls.class_teacher_email?.toLowerCase() === teacherEmail || 
-          cls.class_teacher_name?.toLowerCase() === teacher.fullname?.toLowerCase()
+        classTeacherInfo = classes.filter(cls =>
+          String(cls.class_teacher_email)?.toLowerCase() === teacherEmail ||
+          String(cls.class_teacher_name)?.toLowerCase() === String(teacher.fullname)?.toLowerCase()
         );
       }
 
@@ -322,22 +356,22 @@ const TeachersPage = () => {
       const allLeaves = leavesRes.data || [];
       const allTimetable = timetableRes.data || [];
       const allSubjects = subjectsRes.data || [];
-      
-      
+
+
       // Filter timetable for this specific teacher
       const teacherTimetable = allTimetable.filter((t: TimetableEntry) => {
-        const itemTeacher = (t.teacher || t.teacher_email || '').toLowerCase();
+        const itemTeacher = String(t.teacher || t.teacher_email || '').toLowerCase();
         const isMatch = itemTeacher === teacherEmail;
         return isMatch;
       });
-      
+
 
       // Match attendance records by user_email or user_id (DB may expose either)
       const teacherAttendance = allAttendance.filter((a: AttendanceRecord) => {
         const email = teacher.email?.toLowerCase();
         if (!email) return false;
 
-        const userEmail = (a.user_email ?? a.user_id ?? '').toLowerCase();
+        const userEmail = String(a.user_email ?? a.user_id ?? '').toLowerCase();
         return userEmail === email;
       });
 
@@ -350,19 +384,19 @@ const TeachersPage = () => {
       if (teacher.department_id && !teacher.department_name) {
         const dept = departments.find(d => d.id === teacher.department_id);
         if (dept) {
-          enhancedTeacher.department_name = dept.department_name;
+          enhancedTeacher.department_name = dept.name;
         }
       }
 
       // Get education level from teacher ID
-      enhancedTeacher.education_level = getEducationLevelFromId(teacher.teacher_id);
+      enhancedTeacher.education_level = getEducationLevelFromId(String(teacher.teacher_id ?? ''));
       enhancedTeacher.education_level_display = getEducationLevelDisplayName(enhancedTeacher.education_level);
 
       // Get subjects for this teacher from timetable
-      const teacherSubjectIds = [...new Set(teacherTimetable.map((item: TimetableEntry) => 
+      const teacherSubjectIds = [...new Set(teacherTimetable.map((item: TimetableEntry) =>
         item.subject ?? item.subject_id ?? item.subject_name_id
       ).filter(Boolean))];
-      
+
       const teacherSubjects = teacherSubjectIds.map(id => {
         const subject = allSubjects.find((s: { id: number; subject_name?: string; subject_code?: string }) => s.id === id);
         return subject || { id, subject_name: `Subject ${id}`, subject_code: '' };
@@ -380,7 +414,7 @@ const TeachersPage = () => {
       setAttendance(teacherAttendance);
       setLeaves(teacherLeaves);
       setTimetable(teacherTimetable); // Set teacher-specific timetable
-      
+
     } catch (error) {
       console.error("Error fetching teacher details:", error);
       setAttendance([]);
@@ -406,17 +440,17 @@ const TeachersPage = () => {
       const email = selectedTeacher?.email?.toLowerCase();
       if (!email) return false;
 
-      const userEmail = (a.user_email ?? a.user_id ?? '').toLowerCase();
+      const userEmail = String(a.user_email ?? a.user_id ?? '').toLowerCase();
       return userEmail === email;
     });
 
     const totalDays = teacherAttendance.length;
-    const presentDays = teacherAttendance.filter((a: AttendanceRecord) => a.status === "Present").length;
-    const absentDays = teacherAttendance.filter((a: AttendanceRecord) => a.status === "Absent").length;
-    const approvedLeaves = leaves.filter((l: LeaveRecord) => l.status === "Approved").length;
-    const pendingLeaves = leaves.filter((l: LeaveRecord) => l.status === "Pending").length;
+    const presentDays = teacherAttendance.filter((a: AttendanceRecord) => a.status === "present").length;
+    const absentDays = teacherAttendance.filter((a: AttendanceRecord) => a.status === "absent").length;
+    const approvedLeaves = leaves.filter((l: LeaveRecord) => l.status === "approved").length;
+    const pendingLeaves = leaves.filter((l: LeaveRecord) => l.status === "pending").length;
 
-    const subjectList = selectedTeacher?.subject_list || [];
+    const subjectList = Array.isArray(selectedTeacher?.subject_list) ? selectedTeacher?.subject_list : [];
     const totalSubjects = subjectList.length;
 
     // Classes should be counted only where this teacher actually teaches
@@ -424,19 +458,25 @@ const TeachersPage = () => {
 
     const teacherClasses = timetable.filter((item: TimetableEntry) => {
       // More flexible teacher matching
-      const itemTeacher = (item.teacher || item.teacher_email || '').toLowerCase();
+      const itemTeacher = String(item.teacher || item.teacher_email || '').toLowerCase();
       const matchesTeacher = teacherEmail ? itemTeacher === teacherEmail : false;
-      
+
       // If we don't have subject list, we can't filter by subject, so just match teacher
       if (subjectList.length === 0) {
         return matchesTeacher;
       }
-      
+
       // Match by subject if we have subject list
       const itemSubjectId = item.subject ?? item.subject_id ?? item.subject_name_id;
-      const teacherSubjectIds = subjectList.map((subject: { id: number }) => subject.id);
-      const matchesSubject = teacherSubjectIds.includes(itemSubjectId);
-      
+      const teacherSubjectIds = subjectList.map((subject) => {
+        // Handle both string arrays and object arrays
+        if (typeof subject === 'object' && subject !== null && 'id' in subject) {
+          return (subject as { id: number }).id;
+        }
+        return subject;
+      });
+      const matchesSubject = teacherSubjectIds.some(id => id == Number(itemSubjectId));
+
       return matchesTeacher && matchesSubject;
     });
 
@@ -476,16 +516,16 @@ const TeachersPage = () => {
 
   // Filter teachers based on search and filters
   const filteredTeachers = teachers.filter(teacher => {
-    const matchesSearch = teacher.fullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         teacher.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         teacher.teacher_id?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch = String(teacher.fullname)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacher.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(teacher.teacher_id)?.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesDepartment = departmentFilter === "all" || teacher.department_name === departmentFilter;
-    
+
     // Filter by education level based on teacher ID prefix
-    const teacherEducationLevel = getEducationLevelFromId(teacher.teacher_id);
+    const teacherEducationLevel = getEducationLevelFromId(String(teacher.teacher_id ?? ''));
     const matchesEducationLevel = educationLevelFilter === "all" || teacherEducationLevel === educationLevelFilter;
-    
+
     return matchesSearch && matchesDepartment && matchesEducationLevel;
   });
 
@@ -493,18 +533,20 @@ const TeachersPage = () => {
   const uniqueDepartments = [...new Set(teachers.map(teacher => {
     // If teacher has department_name, use it directly
     if (teacher.department_name) return teacher.department_name;
-    
+
     // If teacher has department_id, try to find department name
     if (teacher.department_id) {
       const dept = departments.find(d => d.id === teacher.department_id);
       return dept ? dept.department_name : `Department ${teacher.department_id}`;
     }
-    
+
     return "General Department";
   }))];
 
   // Export teacher data
   const exportTeacherData = () => {
+    if (!selectedTeacher) return;
+
     const data = {
       teacher: selectedTeacher,
       attendance,
@@ -555,7 +597,7 @@ const TeachersPage = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 w-full lg:w-auto">
                   <select
                     value={departmentFilter}
@@ -563,11 +605,11 @@ const TeachersPage = () => {
                     className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[160px]"
                   >
                     <option value="all">All Departments</option>
-                    {uniqueDepartments.map(dept => (
+                    {uniqueDepartments.filter(dept => typeof dept === 'string').map(dept => (
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>
-                  
+
                   <select
                     value={educationLevelFilter}
                     onChange={(e) => setEducationLevelFilter(e.target.value)}
@@ -577,7 +619,7 @@ const TeachersPage = () => {
                     <option value="school">School</option>
                     <option value="college">College</option>
                   </select>
-                  
+
                   <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 px-1">
                     <Filter className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span>{filteredTeachers.length} teachers</span>
@@ -597,7 +639,7 @@ const TeachersPage = () => {
             ) : (
               <div className="grid grid-cols-1 xs:grid-cols-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6">
                 {filteredTeachers.map((teacher) => {
-                  const educationLevel = getEducationLevelFromId(teacher.teacher_id);
+                  const educationLevel = getEducationLevelFromId(String(teacher.teacher_id ?? ''));
                   const educationLevelDisplay = getEducationLevelDisplayName(educationLevel);
                   const educationLevelBadgeColor = getEducationLevelBadgeColor(educationLevel);
 
@@ -612,23 +654,23 @@ const TeachersPage = () => {
                         <div className="flex flex-col items-center text-center">
                           <div className="relative mb-3 sm:mb-4">
                             <Image
-                              src={teacher.profile_picture || "https://i.pravatar.cc/150?img=12"}
-                              alt={teacher.fullname}
+                              src={typeof teacher.profile_picture === 'string' ? teacher.profile_picture : "https://i.pravatar.cc/150?img=12"}
+                              alt={typeof teacher.fullname === 'string' ? teacher.fullname : "Teacher"}
                               width={80}
                               height={80}
                               className="w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-white shadow-lg group-hover:border-blue-100 transition-colors"
                             />
                             <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 border-2 border-white rounded-full shadow-sm"></div>
                           </div>
-                          
+
                           <h3 className="text-base sm:text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1 px-2">
-                            {teacher.fullname}
+                            {typeof teacher.fullname === 'string' ? teacher.fullname : "Teacher"}
                           </h3>
-                          
+
                           <p className="text-xs sm:text-sm text-blue-600 font-semibold mt-1 px-2 line-clamp-1">
                             {teacher.department_name || (teacher.department_id ? `Department ${teacher.department_id}` : (teacher.department || "General Department"))}
                           </p>
-                          
+
                           {/* Education Level Badge */}
                           <div className="mt-2">
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${educationLevelBadgeColor} border`}>
@@ -636,7 +678,7 @@ const TeachersPage = () => {
                               <span className="ml-1">{educationLevelDisplay}</span>
                             </span>
                           </div>
-                          
+
                           <p className="text-xs text-gray-500 mt-2 line-clamp-1 px-2">{teacher.qualification || teacher.education || "Qualification not specified"}</p>
 
                           {/* Show class teacher information */}
@@ -648,7 +690,7 @@ const TeachersPage = () => {
                               </span>
                             </div>
                           )}
-                          
+
                           <div className="mt-3 sm:mt-4 flex gap-1.5 sm:gap-2 flex-wrap justify-center">
                             <span className="bg-blue-50 text-blue-700 text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-medium border border-blue-200">
                               {teacher.experience_years} yrs
@@ -674,10 +716,10 @@ const TeachersPage = () => {
                   <h3 className="text-gray-700 font-semibold text-base sm:text-lg mb-2">No Teachers Found</h3>
                   <p className="text-gray-500 text-sm sm:text-base mb-4">Try adjusting your search or filters</p>
                   <button
-                    onClick={() => { 
-                      setSearchTerm(""); 
-                      setDepartmentFilter("all"); 
-                      setEducationLevelFilter("all"); 
+                    onClick={() => {
+                      setSearchTerm("");
+                      setDepartmentFilter("all");
+                      setEducationLevelFilter("all");
                     }}
                     className="px-4 py-2 text-sm sm:text-base bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
@@ -714,30 +756,30 @@ const TeachersPage = () => {
             </div>
 
             {/* Teacher Header */}
-            <div className={`bg-gradient-to-r ${getEducationLevelColor(selectedTeacher.education_level)} rounded-lg xs:rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-6 md:p-8 text-white shadow-xl relative overflow-hidden`}>
+            <div className={`bg-gradient-to-r ${getEducationLevelColor(selectedTeacher.education_level || 'default')} rounded-lg xs:rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-6 md:p-8 text-white shadow-xl relative overflow-hidden`}>
               <div className="absolute inset-0 bg-black/10"></div>
               <div className="relative z-10 flex flex-col lg:flex-row items-center lg:items-start gap-3 xs:gap-4 sm:gap-5 md:gap-6">
                 <div className="relative flex-shrink-0">
                   <Image
                     src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150?img=12"}
-                    alt={selectedTeacher.fullname}
+                    alt={selectedTeacher.fullname || 'Teacher Profile'}
                     width={128}
                     height={128}
                     className="w-20 h-20 xs:w-24 xs:h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-lg xs:rounded-xl sm:rounded-2xl border-2 xs:border-2 sm:border-4 border-white/80 shadow-2xl mx-auto lg:mx-0"
                   />
                   <div className="absolute -bottom-1 xs:-bottom-1 sm:-bottom-2 -right-1 xs:-right-1 sm:-right-2 w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-green-400 border-2 border-white rounded-full shadow-lg"></div>
                 </div>
-                
+
                 <div className="flex-1 text-center lg:text-left w-full min-w-0">
                   <div className="flex flex-col lg:flex-row lg:items-center gap-2 mb-1">
                     <h1 className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-bold truncate">{selectedTeacher.fullname}</h1>
                     <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
                       {/* Education Level Badge */}
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm text-white border border-white/30`}>
-                        {getEducationLevelIcon(selectedTeacher.education_level)}
+                        {getEducationLevelIcon(selectedTeacher.education_level || 'default')}
                         <span className="ml-1">{selectedTeacher.education_level_display}</span>
                       </span>
-                      
+
                       {selectedTeacher.is_classteacher === true && (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-500 text-white">
                           <GraduationCap className="w-3 h-3 mr-1" />
@@ -746,11 +788,11 @@ const TeachersPage = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <p className="text-blue-100 text-xs xs:text-sm sm:text-base md:text-lg mb-2 xs:mb-3 sm:mb-4 font-medium truncate">
                     {selectedTeacher.department_name || (selectedTeacher.department_id ? `Department ${selectedTeacher.department_id}` : "General Department")}
                   </p>
-                  
+
                   <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 xs:gap-3 sm:gap-4 text-xs sm:text-sm">
                     <div className="flex items-center gap-1.5 xs:gap-2 justify-center lg:justify-start min-w-0">
                       <span className="font-semibold text-blue-200 flex-shrink-0 text-xs">Teacher ID:</span>
@@ -790,7 +832,7 @@ const TeachersPage = () => {
                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-blue-600">{stats.attendancePercentage}%</div>
                 <div className="text-xs sm:text-sm text-gray-600 font-medium">Attendance</div>
               </div>
-              
+
               <div className="bg-white rounded-lg xs:rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-5 md:p-6 shadow-lg border border-gray-200 text-center group hover:shadow-xl transition-all">
                 <div className="w-9 h-9 xs:w-10 xs:h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-green-50 rounded-lg xs:rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-1.5 xs:mb-2 sm:mb-3 group-hover:scale-110 transition-transform">
                   <BookOpen className="w-4 h-4 xs:w-5 xs:h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 text-green-600" />
@@ -798,7 +840,7 @@ const TeachersPage = () => {
                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-green-600">{stats.totalSubjects}</div>
                 <div className="text-xs sm:text-sm text-gray-600 font-medium">Subjects</div>
               </div>
-              
+
               <div className="bg-white rounded-lg xs:rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-5 md:p-6 shadow-lg border border-gray-200 text-center group hover:shadow-xl transition-all">
                 <div className="w-9 h-9 xs:w-10 xs:h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-purple-50 rounded-lg xs:rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-1.5 xs:mb-2 sm:mb-3 group-hover:scale-110 transition-transform">
                   <Building className="w-4 h-4 xs:w-5 xs:h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 text-purple-600" />
@@ -806,7 +848,7 @@ const TeachersPage = () => {
                 <div className="text-lg xs:text-xl sm:text-2xl font-bold text-purple-600">{stats.totalClasses}</div>
                 <div className="text-xs sm:text-sm text-gray-600 font-medium">Classes</div>
               </div>
-              
+
               <div className="bg-white rounded-lg xs:rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-5 md:p-6 shadow-lg border border-gray-200 text-center group hover:shadow-xl transition-all">
                 <div className="w-9 h-9 xs:w-10 xs:h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-orange-50 rounded-lg xs:rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-1.5 xs:mb-2 sm:mb-3 group-hover:scale-110 transition-transform">
                   <CheckCircle className="w-4 h-4 xs:w-5 xs:h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 text-orange-600" />
@@ -824,11 +866,10 @@ const TeachersPage = () => {
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`flex items-center gap-1.5 xs:gap-2 px-3 xs:px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm transition-all whitespace-nowrap border-b-2 ${
-                        activeTab === tab
-                          ? "text-blue-600 border-blue-600 bg-blue-50/50"
-                          : "text-gray-500 hover:text-gray-700 border-transparent hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center gap-1.5 xs:gap-2 px-3 xs:px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm transition-all whitespace-nowrap border-b-2 ${activeTab === tab
+                        ? "text-blue-600 border-blue-600 bg-blue-50/50"
+                        : "text-gray-500 hover:text-gray-700 border-transparent hover:bg-gray-50"
+                        }`}
                     >
                       {tab === "overview" && <User className="w-3.5 h-3.5 xs:w-4 xs:h-4" />}
                       {tab === "subjects" && <BookMarked className="w-3.5 h-3.5 xs:w-4 xs:h-4" />}
@@ -861,10 +902,10 @@ const TeachersPage = () => {
                       </h3>
                       <div className="space-y-3 sm:space-y-4">
                         {[
-                          { label: "Full Name", value: selectedTeacher.fullname },
-                          { label: "Education Level", value: selectedTeacher.education_level_display },
-                          { label: "Gender", value: selectedTeacher.gender },
-                          { label: "Date of Birth", value: selectedTeacher.date_of_birth },
+                          { label: "Full Name", value: selectedTeacher.fullname || "N/A" },
+                          { label: "Education Level", value: selectedTeacher.education_level_display || "N/A" },
+                          { label: "Gender", value: selectedTeacher.gender || "N/A" },
+                          { label: "Date of Birth", value: selectedTeacher.date_of_birth || "N/A" },
                           { label: "Nationality", value: selectedTeacher.nationality || "N/A" },
                           { label: "Blood Group", value: selectedTeacher.blood_group || "N/A" }
                         ].map((item, index) => (
@@ -886,11 +927,11 @@ const TeachersPage = () => {
                       </h3>
                       <div className="space-y-3 sm:space-y-4">
                         {[
-                          { label: "Teacher ID", value: selectedTeacher.teacher_id },
+                          { label: "Teacher ID", value: selectedTeacher.teacher_id || "N/A" },
                           { label: "Department", value: selectedTeacher.department_name || (selectedTeacher.department_id ? `Department ${selectedTeacher.department_id}` : "N/A") },
                           { label: "Qualification", value: selectedTeacher.qualification || selectedTeacher.education || "Not specified" },
-                          { label: "Experience", value: `${selectedTeacher.experience_years} years` },
-                          { label: "Date Joined", value: selectedTeacher.date_joined }
+                          { label: "Experience", value: `${selectedTeacher.experience_years || 0} years` },
+                          { label: "Date Joined", value: selectedTeacher.date_joined || "N/A" }
                         ].map((item, index) => (
                           <div key={index} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-gray-100 last:border-b-0">
                             <span className="text-gray-600 font-medium text-sm sm:text-base">{item.label}:</span>
@@ -1015,76 +1056,75 @@ const TeachersPage = () => {
                       {selectedTeacher.subject_list && selectedTeacher.subject_list.length > 0 ? (
                         <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                           {selectedTeacher.subject_list
-                            .filter((subject: { id: number }) => {
+                            .filter((subject: Subject) => {
                               // If filter is "all", show all subjects
                               if (subjectEducationLevelFilter === "all") return true;
-                              
+
                               // Filter subjects based on the selected education level
                               // We'll determine subject education level by checking associated classes
                               // For each subject, check if it's taught in classes that belong to the selected education level
-                              
+
                               // Get all timetable entries for this subject
                               const subjectTimetableEntries = timetable.filter((item: TimetableEntry) => {
                                 const itemSubjectId = item.subject ?? item.subject_id ?? item.subject_name_id ?? null;
-                                return itemSubjectId !== null && itemSubjectId === subject.id;
+                                return itemSubjectId !== null && Number(itemSubjectId) === subject.id;
                               });
-                              
+
                               // If no timetable entries, show based on teacher's education level
                               if (subjectTimetableEntries.length === 0) {
                                 return selectedTeacher.education_level === subjectEducationLevelFilter;
                               }
-                              
+
                               // Check if any of the classes for this subject match the selected education level
                               for (const entry of subjectTimetableEntries) {
                                 const classInfo = classes.find((cls: Class) => cls.id === entry.class_id);
                                 if (classInfo) {
                                   // Get education level from class teacher ID or class name prefix
-                                  const classTeacherId = classInfo.class_teacher_id || '';
-                                  const classEducationLevel = classTeacherId.toLowerCase().startsWith('l') ? 'college' : 
-                                                             classTeacherId.toLowerCase().startsWith('s') ? 'school' : 
-                                                             selectedTeacher.education_level;
-                                  
+                                  const classTeacherId = String(classInfo.class_teacher_id || '');
+                                  const classEducationLevel = classTeacherId.toLowerCase().startsWith('l') ? 'college' :
+                                    classTeacherId.toLowerCase().startsWith('s') ? 'school' :
+                                      selectedTeacher.education_level;
+
                                   if (classEducationLevel === subjectEducationLevelFilter) {
                                     return true;
                                   }
                                 }
                               }
-                              
+
                               // Fallback to teacher's education level
                               return selectedTeacher.education_level === subjectEducationLevelFilter;
                             })
-                            .map((subject: { id: number }, index: number) => (
+                            .map((subject: Subject, index: number) => (
                               <div
                                 key={index}
                                 onClick={() => handleSubjectSelect(subject)}
-                                className={`bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border cursor-pointer transition-all shadow-sm hover:shadow-md group ${
-                                  selectedSubject?.id === subject.id ? "border-blue-500 ring-2 ring-blue-300" : "border-gray-200 hover:border-blue-300"
-                                }`}
+                                className={`bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border cursor-pointer transition-all shadow-sm hover:shadow-md group ${selectedSubject?.id === subject.id ? "border-blue-500 ring-2 ring-blue-300" : "border-gray-200 hover:border-blue-300"
+                                  }`}
                               >
-                              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                                <h4 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors text-sm sm:text-base">
-                                  {subject.subject_name}
-                                </h4>
-                                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
-                              </div>
-                              <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600">
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Subject ID:</span>
-                                  <span className="font-mono text-xs">{subject.id}</span>
+                                <div className="flex items-start justify-between mb-2 sm:mb-3">
+                                  <h4 className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors text-sm sm:text-base">
+                                    {subject.subject_name}
+                                  </h4>
+                                  <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
                                 </div>
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Code:</span>
-                                  <span>{subject.subject_code}</span>
-                                </div>
-                                {subject.description && (
-                                  <div>
-                                    <span className="font-medium">Description:</span>
-                                    <p className="text-xs mt-1 text-gray-500 line-clamp-2">{subject.description}</p>
+                                <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">Subject ID:</span>
+                                    <span className="font-mono text-xs">{subject.id}</span>
                                   </div>
-                                )}
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">Code:</span>
+                                    <span>{subject.subject_code}</span>
+                                  </div>
+                                  {subject.description && (
+                                    <div>
+                                      <span className="font-medium">Description:</span>
+                                      <p className="text-xs mt-1 text-gray-500 line-clamp-2">{subject.description}</p>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       ) : (
                         <div className="text-center py-8 sm:py-12">
@@ -1163,11 +1203,11 @@ const TeachersPage = () => {
                             <h4 className="text-gray-700 font-semibold mb-1.5 sm:mb-2 text-sm sm:text-base">No Classes Found</h4>
                             <p className="text-gray-500 text-xs sm:text-sm">No timetable entries found for this subject. This could be because:</p>
                             <ul className="text-gray-500 text-xs sm:text-sm mt-2 text-left list-disc list-inside max-w-md mx-auto">
-                              <li>The teacher hasn't been assigned classes for this subject</li>
-                              <li>Timetable data hasn't been configured yet</li>
+                              <li>The teacher hasn&apos;t been assigned classes for this subject</li>
+                              <li>Timetable data hasn&apos;t been configured yet</li>
                               <li>There might be a data mismatch between teacher and timetable records</li>
                             </ul>
-                          </div>                          )}
+                          </div>)}
                       </div>
                     )}
                   </div>
@@ -1213,7 +1253,7 @@ const TeachersPage = () => {
                                     const email = selectedTeacher.email?.toLowerCase();
                                     if (!email) return false;
 
-                                    return record.user_email?.toLowerCase() === email;
+                                    return String(record.user_email)?.toLowerCase() === email;
                                   })
                                   .map((record: AttendanceRecord, index: number) => (
                                     <tr key={index} className="hover:bg-gray-50 transition-colors">
@@ -1224,12 +1264,11 @@ const TeachersPage = () => {
                                         {new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' })}
                                       </td>
                                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                        <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold ${
-                                          record.status === "Present" 
-                                            ? "bg-green-100 text-green-800 border border-green-200"
-                                            : "bg-red-100 text-red-800 border border-red-200"
-                                        }`}>
-                                          {record.status === "Present" ? (
+                                        <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold capitalize ${record.status === "present"
+                                          ? "bg-green-100 text-green-800 border border-green-200"
+                                          : "bg-red-100 text-red-800 border border-red-200"
+                                          }`}>
+                                          {record.status === "present" ? (
                                             <CheckCircle className="w-3 h-3 mr-1" />
                                           ) : (
                                             <XCircle className="w-3 h-3 mr-1" />
@@ -1248,7 +1287,7 @@ const TeachersPage = () => {
                             </table>
                           </div>
                         </div>
-                        
+
                         {/* Card view for small screens */}
                         <div className="sm:hidden grid grid-cols-1 gap-3">
                           {attendance
@@ -1256,7 +1295,7 @@ const TeachersPage = () => {
                               const email = selectedTeacher.email?.toLowerCase();
                               if (!email) return false;
 
-                              return record.user_email?.toLowerCase() === email;
+                              return String(record.user_email)?.toLowerCase() === email;
                             })
                             .map((record: AttendanceRecord, index: number) => (
                               <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
@@ -1267,12 +1306,11 @@ const TeachersPage = () => {
                                       {new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' })}
                                     </p>
                                   </div>
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                                    record.status === "Present" 
-                                      ? "bg-green-100 text-green-800 border border-green-200"
-                                      : "bg-red-100 text-red-800 border border-red-200"
-                                  }`}>
-                                    {record.status === "Present" ? (
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold capitalize ${record.status === "present"
+                                    ? "bg-green-100 text-green-800 border border-green-200"
+                                    : "bg-red-100 text-red-800 border border-red-200"
+                                    }`}>
+                                    {record.status === "present" ? (
                                       <CheckCircle className="w-3 h-3 mr-1" />
                                     ) : (
                                       <XCircle className="w-3 h-3 mr-1" />
@@ -1281,7 +1319,7 @@ const TeachersPage = () => {
                                   </span>
                                 </div>
                                 <div className="text-xs text-gray-600">
-                                  <span className="font-medium">Check-in:</span> 
+                                  <span className="font-medium">Check-in:</span>
                                   <span className="ml-1">
                                     {record.check_in_time || record.check_in || "Not recorded"}
                                   </span>
@@ -1344,16 +1382,15 @@ const TeachersPage = () => {
                                       <div className="line-clamp-2">{leave.reason}</div>
                                     </td>
                                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                      <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold ${
-                                        leave.status === "Approved" 
-                                          ? "bg-green-100 text-green-800 border border-green-200"
-                                          : leave.status === "Pending"
+                                      <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold capitalize ${leave.status === "approved"
+                                        ? "bg-green-100 text-green-800 border border-green-200"
+                                        : leave.status === "pending"
                                           ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
                                           : "bg-red-100 text-red-800 border border-red-200"
-                                      }`}>
-                                        {leave.status === "Approved" && <CheckCircle className="w-3 h-3 mr-1" />}
-                                        {leave.status === "Pending" && <Clock4 className="w-3 h-3 mr-1" />}
-                                        {leave.status === "Rejected" && <XCircle className="w-3 h-3 mr-1" />}
+                                        }`}>
+                                        {leave.status === "approved" && <CheckCircle className="w-3 h-3 mr-1" />}
+                                        {leave.status === "pending" && <Clock4 className="w-3 h-3 mr-1" />}
+                                        {leave.status === "rejected" && <XCircle className="w-3 h-3 mr-1" />}
                                         {leave.status}
                                       </span>
                                     </td>
@@ -1368,7 +1405,7 @@ const TeachersPage = () => {
                             </table>
                           </div>
                         </div>
-                        
+
                         {/* Card view for small screens */}
                         <div className="sm:hidden grid grid-cols-1 gap-3">
                           {leaves.map((leave: LeaveRecord, index: number) => (
@@ -1380,25 +1417,24 @@ const TeachersPage = () => {
                                     {leave.start_date} to {leave.end_date}
                                   </p>
                                 </div>
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                                  leave.status === "Approved" 
-                                    ? "bg-green-100 text-green-800 border border-green-200"
-                                    : leave.status === "Pending"
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold capitalize ${leave.status === "approved"
+                                  ? "bg-green-100 text-green-800 border border-green-200"
+                                  : leave.status === "pending"
                                     ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
                                     : "bg-red-100 text-red-800 border border-red-200"
-                                }`}>
-                                  {leave.status === "Approved" && <CheckCircle className="w-3 h-3 mr-1" />}
-                                  {leave.status === "Pending" && <Clock4 className="w-3 h-3 mr-1" />}
-                                  {leave.status === "Rejected" && <XCircle className="w-3 h-3 mr-1" />}
+                                  }`}>
+                                  {leave.status === "approved" && <CheckCircle className="w-3 h-3 mr-1" />}
+                                  {leave.status === "pending" && <Clock4 className="w-3 h-3 mr-1" />}
+                                  {leave.status === "rejected" && <XCircle className="w-3 h-3 mr-1" />}
                                   {leave.status}
                                 </span>
                               </div>
                               <div className="text-xs text-gray-600 mb-1.5">
-                                <span className="font-medium">Reason:</span> 
+                                <span className="font-medium">Reason:</span>
                                 <span className="ml-1">{leave.reason}</span>
                               </div>
                               <div className="text-xs text-gray-600">
-                                <span className="font-medium">Approved by:</span> 
+                                <span className="font-medium">Approved by:</span>
                                 <span className="ml-1">
                                   {leave.approved_by_email || "Not specified"}
                                 </span>
@@ -1505,7 +1541,7 @@ const TeachersPage = () => {
                       </div>
                       Teacher Analytics
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       {/* Attendance Analytics */}
                       <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-sm">

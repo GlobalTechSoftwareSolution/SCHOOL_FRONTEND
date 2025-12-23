@@ -1,22 +1,175 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
+import Image from "next/image";
+
+// Define TypeScript interfaces
+interface Teacher {
+  id: number | string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile_image?: string;
+  department?: string;
+  phone?: string;
+  date_of_joining?: string;
+  subject_list?: Subject[];
+  profile_picture?: string;
+  fullname?: string;
+  department_name?: string;
+  qualification?: string;
+  class_teacher_for?: string;
+  experience_years?: number | string;
+  teacher_id?: string | number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+interface Student {
+  id: number | string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile_image?: string;
+  class_id?: number | string;
+  date_of_birth?: string;
+  phone?: string;
+  student_id?: string | number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+interface Principal {
+  id: number | string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile_image?: string;
+  phone?: string;
+  date_of_joining?: string;
+  fullname?: string;
+  school_name?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+interface Notice {
+  id: string | number;
+  title: string;
+  message: string;
+  notice_by: string;
+  posted_date: string;
+  important?: boolean;
+}
+
+interface Report {
+  id: string | number;
+  title: string;
+  principal_email?: string;
+  email?: string;
+  created_by?: string;
+  description?: string;
+  important?: boolean;
+  created_date?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any; // Allow for dynamic fields in reports
+}
+
+interface Class {
+  id: number | string;
+  class_name: string;
+  sec: string;
+}
+
+interface StudentExtraData {
+  leaves: LeaveRecord[];
+  grades: GradeRecord[];
+  attendance: AttendanceRecord[];
+  notices: Notice[];
+}
+
+interface TeacherExtraData {
+  leaves: LeaveRecord[];
+  classes: TimetableEntry[];
+  reports: Report[];
+  subjects: Subject[];
+  attendance: AttendanceRecord[];
+}
+
+interface PrincipalExtraData {
+  leaves: LeaveRecord[];
+  attendance: AttendanceRecord[];
+  reports: Report[];
+}
+
+interface Subject {
+  id: number | string;
+  subject_name: string;
+  subject_code?: string;
+  [key: string]: string | number | boolean | null | undefined; // Allow additional properties
+}
+
+interface TimetableEntry {
+  id: number | string;
+  teacher_id: number | string;
+  class_id: number | string;
+  subject_id: number | string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  [key: string]: string | number | boolean | null | undefined; // Allow additional properties
+}
+
+interface AttendanceRecord {
+  id: number | string;
+  email: string;
+  date: string;
+  status: string;
+  teacher_email?: string;
+  staff_email?: string;
+  [key: string]: string | number | boolean | null | undefined; // Allow additional properties
+}
+
+interface LeaveRecord {
+  id: number | string;
+  email: string;
+  applicant_email?: string;
+  student_email?: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  [key: string]: string | number | boolean | null | undefined; // Allow additional properties
+}
+
+interface GradeRecord {
+  id: number | string;
+  student: string;
+  student_email?: string;
+  subject: string;
+  subject_name?: string;
+  marks: number;
+  grade: string;
+  exam_type: string;
+  percentage?: number | string;
+  [key: string]: string | number | boolean | null | undefined; // Allow additional properties
+}
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 const ManagementMonthlyReport = () => {
   const [view, setView] = useState<"teachers" | "students" | "principals" | null>(null);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [filteredTeachers, setFilteredTeachers] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [principals, setPrincipals] = useState<any[]>([]);
-  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [selectedPrincipal, setSelectedPrincipal] = useState<any>(null);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
-  const [filteredTimetable, setFilteredTimetable] = useState<any[]>([]);
-  const [allClasses, setAllClasses] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [principals, setPrincipals] = useState<Principal[]>([]);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedPrincipal, setSelectedPrincipal] = useState<Principal | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [filteredTimetable, setFilteredTimetable] = useState<TimetableEntry[]>([]);
+  const [allClasses, setAllClasses] = useState<Class[]>([]);
   const [attendanceMonth, setAttendanceMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -25,20 +178,15 @@ const ManagementMonthlyReport = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
-  const [studentExtra, setStudentExtra] = useState<{ 
-    leaves: any[]; 
-    grades: any[]; 
-    attendance: any[];
-    notices: any[];
-  }>({
+  const [studentExtra, setStudentExtra] = useState<StudentExtraData>({
     leaves: [],
     grades: [],
     attendance: [],
     notices: [],
   });
-  const [selectedLeave, setSelectedLeave] = useState<any>(null);
+  const [selectedLeave, setSelectedLeave] = useState<LeaveRecord | null>(null);
   const [showLeaveDetails, setShowLeaveDetails] = useState(false);
-  const [selectedGrade, setSelectedGrade] = useState<any>(null);
+  const [selectedGrade, setSelectedGrade] = useState<GradeRecord | null>(null);
   const [showGradeDetails, setShowGradeDetails] = useState(false);
   const [studentAttendanceMonth, setStudentAttendanceMonth] = useState(() => {
     const now = new Date();
@@ -48,13 +196,7 @@ const ManagementMonthlyReport = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
-  const [teacherExtra, setTeacherExtra] = useState<{
-    leaves: any[];
-    classes: any[];
-    reports: any[];
-    subjects: any[];
-    attendance: any[];
-  }>({
+  const [teacherExtra, setTeacherExtra] = useState<TeacherExtraData>({
     leaves: [],
     classes: [],
     reports: [],
@@ -62,22 +204,13 @@ const ManagementMonthlyReport = () => {
     attendance: [],
   });
 
-  const [principalExtra, setPrincipalExtra] = useState<{
-    leaves: any[];
-    attendance: any[];
-    reports: any[];
-  }>({
+  const [principalExtra, setPrincipalExtra] = useState<PrincipalExtraData>({
     leaves: [],
     attendance: [],
     reports: [],
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
 
   // Class / Section filters for students view
   const [studentClassFilter, setStudentClassFilter] = useState<string>("all");
@@ -127,31 +260,31 @@ const ManagementMonthlyReport = () => {
   };
 
   // ✅ Updated handleSubjectClick with debugging
-  const handleSubjectClick = (subject: any) => {
+  const handleSubjectClick = (subject: Subject) => {
     setSelectedSubject(subject);
-    
-    
+
+
     // Show sample entry to understand the data structure
     if (teacherExtra.classes.length > 0) {
     }
-    
+
     // Filter timetable for this specific subject - check multiple possible field names
-    const subjectTimetable = teacherExtra.classes.filter((entry: any) => {
+    const subjectTimetable = teacherExtra.classes.filter((entry: TimetableEntry) => {
       const possibleFields = [
         entry.subject_id,
-        entry.subjectId, 
+        entry.subjectId,
         entry.subject,
         entry.subject_name,
         entry.subject_code,
         entry.subject_name_id
       ];
-      
-      
+
+
       return possibleFields.some(field => field === subject.id) ||
-             possibleFields.some(field => field === subject.subject_name) ||
-             possibleFields.some(field => field === subject.subject_code);
+        possibleFields.some(field => field === subject.subject_name) ||
+        possibleFields.some(field => field === subject.subject_code);
     });
-    
+
     setFilteredTimetable(subjectTimetable);
   };
 
@@ -160,7 +293,7 @@ const ManagementMonthlyReport = () => {
     console.log("🔍 All Teacher Extra Data:", teacherExtra);
     console.log("📚 All Subjects:", teacherExtra.subjects);
     console.log("🏫 All Classes:", teacherExtra.classes);
-    
+
     // Show sample entries to understand the data structure
     if (teacherExtra.classes.length > 0) {
       console.log("📊 Sample Class Entry:", teacherExtra.classes[0]);
@@ -168,13 +301,13 @@ const ManagementMonthlyReport = () => {
   };
 
   // Filter teachers based on category and department
-  const filterTeachers = () => {
+  const filterTeachers = useCallback(() => {
     let filtered = teachers;
 
     // Filter by category (S or L from teacher_id)
     if (teacherCategoryFilter !== "all") {
       filtered = filtered.filter(teacher => {
-        const teacherId = teacher.teacher_id || "";
+        const teacherId = String(teacher.teacher_id || "");
         if (teacherCategoryFilter === "S") {
           return teacherId.startsWith("S") || teacherId.startsWith("T"); // Assuming school teachers start with S or T
         } else if (teacherCategoryFilter === "L") {
@@ -187,20 +320,20 @@ const ManagementMonthlyReport = () => {
     // Filter by department
     if (departmentFilter !== "all") {
       filtered = filtered.filter(teacher => {
-        const dept = teacher.department_name?.toLowerCase() || "";
+        const dept = String(teacher.department_name || "").toLowerCase();
         return dept.includes(departmentFilter.toLowerCase());
       });
     }
 
     setFilteredTeachers(filtered);
-  };
+  }, [teachers, teacherCategoryFilter, departmentFilter]);
 
   // Apply filters when category or department changes
   useEffect(() => {
     if (teachers.length > 0) {
       filterTeachers();
     }
-  }, [teacherCategoryFilter, departmentFilter, teachers]);
+  }, [teacherCategoryFilter, departmentFilter, teachers, filterTeachers]);
 
   // Refresh data based on current view
   const refreshData = async () => {
@@ -220,18 +353,18 @@ const ManagementMonthlyReport = () => {
   };
 
   // Calculate student statistics
-  const calculateStudentStats = (extra: { leaves: any[]; grades: any[] }) => {
+  const calculateStudentStats = (extra: { leaves: LeaveRecord[]; grades: GradeRecord[] }) => {
     const totalLeaves = extra.leaves.length;
     const totalGrades = extra.grades.length;
-    
+
     // Calculate attendance percentage (assuming 30 days in month, subtract leaves)
     const attendancePercentage = Math.max(0, Math.round(((30 - totalLeaves) / 30) * 100));
-    
+
     // Calculate average grade
-    const averageGrade = totalGrades > 0 
-      ? (extra.grades.reduce((sum: number, grade: any) => sum + (parseFloat(grade.grade) || 0), 0) / totalGrades).toFixed(1)
+    const averageGrade = totalGrades > 0
+      ? (extra.grades.reduce((sum: number, grade: GradeRecord) => sum + (parseFloat(grade.grade) || 0), 0) / totalGrades).toFixed(1)
       : '0';
-    
+
     return {
       attendancePercentage,
       totalGrades,
@@ -241,18 +374,18 @@ const ManagementMonthlyReport = () => {
   };
 
   // Calculate teacher statistics
-  const calculateTeacherStats = (extra: { leaves: any[]; classes: any[]; subjects: any[]; attendance: any[] }) => {
+  const calculateTeacherStats = (extra: { leaves: LeaveRecord[]; classes: TimetableEntry[]; subjects: Subject[]; attendance: AttendanceRecord[] }) => {
     const totalLeaves = extra.leaves.length;
     const totalClasses = extra.classes.length;
     const totalSubjects = extra.subjects.length;
-    
+
     // Calculate attendance from actual attendance data
-    const presentDays = extra.attendance.filter((a: any) => a.status === "Present").length;
+    const presentDays = extra.attendance.filter((a: AttendanceRecord) => a.status === "Present").length;
     const totalAttendanceDays = extra.attendance.length;
-    const attendancePercentage = totalAttendanceDays > 0 
+    const attendancePercentage = totalAttendanceDays > 0
       ? Math.round((presentDays / totalAttendanceDays) * 100)
       : Math.max(0, Math.round(((30 - totalLeaves) / 30) * 100)); // fallback to leave-based calculation
-    
+
     return {
       attendancePercentage,
       totalClasses,
@@ -264,17 +397,17 @@ const ManagementMonthlyReport = () => {
   };
 
   // Calculate principal statistics
-  const calculatePrincipalStats = (extra: { leaves: any[]; attendance: any[]; reports: any[] }) => {
+  const calculatePrincipalStats = (extra: { leaves: LeaveRecord[]; attendance: AttendanceRecord[]; reports: unknown[] }) => {
     const totalLeaves = extra.leaves.length;
     const totalReports = extra.reports.length;
-    
+
     // Calculate attendance from actual attendance data
-    const presentDays = extra.attendance.filter((a: any) => a.status === "Present").length;
+    const presentDays = extra.attendance.filter((a: AttendanceRecord) => a.status === "Present").length;
     const totalAttendanceDays = extra.attendance.length;
-    const attendancePercentage = totalAttendanceDays > 0 
+    const attendancePercentage = totalAttendanceDays > 0
       ? Math.round((presentDays / totalAttendanceDays) * 100)
       : Math.max(0, Math.round(((30 - totalLeaves) / 30) * 100)); // fallback to leave-based calculation
-    
+
     return {
       attendancePercentage,
       totalLeaves,
@@ -331,15 +464,15 @@ const ManagementMonthlyReport = () => {
   };
 
   // ✅ Try different timetable API endpoints
-  const fetchTeacherDetails = async (teacher: any) => {
+  const fetchTeacherDetails = async (teacher: Teacher) => {
     setSelectedTeacher(teacher);
     setLoading(true);
 
     try {
       // Use teacher's subject list from the teacher object
       const subjects = teacher.subject_list || [];
-      const teacherSubjectIds = subjects.map((subject: any) => subject.id);
-      
+      const teacherSubjectIds = subjects.map((subject: Subject) => subject.id);
+
       console.log("🔍 Teacher Subjects:", subjects);
       console.log("🎯 Teacher Subject IDs:", teacherSubjectIds);
 
@@ -354,22 +487,23 @@ const ManagementMonthlyReport = () => {
         `${API_BASE}/class-timetable/?teacher_email=${teacher.email}`,
       ];
 
-      let allTimetableEntries: any[] = [];
+      let allTimetableEntries: TimetableEntry[] = [];
 
-      for (let endpoint of endpoints) {
+      for (const endpoint of endpoints) {
         try {
           console.log("🔍 Trying endpoint:", endpoint);
           const response = await axios.get(endpoint);
           const data = response.data || [];
           console.log("📊 Data from", endpoint, ":", data);
-          
+
           if (Array.isArray(data) && data.length > 0) {
             allTimetableEntries = data;
             console.log("✅ Found data from:", endpoint);
             break;
           }
-        } catch (err: any) {
-          console.log("❌ Failed for endpoint:", endpoint, err?.response?.status || err);
+        } catch (err) {
+          const errorStatus = isAxiosError(err) ? err.response?.status : undefined;
+          console.log("❌ Failed for endpoint:", endpoint, errorStatus || err);
         }
       }
 
@@ -380,11 +514,11 @@ const ManagementMonthlyReport = () => {
           const allResponse = await axios.get(`${API_BASE}/timetable/`);
           const allData = allResponse.data || [];
           console.log("📊 All timetable data:", allData);
-          
+
           if (Array.isArray(allData)) {
             // Filter by teacher email or teacher ID
-            allTimetableEntries = allData.filter((entry: any) => 
-              entry.teacher_email === teacher.email || 
+            allTimetableEntries = allData.filter((entry: TimetableEntry) =>
+              entry.teacher_email === teacher.email ||
               entry.teacher_id === teacher.teacher_id ||
               entry.teacher === teacher.teacher_id
             );
@@ -396,20 +530,20 @@ const ManagementMonthlyReport = () => {
       }
 
       // Final filtering by subject IDs - check multiple possible field names
-      const classes = allTimetableEntries.filter((entry: any) => {
+      const classes = allTimetableEntries.filter((entry: TimetableEntry) => {
         const possibleFields = [
           entry.subject_id,
-          entry.subjectId, 
+          entry.subjectId,
           entry.subject,
           entry.subject_name,
           entry.subject_code,
           entry.subject_name_id
         ];
-        
-        const matches = possibleFields.some(field => 
-          teacherSubjectIds.includes(field)
+
+        const matches = possibleFields.some(field =>
+          (typeof field === "string" || typeof field === "number") && teacherSubjectIds.includes(field)
         );
-        
+
         if (matches) {
           console.log("✅ Matched entry:", entry);
         }
@@ -419,8 +553,8 @@ const ManagementMonthlyReport = () => {
       console.log("🎯 Final filtered classes:", classes);
 
       // Fetch leaves for the specific teacher - ALL LEAVES
-      let leaves: any[] = [];
-      let attendance: any[] = [];
+      let leaves: LeaveRecord[] = [];
+      let attendance: AttendanceRecord[] = [];
 
       try {
         // Fetch leaves specifically for this teacher using applicant_email
@@ -428,19 +562,19 @@ const ManagementMonthlyReport = () => {
         const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${teacher.email}`);
         const rawLeaves = leavesResponse.data || [];
         console.log("📊 Raw leaves fetched:", rawLeaves.length);
-        
+
         // Always filter client-side to ensure we only get this teacher's leaves
-        leaves = rawLeaves.filter((leave: any) => {
+        leaves = rawLeaves.filter((leave: LeaveRecord) => {
           const matches = leave.applicant_email === teacher.email ||
-                        leave.email === teacher.email ||
-                        leave.teacher_email === teacher.email;
-          
+            leave.email === teacher.email ||
+            leave.teacher_email === teacher.email;
+
           if (matches) {
             console.log("✅ Matched leave record:", leave);
           }
           return matches;
         });
-        
+
         console.log("✅ Filtered leaves for teacher", teacher.email, ":", leaves.length);
       } catch (err) {
         console.log("❌ Failed to fetch leaves with applicant_email, trying alternatives:", err);
@@ -448,36 +582,36 @@ const ManagementMonthlyReport = () => {
         try {
           const leavesResponse = await axios.get(`${API_BASE}/leaves/?email=${teacher.email}`);
           const rawLeaves = leavesResponse.data || [];
-          
+
           // Filter client-side
-          leaves = rawLeaves.filter((leave: any) => 
+          leaves = rawLeaves.filter((leave: LeaveRecord) =>
             leave.applicant_email === teacher.email ||
             leave.email === teacher.email ||
             leave.teacher_email === teacher.email
           );
           console.log("✅ Filtered leaves from email endpoint:", leaves.length);
-        } catch (err2) {
+        } catch {
           console.log("❌ Alternative leaves endpoint also failed");
           // Try fetching all leaves and filter by applicant_email
           try {
             const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
             const allLeaves = allLeavesResponse.data || [];
             console.log("📊 All leaves fetched:", allLeaves.length);
-            
+
             // Filter leaves by applicant_email
-            leaves = allLeaves.filter((leave: any) => {
+            leaves = allLeaves.filter((leave: LeaveRecord) => {
               const matches = leave.applicant_email === teacher.email ||
-                            leave.email === teacher.email ||
-                            leave.teacher_email === teacher.email;
-              
+                leave.email === teacher.email ||
+                leave.teacher_email === teacher.email;
+
               if (matches) {
                 console.log("✅ Matched leave from all leaves:", leave);
               }
               return matches;
             });
-            
+
             console.log("✅ Filtered leaves from all leaves for", teacher.email, ":", leaves.length);
-          } catch (err3) {
+          } catch {
             console.log("❌ All leaves endpoints failed");
           }
         }
@@ -493,22 +627,22 @@ const ManagementMonthlyReport = () => {
         `${API_BASE}/staff-attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
       ];
 
-      for (let endpoint of attendanceEndpoints) {
+      for (const endpoint of attendanceEndpoints) {
         try {
           console.log("🔍 Trying attendance endpoint:", endpoint);
           const attendanceResponse = await axios.get(endpoint);
           const data = attendanceResponse.data || [];
           console.log("📊 Attendance data from", endpoint, ":", data);
-          
+
           if (Array.isArray(data) && data.length > 0) {
             // Check if this is teacher data (should have teacher fields, not student fields)
-            const hasTeacherData = data.some((record: any) => 
+            const hasTeacherData = data.some((record: AttendanceRecord) =>
               record.teacher_email || record.teacher_name || !record.student_email
             );
-            
+
             if (hasTeacherData) {
               // Filter to only this teacher's records (email + role)
-              attendance = data.filter((record: any) => {
+              attendance = data.filter((record: AttendanceRecord) => {
                 const roleMatch = String(record.role || "").toLowerCase() === "teacher";
                 const emailMatch =
                   record.teacher_email === teacher.email ||
@@ -522,8 +656,9 @@ const ManagementMonthlyReport = () => {
               console.log("⚠️ This endpoint returns student data, not teacher data");
             }
           }
-        } catch (err: any) {
-          console.log("❌ Failed for attendance endpoint:", endpoint, err?.response?.status || err);
+        } catch (err) {
+          const errorStatus = isAxiosError(err) ? err.response?.status : undefined;
+          console.log("❌ Failed for attendance endpoint:", endpoint, errorStatus || err);
         }
       }
 
@@ -552,9 +687,9 @@ const ManagementMonthlyReport = () => {
   };
 
   // Refresh attendance data when month/year changes
-  const refreshAttendanceData = async () => {
+  const refreshAttendanceData = useCallback(async () => {
     if (!selectedTeacher) return;
-    
+
     try {
       const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
       const attendanceEndpoints = [
@@ -565,60 +700,60 @@ const ManagementMonthlyReport = () => {
         `${API_BASE}/staff-attendance/?email=${selectedTeacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
       ];
 
-      let attendance: any[] = [];
-      for (let endpoint of attendanceEndpoints) {
+      let attendance: AttendanceRecord[] = [];
+      for (const endpoint of attendanceEndpoints) {
         try {
           const response = await axios.get(endpoint);
           const data = response.data || [];
-          
+
           if (Array.isArray(data) && data.length > 0) {
-            const hasTeacherData = data.some((record: any) => 
+            const hasTeacherData = data.some((record: AttendanceRecord) =>
               record.teacher_email || record.teacher_name || !record.student_email
             );
-            
+
             if (hasTeacherData) {
               // Filter to only teacher role
-              attendance = data.filter((record: any) =>
+              attendance = data.filter((record: AttendanceRecord) =>
                 String(record.role || "").toLowerCase() === "teacher"
               );
               break;
             }
           }
-        } catch (err) {
+        } catch {
           console.log("Failed attendance endpoint:", endpoint);
         }
       }
 
-      setTeacherExtra(prev => ({ ...prev, attendance }));
-    } catch (err) {
-      console.error("Error refreshing attendance:", err);
+      setTeacherExtra((prev: TeacherExtraData) => ({ ...prev, attendance }));
+    } catch {
+      console.error("Error refreshing attendance:");
     }
-  };
+  }, [attendanceMonth, selectedTeacher]);
 
   // Refresh leaves data when month/year changes
-  const refreshLeavesData = async () => {
+  const refreshLeavesData = useCallback(async () => {
     if (!selectedTeacher) return;
-    
+
     try {
       // Fetch leaves specifically for this teacher using applicant_email
       console.log("🔍 Refreshing leaves for teacher using applicant_email:", selectedTeacher.email);
       const response = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedTeacher.email}`);
       const rawLeaves = response.data || [];
       console.log("📊 Raw leaves fetched:", rawLeaves.length);
-      
+
       // Always filter client-side to ensure we only get this teacher's leaves
-      const leaves = rawLeaves.filter((leave: any) => {
+      const leaves = rawLeaves.filter((leave: LeaveRecord) => {
         const matches = leave.applicant_email === selectedTeacher.email ||
-                      leave.email === selectedTeacher.email ||
-                      leave.teacher_email === selectedTeacher.email;
-        
+          leave.email === selectedTeacher.email ||
+          leave.teacher_email === selectedTeacher.email;
+
         if (matches) {
           console.log("✅ Matched leave record:", leave);
         }
         return matches;
       });
-      
-      setTeacherExtra(prev => ({ ...prev, leaves }));
+
+      setTeacherExtra((prev: TeacherExtraData) => ({ ...prev, leaves }));
       console.log("✅ Refreshed leaves for", selectedTeacher.email, ":", leaves.length);
     } catch (err) {
       console.log("❌ Failed to refresh leaves with applicant_email, trying alternatives:", err);
@@ -626,82 +761,68 @@ const ManagementMonthlyReport = () => {
       try {
         const response = await axios.get(`${API_BASE}/leaves/?email=${selectedTeacher.email}`);
         const rawLeaves = response.data || [];
-        
+
         // Filter client-side
-        const leaves = rawLeaves.filter((leave: any) => 
+        const leaves = rawLeaves.filter((leave: LeaveRecord) =>
           leave.applicant_email === selectedTeacher.email ||
           leave.email === selectedTeacher.email ||
           leave.teacher_email === selectedTeacher.email
         );
-        
-        setTeacherExtra(prev => ({ ...prev, leaves }));
+
+        setTeacherExtra((prev: TeacherExtraData) => ({ ...prev, leaves }));
         console.log("✅ Filtered leaves from email endpoint:", leaves.length);
-      } catch (err2) {
+      } catch {
         console.log("❌ Alternative leaves endpoint also failed");
         // Try fetching all leaves and filter by applicant_email
         try {
           const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
           const allLeaves = allLeavesResponse.data || [];
           console.log("📊 All leaves fetched:", allLeaves.length);
-          
+
           // Filter leaves by applicant_email
-          const leaves = allLeaves.filter((leave: any) => {
+          const leaves = allLeaves.filter((leave: LeaveRecord) => {
             const matches = leave.applicant_email === selectedTeacher.email ||
-                          leave.email === selectedTeacher.email ||
-                          leave.teacher_email === selectedTeacher.email;
-            
+              leave.email === selectedTeacher.email ||
+              leave.teacher_email === selectedTeacher.email;
+
             if (matches) {
               console.log("✅ Matched leave from all leaves:", leave);
             }
             return matches;
           });
-          
-          setTeacherExtra(prev => ({ ...prev, leaves }));
+
+          setTeacherExtra((prev: TeacherExtraData) => ({ ...prev, leaves }));
           console.log("✅ Filtered leaves from all leaves for", selectedTeacher.email, ":", leaves.length);
-        } catch (err3) {
+        } catch {
           console.log("❌ All leaves endpoints failed");
-          setTeacherExtra(prev => ({ ...prev, leaves: [] }));
+          setTeacherExtra((prev: TeacherExtraData) => ({ ...prev, leaves: [] }));
         }
       }
     }
-  };
+  }, [selectedTeacher]);
 
   // Refresh data when month/year changes
   useEffect(() => {
     if (selectedTeacher) {
       refreshAttendanceData();
     }
-  }, [attendanceMonth]);
+  }, [attendanceMonth, refreshAttendanceData, selectedTeacher]);
 
   useEffect(() => {
     if (selectedTeacher) {
       refreshLeavesData();
     }
-  }, [leaveMonth]);
+  }, [leaveMonth, refreshLeavesData, selectedTeacher]);
 
-  // Refresh student attendance data when month changes
-  useEffect(() => {
-    if (selectedStudent) {
-      refreshStudentAttendanceData();
-    }
-  }, [studentAttendanceMonth]);
 
-  // Refresh student leaves data when month changes
-  useEffect(() => {
-    if (selectedStudent) {
-      refreshStudentLeavesData();
-    }
-  }, [studentLeaveMonth]);
-
-  const refreshStudentAttendanceData = async () => {
+  const refreshStudentAttendanceData = useCallback(async () => {
     if (!selectedStudent) return;
-    
-    const [year, month] = studentAttendanceMonth.split("-");
-    let attendance: any[] = [];
+
+    let attendance: AttendanceRecord[] = [];
 
     try {
       console.log("🔄 Refreshing student attendance data for:", studentAttendanceMonth);
-      
+
       // Fetch all student_attendance records, then filter by email + month/year client-side
       console.log("🔍 Fetching all student_attendance records for client-side filtering");
       const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
@@ -714,7 +835,7 @@ const ManagementMonthlyReport = () => {
       console.log("📊 Raw Student Attendance:", rawAttendance);
       console.log("📊 Attendance length:", rawAttendance.length);
 
-      attendance = rawAttendance.filter((record: any) => {
+      attendance = rawAttendance.filter((record: AttendanceRecord) => {
         const emailMatch =
           record.student === selectedStudent.email ||
           record.student_email === selectedStudent.email ||
@@ -734,104 +855,102 @@ const ManagementMonthlyReport = () => {
       console.log("✅ Updated student attendance (filtered by email + month):", attendance);
 
       // Update state with new attendance data
-      setStudentExtra(prev => ({
+      setStudentExtra((prev: StudentExtraData) => ({
         ...prev,
         attendance: attendance,
       }));
-      
+
     } catch (err) {
       console.error("Error refreshing student attendance:", err);
     }
-  };
+  }, [selectedStudent, studentAttendanceMonth]);
 
-  const refreshStudentLeavesData = async () => {
+  const refreshStudentLeavesData = useCallback(async () => {
     if (!selectedStudent) return;
-    
+
     const [year, month] = studentLeaveMonth.split("-");
-    let leaves: any[] = [];
+    let leaves: LeaveRecord[] = [];
 
     try {
       console.log("🔄 Refreshing student leaves data for:", studentLeaveMonth);
-      
+
       // Try leaves endpoints with new month
       try {
         console.log("🔍 Trying primary leaves endpoint:", `${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
         const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
         const rawLeaves = leavesResponse.data || [];
-        
+
         // Filter client-side
-        leaves = rawLeaves.filter((leave: any) => 
+        leaves = rawLeaves.filter((leave: LeaveRecord) =>
           leave.applicant_email === selectedStudent.email ||
           leave.email === selectedStudent.email ||
           leave.student_email === selectedStudent.email
         );
-        
+
         console.log("✅ Updated student leaves:", leaves);
-      } catch (err: any) {
-        console.log("❌ Primary leaves failed, trying alternatives");
-        try {
-          const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}`);
-          const rawLeaves = leavesResponse.data || [];
-          
-          leaves = rawLeaves.filter((leave: any) => 
-            leave.applicant_email === selectedStudent.email ||
-            leave.email === selectedStudent.email ||
-            leave.student_email === selectedStudent.email
-          );
-        } catch (err2: any) {
-          console.log("❌ All leaves endpoints failed");
-        }
+      } catch {
+        console.log("Falling back to fetching all leaves...");
+        const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
+        const allLeaves = allLeavesResponse.data || [];
+        leaves = allLeaves.filter((leave: LeaveRecord) =>
+          leave.applicant_email === selectedStudent.email ||
+          leave.email === selectedStudent.email ||
+          leave.student_email === selectedStudent.email
+        );
       }
 
-      // Update state with new leaves data
-      setStudentExtra(prev => ({
+      setStudentExtra((prev: StudentExtraData) => ({
         ...prev,
         leaves: leaves,
       }));
-      
     } catch (err) {
       console.error("Error refreshing student leaves:", err);
     }
-  };
+  }, [selectedStudent, studentLeaveMonth]);
 
-  const fetchClasses = async (subjectId: number) => {
-    try {
-      const res = await axios.get(`${API_BASE}/classes?subject_id=${subjectId}`);
-      console.log('All Classes:', res.data);
-      setAllClasses(res.data); // Make sure this state exists
-    } catch (err) {
-      console.error('Error fetching classes:', err);
+  // Refresh student attendance data when month changes
+  useEffect(() => {
+    if (selectedStudent) {
+      refreshStudentAttendanceData();
     }
-  };
+  }, [studentAttendanceMonth, refreshStudentAttendanceData, selectedStudent]);
+
+  // Refresh student leaves data when month changes
+  useEffect(() => {
+    if (selectedStudent) {
+      refreshStudentLeavesData();
+    }
+  }, [studentLeaveMonth, refreshStudentLeavesData, selectedStudent]);
+
 
   // Helper: resolve class info for a student using class_id and allClasses
-  const getClassInfoForStudent = (student: any) => {
+  const getClassInfoForStudent = (student: Student) => {
     if (!student?.class_id) return null;
-    return allClasses.find((cls: any) => cls.id === student.class_id) || null;
+    return allClasses.find((cls: Class) => cls.id === student.class_id) || null;
   };
 
   // Derived lists for student filters
   const studentUniqueClasses = Array.from(
     new Set(
       allClasses
-        .map((cls: any) => cls.class_name)
-        .filter((name: any) => Boolean(name))
+        .map((cls: Class) => cls.class_name)
+        .filter((name: string) => Boolean(name))
     )
   );
 
   const studentUniqueSectionsForClass = studentClassFilter === "all"
     ? []
     : Array.from(
-        new Set(
-          allClasses
-            .filter((cls: any) => cls.class_name === studentClassFilter)
-            .map((cls: any) => cls.sec)
-            .filter((sec: any) => Boolean(sec))
-        )
-      );
+      new Set(
+        allClasses
+          .filter((cls: Class) => cls.class_name === studentClassFilter)
+          .map((cls: Class) => cls.sec)
+          .filter((sec: string) => Boolean(sec))
+      )
+    );
 
   // Students filtered by class/section
-  const filteredStudentsByClass = students.filter((student: any) => {
+  const filteredStudentsByClass = students.filter((student: Student) => {
     const classInfo = getClassInfoForStudent(student);
     const className = classInfo?.class_name;
     const section = classInfo?.sec;
@@ -845,18 +964,17 @@ const ManagementMonthlyReport = () => {
   });
 
   // Fetch student details
-  const fetchStudentDetails = async (student: any) => {
+  const fetchStudentDetails = async (student: Student) => {
     setSelectedStudent(student);
     setLoading(true);
-    
-    const [year, month] = selectedMonth.split("-");
-    
+
+    const [year, month] = studentAttendanceMonth.split("-");
+
     try {
       // Try multiple endpoint variations for each API
-      let leaves: any[] = [];
-      let grades: any[] = [];
-      let attendance: any[] = [];
-      let fees: any[] = [];
+      let leaves: LeaveRecord[] = [];
+      let grades: GradeRecord[] = [];
+      let attendance: AttendanceRecord[] = [];
 
       // Try leaves endpoints
       try {
@@ -864,41 +982,41 @@ const ManagementMonthlyReport = () => {
         const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${student.email}&year=${year}&month=${month}`);
         const rawLeaves = leavesResponse.data || [];
         console.log("📊 Raw leaves data from primary endpoint:", rawLeaves);
-        
+
         // Always filter client-side to ensure we only get student's leaves
-        leaves = rawLeaves.filter((leave: any) => {
+        leaves = rawLeaves.filter((leave: LeaveRecord) => {
           const matches = leave.applicant_email === student.email ||
-                         leave.email === student.email ||
-                         leave.student_email === student.email ||
-                         leave.student_id === student.email;
-          
+            leave.email === student.email ||
+            leave.student_email === student.email ||
+            leave.student_id === student.email;
+
           if (matches) {
             console.log("✅ Matched leave record:", leave);
           }
           return matches;
         });
-        
+
         console.log("🎯 Filtered leaves for student", student.email, ":", leaves);
-        
-      } catch (err: any) {
-        console.log("❌ Leaves API failed, trying alternatives:", err?.response?.status);
+
+      } catch {
+        console.log("❌ Leaves API failed, trying alternatives:");
         try {
           console.log("🔍 Trying alternative leaves endpoint:", `${API_BASE}/leaves/?applicant_email=${student.email}`);
           const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${student.email}`);
           const rawLeaves = leavesResponse.data || [];
           console.log("📊 Raw leaves data from alternative endpoint:", rawLeaves);
-          
+
           // Filter client-side
-          leaves = rawLeaves.filter((leave: any) => 
+          leaves = rawLeaves.filter((leave: LeaveRecord) =>
             leave.applicant_email === student.email ||
             leave.email === student.email ||
             leave.student_email === student.email ||
             leave.student_id === student.email
           );
-          
+
           console.log("🎯 Filtered leaves from alternative:", leaves);
-          
-        } catch (err2: any) {
+
+        } catch {
           console.log("❌ Alternative leaves API also failed");
           // Try fetching all leaves and filter client-side
           try {
@@ -907,20 +1025,20 @@ const ManagementMonthlyReport = () => {
             const allLeaves = allLeavesResponse.data || [];
             console.log("📊 Raw leaves data from all endpoint:", allLeaves);
             console.log("👤 Looking for student email:", student.email);
-            
+
             // Filter by applicant_email with detailed logging
-            const filteredLeaves = allLeaves.filter((leave: any) => {
+            const filteredLeaves = allLeaves.filter((leave: LeaveRecord) => {
               const matches = leave.applicant_email === student.email ||
-                             leave.email === student.email ||
-                             leave.student_email === student.email ||
-                             leave.student_id === student.email;
-              
+                leave.email === student.email ||
+                leave.student_email === student.email ||
+                leave.student_id === student.email;
+
               if (matches) {
                 console.log("✅ Found matching leave:", leave);
               }
               return matches;
             });
-            
+
             if (filteredLeaves.length > 0) {
               leaves = filteredLeaves;
               console.log("✅ Found leaves via client-side filtering:", filteredLeaves);
@@ -929,8 +1047,9 @@ const ManagementMonthlyReport = () => {
               // Show sample of available leaves for debugging
               console.log("📝 Sample available leaves (first 3):", allLeaves.slice(0, 3));
             }
-          } catch (err3: any) {
-            console.log("❌ All leaves endpoint also failed:", err3?.response?.status);
+          } catch (err3) {
+            const errorStatus = isAxiosError(err3) ? err3.response?.status : undefined;
+            console.log("❌ All leaves endpoint also failed:", errorStatus);
           }
         }
       }
@@ -940,53 +1059,54 @@ const ManagementMonthlyReport = () => {
         console.log("🔍 Trying primary grades endpoint:", `${API_BASE}/grades/?student=${student.email}&year=${year}&month=${month}`);
         console.log("👤 Student email being searched:", student.email);
         console.log("📅 Year/Month being searched:", year, month);
-        
+
         const gradesResponse = await axios.get(`${API_BASE}/grades/?student=${student.email}&year=${year}&month=${month}`);
         const rawGrades = gradesResponse.data || [];
         console.log("📊 Raw grades data from primary endpoint:");
         console.log("  - Type:", typeof rawGrades);
         console.log("  - Length:", rawGrades.length);
         console.log("  - Data:", rawGrades);
-        
+
         if (rawGrades.length > 0) {
           console.log("🔍 Sample grades record structure:");
           console.log("  - First record keys:", Object.keys(rawGrades[0] || {}));
           console.log("  - First record:", rawGrades[0]);
         }
-        
+
         // Always filter client-side to ensure we only get student's grades
-        grades = rawGrades.filter((record: any) => {
+        grades = rawGrades.filter((record: GradeRecord) => {
           console.log("🔍 Checking grades record:", record);
-          
+
           const matches = record.student === student.email ||
-                         record.student_email === student.email ||
-                         record.email === student.email ||
-                         record.student_id === student.email ||
-                         record.studentid === student.email;
-          
+            record.student_email === student.email ||
+            record.email === student.email ||
+            record.student_id === student.email ||
+            record.studentid === student.email;
+
           console.log("🎯 Matching check:");
           console.log("  - record.student:", record.student, "==", student.email, ":", record.student === student.email);
           console.log("  - record.student_email:", record.student_email, "==", student.email, ":", record.student_email === student.email);
           console.log("  - record.email:", record.email, "==", student.email, ":", record.email === student.email);
           console.log("  - Final match result:", matches);
-          
+
           if (matches) {
             console.log("✅ Matched grades record:", record);
           }
           return matches;
         });
-        
+
         console.log("🎯 Filtered grades for student", student.email, ":", grades);
         console.log("📈 Grades summary:");
         console.log("  - Total records:", grades.length);
         if (grades.length > 0) {
-          console.log("  - Subjects:", grades.map((g: any) => g.subject_name || g.subject || 'Unknown'));
+          console.log("  - Subjects:", grades.map((g: GradeRecord) => g.subject_name || g.subject || 'Unknown'));
         }
-        
-      } catch (err: any) {
-        console.log("❌ Grades API failed, trying alternatives:", err?.response?.status);
+
+      } catch (err) {
+        const errorStatus = isAxiosError(err) ? err.response?.status : undefined;
+        console.log("❌ Grades API failed, trying alternatives:", errorStatus);
         console.log("❌ Error details:", err);
-        
+
         const gradeEndpoints = [
           `${API_BASE}/grades/?student=${student.email}&year=${year}&month=${month}`,
           `${API_BASE}/grades/?student=${student.email}`,
@@ -995,40 +1115,40 @@ const ManagementMonthlyReport = () => {
           `${API_BASE}/grades/?email=${student.email}&year=${year}&month=${month}`,
           `${API_BASE}/grades/`,
         ];
-        
-        for (let endpoint of gradeEndpoints) {
+
+        for (const endpoint of gradeEndpoints) {
           try {
             console.log("🔍 Trying grades endpoint:", endpoint);
             const gradesResponse = await axios.get(endpoint);
             const data = gradesResponse.data || [];
             console.log("📊 Raw grades data from", endpoint, ":", data);
-            
+
             if (Array.isArray(data) && data.length > 0) {
               // If we got all grades, filter by student email
-              const filteredGrades = endpoint.includes('?') 
-                ? data.filter((grade: any) => {
-                    const matches = grade.student === student.email ||
-                                   grade.student_email === student.email ||
-                                   grade.email === student.email ||
-                                   grade.student_id === student.email;
-                    
-                    if (matches) {
-                      console.log("✅ Matched grade record:", grade);
-                    }
-                    return matches;
-                  })
-                : data.filter((grade: any) => {
-                    const matches = grade.student === student.email ||
-                                   grade.student_email === student.email ||
-                                   grade.email === student.email ||
-                                   grade.student_id === student.email;
-                    
-                    if (matches) {
-                      console.log("✅ Matched grade record:", grade);
-                    }
-                    return matches;
-                  });
-              
+              const filteredGrades = endpoint.includes('?')
+                ? data.filter((grade: GradeRecord) => {
+                  const matches = grade.student === student.email ||
+                    grade.student_email === student.email ||
+                    grade.email === student.email ||
+                    grade.student_id === student.email;
+
+                  if (matches) {
+                    console.log("✅ Matched grade record:", grade);
+                  }
+                  return matches;
+                })
+                : data.filter((grade: GradeRecord) => {
+                  const matches = grade.student === student.email ||
+                    grade.student_email === student.email ||
+                    grade.email === student.email ||
+                    grade.student_id === student.email;
+
+                  if (matches) {
+                    console.log("✅ Matched grade record:", grade);
+                  }
+                  return matches;
+                });
+
               if (filteredGrades.length > 0) {
                 grades = filteredGrades;
                 console.log("✅ Found grades data from:", endpoint, "- Filtered:", filteredGrades);
@@ -1036,7 +1156,7 @@ const ManagementMonthlyReport = () => {
               } else {
                 console.log("⚠️ Data found but no matching student records for:", endpoint);
                 console.log("🔍 Available student fields in sample:");
-                data.slice(0, 3).forEach((record: any, index: number) => {
+                data.slice(0, 3).forEach((record: GradeRecord, index: number) => {
                   console.log(`  - Record ${index + 1}:`, {
                     student: record.student,
                     student_email: record.student_email,
@@ -1046,15 +1166,16 @@ const ManagementMonthlyReport = () => {
                 });
               }
             }
-          } catch (err: any) {
-            console.log("❌ Failed grades endpoint:", endpoint, "- Status:", err?.response?.status);
+          } catch (err) {
+            const errorStatus = isAxiosError(err) ? err.response?.status : undefined;
+            console.log("❌ Failed grades endpoint:", endpoint, "- Status:", errorStatus);
           }
         }
       }
 
       // Fetch attendance from student_attendance and filter by email + selected month
       try {
-        console.log("🔍 Fetching student_attendance for:", student.email, "month:", selectedMonth);
+        console.log("🔍 Fetching student_attendance for:", student.email, "month:", studentAttendanceMonth);
 
         const attendanceResponse = await axios.get(`${API_BASE}/student_attendance/`);
         let rawAttendance = attendanceResponse.data || [];
@@ -1065,7 +1186,7 @@ const ManagementMonthlyReport = () => {
 
         console.log("📊 Raw student_attendance data:", rawAttendance.length);
 
-        attendance = rawAttendance.filter((record: any) => {
+        attendance = rawAttendance.filter((record: AttendanceRecord) => {
           const emailMatch =
             record.student === student.email ||
             record.student_email === student.email ||
@@ -1076,7 +1197,7 @@ const ManagementMonthlyReport = () => {
           let monthMatch = true;
           if (recordDate && typeof recordDate === "string") {
             const recMonth = recordDate.split("T")[0]?.slice(0, 7); // YYYY-MM
-            monthMatch = recMonth === selectedMonth;
+            monthMatch = recMonth === studentAttendanceMonth;
           }
 
           return emailMatch && monthMatch;
@@ -1084,8 +1205,8 @@ const ManagementMonthlyReport = () => {
 
         console.log("🎯 Filtered student_attendance for", student.email, ":", attendance.length);
 
-      } catch (err: any) {
-        console.log("❌ student_attendance API failed:", err?.response?.status);
+      } catch {
+        console.log("❌ student_attendance API failed:");
       }
 
       console.log("📊 Final Student Data:");
@@ -1114,17 +1235,17 @@ const ManagementMonthlyReport = () => {
   };
 
   // Fetch principal details
-  const fetchPrincipalDetails = async (principal: any) => {
+  const fetchPrincipalDetails = async (principal: Principal) => {
     setSelectedPrincipal(principal);
     setLoading(true);
-    
-    const [year, month] = selectedMonth.split("-");
-    
+
+    const [year, month] = attendanceMonth.split("-");
+
     try {
       // Try multiple endpoint variations for each API
-      let leaves: any[] = [];
-      let attendance: any[] = [];
-      let reports: any[] = [];
+      let leaves: LeaveRecord[] = [];
+      let attendance: AttendanceRecord[] = [];
+      let reports: Report[] = [];
 
       // Try leaves endpoints
       try {
@@ -1132,30 +1253,31 @@ const ManagementMonthlyReport = () => {
         const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${principal.email}&year=${year}&month=${month}`);
         const rawLeaves = leavesResponse.data || [];
         console.log("📊 Raw principal leaves data:", rawLeaves);
-        
+
         // Filter client-side to ensure we only get principal's leaves
-        leaves = rawLeaves.filter((leave: any) => {
+        leaves = rawLeaves.filter((leave: LeaveRecord) => {
           const matches = leave.applicant_email === principal.email ||
-                         leave.email === principal.email ||
-                         leave.principal_email === principal.email;
+            leave.email === principal.email ||
+            leave.principal_email === principal.email;
           return matches;
         });
-        
+
         console.log("🎯 Filtered leaves for principal", principal.email, ":", leaves);
-        
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.log("❌ Principal leaves API failed, trying alternatives:", err?.response?.status);
         try {
           const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${principal.email}`);
           const rawLeaves = leavesResponse.data || [];
-          
-          leaves = rawLeaves.filter((leave: any) => 
+
+          leaves = rawLeaves.filter((leave: LeaveRecord) =>
             leave.applicant_email === principal.email ||
             leave.email === principal.email ||
             leave.principal_email === principal.email
           );
-          
-        } catch (err2: any) {
+
+        } catch {
           console.log("❌ Alternative principal leaves API also failed");
         }
       }
@@ -1166,9 +1288,9 @@ const ManagementMonthlyReport = () => {
         const attendanceResponse = await axios.get(`${API_BASE}/attendance/`);
         const rawAttendance = attendanceResponse.data || [];
         console.log("📊 Raw principal attendance data:", rawAttendance);
-        
+
         // Filter by email + role = Principal
-        attendance = rawAttendance.filter((record: any) => {
+        attendance = rawAttendance.filter((record: AttendanceRecord) => {
           const recRole = String(record.role || "").trim().toLowerCase();
           const roleMatch = recRole === "principal";
 
@@ -1180,20 +1302,21 @@ const ManagementMonthlyReport = () => {
             record.user_email,
           ]
             .filter(Boolean)
-            .some((val: any) => String(val).toLowerCase() === recEmail);
+            .some((val: string | number | boolean | null | undefined) => String(val).toLowerCase() === recEmail);
 
           return roleMatch && emailMatch;
         });
-        
+
         console.log("🎯 Filtered attendance for principal", principal.email, ":", attendance);
-        
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.log("❌ Principal attendance API failed, trying email-filtered endpoint:", err?.response?.status);
         try {
           const attendanceResponse = await axios.get(`${API_BASE}/attendance/?principal_email=${principal.email}`);
           const rawAttendance = attendanceResponse.data || [];
-          
-          attendance = rawAttendance.filter((record: any) => {
+
+          attendance = rawAttendance.filter((record: AttendanceRecord) => {
             const recRole = String(record.role || "").trim().toLowerCase();
             const roleMatch = recRole === "principal";
 
@@ -1205,12 +1328,12 @@ const ManagementMonthlyReport = () => {
               record.user_email,
             ]
               .filter(Boolean)
-              .some((val: any) => String(val).toLowerCase() === recEmail);
+              .some((val: string | number | boolean | null | undefined) => String(val).toLowerCase() === recEmail);
 
             return roleMatch && emailMatch;
           });
-          
-        } catch (err2: any) {
+
+        } catch {
           console.log("❌ Alternative principal attendance API also failed");
         }
       }
@@ -1221,30 +1344,31 @@ const ManagementMonthlyReport = () => {
         const reportsResponse = await axios.get(`${API_BASE}/reports/?principal_email=${principal.email}&year=${year}&month=${month}`);
         const rawReports = reportsResponse.data || [];
         console.log("📊 Raw principal reports data:", rawReports);
-        
+
         // Filter client-side to ensure we only get principal's reports
-        reports = rawReports.filter((report: any) => {
+        reports = rawReports.filter((report: Report) => {
           const matches = report.principal_email === principal.email ||
-                         report.email === principal.email ||
-                         report.created_by === principal.email;
+            report.email === principal.email ||
+            report.created_by === principal.email;
           return matches;
         });
-        
+
         console.log("🎯 Filtered reports for principal", principal.email, ":", reports);
-        
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.log("❌ Principal reports API failed, trying alternatives:", err?.response?.status);
         try {
           const reportsResponse = await axios.get(`${API_BASE}/reports/?principal_email=${principal.email}`);
           const rawReports = reportsResponse.data || [];
-          
-          reports = rawReports.filter((report: any) => 
+
+          reports = rawReports.filter((report: Report) =>
             report.principal_email === principal.email ||
             report.email === principal.email ||
             report.created_by === principal.email
           );
-          
-        } catch (err2: any) {
+
+        } catch {
           console.log("❌ Alternative principal reports API also failed");
         }
       }
@@ -1304,11 +1428,10 @@ const ManagementMonthlyReport = () => {
                 setSelectedTeacher(null);
                 fetchTeachers();
               }}
-              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
-                view === "teachers"
-                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
-                  : "bg-white text-gray-700 border border-gray-300 hover:border-blue-500"
-              }`}
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${view === "teachers"
+                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
+                : "bg-white text-gray-700 border border-gray-300 hover:border-blue-500"
+                }`}
             >
               👨‍🏫 View Teachers Report
             </button>
@@ -1318,11 +1441,10 @@ const ManagementMonthlyReport = () => {
                 setSelectedStudent(null);
                 fetchStudents();
               }}
-              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
-                view === "students"
-                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
-                  : "bg-white text-gray-700 border border-gray-300 hover:border-green-500"
-              }`}
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${view === "students"
+                ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
+                : "bg-white text-gray-700 border border-gray-300 hover:border-green-500"
+                }`}
             >
               👨‍🎓 View Students Report
             </button>
@@ -1332,11 +1454,10 @@ const ManagementMonthlyReport = () => {
                 setSelectedPrincipal(null);
                 fetchPrincipals();
               }}
-              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${
-                view === "principals"
-                  ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg"
-                  : "bg-white text-gray-700 border border-gray-300 hover:border-purple-500"
-              }`}
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-lg sm:rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 ${view === "principals"
+                ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg"
+                : "bg-white text-gray-700 border border-gray-300 hover:border-purple-500"
+                }`}
             >
               👨‍💼 View Principals Report
             </button>
@@ -1402,12 +1523,14 @@ const ManagementMonthlyReport = () => {
                     className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
                   >
                     <div className="p-6 text-center">
-                      <img
+                      <Image
                         src={teacher.profile_picture || "https://i.pravatar.cc/150"}
-                        alt={teacher.fullname}
-                        className="w-20 h-20 rounded-full border-4 border-blue-100 shadow-md mx-auto"
+                        alt={teacher.fullname || "Teacher"}
+                        width={80}
+                        height={80}
+                        className="rounded-full border-4 border-blue-100 shadow-md mx-auto"
                       />
-                      <h3 className="mt-4 text-lg font-bold text-gray-800">{teacher.fullname}</h3>
+                      <h3 className="mt-4 text-lg font-bold text-gray-800">{teacher.fullname || "N/A"}</h3>
                       <p className="text-sm text-blue-600 font-medium">{teacher.department_name}</p>
                       <p className="text-xs text-gray-500 mt-1">{teacher.qualification}</p>
                       <div className="mt-2 space-y-1">
@@ -1457,13 +1580,15 @@ const ManagementMonthlyReport = () => {
                   <span>Back to Teachers</span>
                 </button>
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
-                  <img
+                  <Image
                     src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150"}
-                    alt={selectedTeacher.fullname}
-                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
+                    alt={selectedTeacher.fullname || "Teacher"}
+                    width={128}
+                    height={128}
+                    className="rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
                   />
                   <div className="flex-1 text-center sm:text-left">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedTeacher.fullname}</h2>
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedTeacher.fullname || "N/A"}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div><b>Teacher ID:</b> {selectedTeacher.teacher_id}</div>
                       <div><b>Department:</b> {selectedTeacher.department_name}</div>
@@ -1525,15 +1650,14 @@ const ManagementMonthlyReport = () => {
                       </button>
                     </div>
                     <div className="space-y-3">
-                      {teacherExtra.subjects.map((sub: any) => (
-                        <div 
-                          key={sub.id} 
+                      {teacherExtra.subjects.map((sub: Subject) => (
+                        <div
+                          key={sub.id}
                           onClick={() => handleSubjectClick(sub)}
-                          className={`bg-white p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                            selectedSubject?.id === sub.id 
-                              ? "border-blue-500 ring-2 ring-blue-300 bg-blue-50" 
-                              : "border-gray-200 hover:border-blue-300"
-                          }`}
+                          className={`bg-white p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${selectedSubject?.id === sub.id
+                            ? "border-blue-500 ring-2 ring-blue-300 bg-blue-50"
+                            : "border-gray-200 hover:border-blue-300"
+                            }`}
                         >
                           <div className="font-semibold text-gray-800">{sub.subject_name}</div>
                           <div className="text-sm text-gray-600">Code: {sub.subject_code}</div>
@@ -1541,11 +1665,11 @@ const ManagementMonthlyReport = () => {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Debug Info */}
                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
                       <p className="text-xs text-yellow-800">
-                        <strong>Debug:</strong> Total Subjects: {teacherExtra.subjects.length} | 
+                        <strong>Debug:</strong> Total Subjects: {teacherExtra.subjects.length} |
                         Total Classes: {teacherExtra.classes.length}
                       </p>
                     </div>
@@ -1557,18 +1681,18 @@ const ManagementMonthlyReport = () => {
                       <h3 className="text-xl font-bold text-gray-800 mb-4">
                         🕒 Timetable for {selectedSubject.subject_name}
                       </h3>
-                      
+
                       {/* Debug info - remove after it works */}
                       <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
                         <p className="text-sm text-yellow-800">
-                          <strong>Debug Info:</strong> Selected Subject ID: {selectedSubject.id} | 
+                          <strong>Debug Info:</strong> Selected Subject ID: {selectedSubject.id} |
                           Filtered Entries: {filteredTimetable.length}
                         </p>
                       </div>
-                      
+
                       {filteredTimetable.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {filteredTimetable.map((entry: any, index: number) => (
+                          {filteredTimetable.map((entry: TimetableEntry, index: number) => (
                             <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
                               <h4 className="font-semibold text-gray-800 mb-2">{entry.class_name}</h4>
                               <div className="space-y-1 text-sm text-gray-600">
@@ -1611,11 +1735,11 @@ const ManagementMonthlyReport = () => {
                     </div>
                     {(() => {
                       const attendanceData = teacherExtra.attendance || [];
-                      const present = attendanceData.filter((a: any) => a.status === "Present").length;
-                      const absent = attendanceData.filter((a: any) => a.status === "Absent").length;
-                      const late = attendanceData.filter((a: any) => a.status === "Late").length;
+                      const present = attendanceData.filter((a: AttendanceRecord) => a.status === "Present").length;
+                      const absent = attendanceData.filter((a: AttendanceRecord) => a.status === "Absent").length;
+                      const late = attendanceData.filter((a: AttendanceRecord) => a.status === "Late").length;
                       const total = attendanceData.length;
-                      
+
                       return (
                         <div className="space-y-3">
                           <div className="flex justify-between items-center">
@@ -1660,19 +1784,19 @@ const ManagementMonthlyReport = () => {
                       <div className="flex justify-between items-center text-green-600">
                         <span>Approved Leaves:</span>
                         <span className="font-semibold">
-                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Approved").length : 0}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: LeaveRecord) => l.status === "Approved").length : 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-yellow-600">
                         <span>Pending Leaves:</span>
                         <span className="font-semibold">
-                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Pending").length : 0}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: LeaveRecord) => l.status === "Pending").length : 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-red-600">
                         <span>Rejected Leaves:</span>
                         <span className="font-semibold">
-                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: any) => l.status === "Rejected").length : 0}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: LeaveRecord) => l.status === "Rejected").length : 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-blue-600 font-semibold">
@@ -1680,24 +1804,23 @@ const ManagementMonthlyReport = () => {
                         <span className="font-semibold">{Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.length : 0}</span>
                       </div>
                     </div>
-                    
+
                     {/* Display recent leaves */}
                     {Array.isArray(teacherExtra.leaves) && teacherExtra.leaves.length > 0 && (
                       <div className="mt-4">
                         <h4 className="text-sm font-semibold text-gray-700 mb-2">Recent Leaves:</h4>
                         <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                          {teacherExtra.leaves.slice(0, 3).map((leave: any, index: number) => (
-                            <div 
+                          {teacherExtra.leaves.slice(0, 3).map((leave: LeaveRecord, index: number) => (
+                            <div
                               key={index}
                               className="text-xs p-2 bg-white border border-gray-200 rounded"
                             >
                               <div className="flex justify-between">
                                 <span className="font-medium">{leave.leave_type}</span>
-                                <span className={`px-1 rounded ${
-                                  leave.status === 'Approved' ? 'bg-green-100 text-green-800' : 
-                                  leave.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                  'bg-red-100 text-red-800'
-                                }`}>
+                                <span className={`px-1 rounded ${leave.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                                  leave.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
                                   {leave.status}
                                 </span>
                               </div>
@@ -1766,37 +1889,39 @@ const ManagementMonthlyReport = () => {
               {/* Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredStudentsByClass.map((student, index) => (
-                (() => {
-                  const classInfo = getClassInfoForStudent(student);
-                  const className = classInfo?.class_name;
-                  const section = classInfo?.sec;
+                  (() => {
+                    const classInfo = getClassInfoForStudent(student);
+                    const className = classInfo?.class_name;
+                    const section = classInfo?.sec;
 
-                  return (
-                    <div
-                      key={student.id || index}
-                      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
-                      onClick={() => fetchStudentDetails(student)}
-                    >
-                      <div className="p-6 text-center">
-                        <img
-                          src={student.profile_picture || "https://i.pravatar.cc/150"}
-                          alt={student.fullname}
-                          className="w-20 h-20 rounded-full border-4 border-green-100 shadow-md mx-auto"
-                        />
-                        <h3 className="mt-4 text-lg font-bold text-gray-800">{student.fullname}</h3>
-                        <p className="text-sm text-green-600 font-semibold mt-1">
-                          {className || "Class ?"} {section ? `• Sec ${section}` : ""}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          ID: {student.student_id || "N/A"}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">
-                          {student.email}
-                        </p>
+                    return (
+                      <div
+                        key={student.id || index}
+                        className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
+                        onClick={() => fetchStudentDetails(student)}
+                      >
+                        <div className="p-6 text-center">
+                          <Image
+                            src={student.profile_picture || "https://i.pravatar.cc/150"}
+                            alt={student.fullname || "Student"}
+                            width={80}
+                            height={80}
+                            className="rounded-full border-4 border-green-100 shadow-md mx-auto"
+                          />
+                          <h3 className="mt-4 text-lg font-bold text-gray-800">{student.fullname || "N/A"}</h3>
+                          <p className="text-sm text-green-600 font-semibold mt-1">
+                            {className || "Class ?"} {section ? `• Sec ${section}` : ""}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            ID: {student.student_id || "N/A"}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            {student.email}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })()
+                    );
+                  })()
                 ))}
               </div>
             </>
@@ -1812,12 +1937,14 @@ const ManagementMonthlyReport = () => {
                   onClick={() => fetchPrincipalDetails(principal)}
                 >
                   <div className="p-6 text-center">
-                    <img
+                    <Image
                       src={principal.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={principal.fullname}
-                      className="w-20 h-20 rounded-full border-4 border-purple-100 shadow-md mx-auto"
+                      alt={principal.fullname || "Principal"}
+                      width={80}
+                      height={80}
+                      className="rounded-full border-4 border-purple-100 shadow-md mx-auto"
                     />
-                    <h3 className="mt-4 text-lg font-bold text-gray-800">{principal.fullname}</h3>
+                    <h3 className="mt-4 text-lg font-bold text-gray-800">{principal.fullname || "N/A"}</h3>
                     <p className="text-sm text-purple-600 font-semibold">Principal</p>
                     <p className="text-xs text-gray-500 mt-1 truncate">{principal.email}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
@@ -1849,15 +1976,17 @@ const ManagementMonthlyReport = () => {
                   <span>←</span>
                   <span>Back to Students</span>
                 </button>
-                
+
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
-                  <img
+                  <Image
                     src={selectedStudent.profile_picture || "https://i.pravatar.cc/150"}
-                    alt={selectedStudent.fullname}
-                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
+                    alt={selectedStudent.fullname || "Student"}
+                    width={128}
+                    height={128}
+                    className="rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
                   />
-                  <div className="text-center sm:text-left">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedStudent.fullname}</h2>
+                  <div className="flex-1 text-center sm:text-left">
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedStudent.fullname || "N/A"}</h2>
                     {(() => {
                       const classInfo = getClassInfoForStudent(selectedStudent);
                       const className = classInfo?.class_name;
@@ -1965,11 +2094,11 @@ const ManagementMonthlyReport = () => {
                     <h3 className="text-xl font-bold text-gray-800 mb-4">👨‍👩‍👧 Parent Information</h3>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Father's Name:</span>
+                        <span className="text-gray-600">Father&apos;s Name:</span>
                         <span className="font-semibold">{selectedStudent.father_name}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Mother's Name:</span>
+                        <span className="text-gray-600">Mother&apos;s Name:</span>
                         <span className="font-semibold">{selectedStudent.mother_name}</span>
                       </div>
                       <div className="flex justify-between">
@@ -2005,7 +2134,7 @@ const ManagementMonthlyReport = () => {
                   {/* Monthly Performance */}
                   <div className="bg-gray-50 p-6 rounded-xl lg:col-span-2">
                     <h3 className="text-xl font-bold text-gray-800 mb-4">
-                      📊 Monthly Performance - {selectedMonth}
+                      📊 Monthly Performance - {studentAttendanceMonth}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {/* Attendance */}
@@ -2024,22 +2153,22 @@ const ManagementMonthlyReport = () => {
                           console.log("📊 Raw Student Attendance:", studentExtra?.attendance);
                           console.log("📊 Attendance data type:", typeof studentExtra?.attendance);
                           console.log("📊 Attendance length:", studentExtra?.attendance?.length);
-                          
+
                           if (studentExtra?.attendance && studentExtra.attendance.length > 0) {
                             console.log("🔍 Sample attendance record structure:");
                             console.log("  - First record keys:", Object.keys(studentExtra.attendance[0] || {}));
                             console.log("  - First record:", studentExtra.attendance[0]);
                             console.log("🔍 All attendance records:");
-                            studentExtra.attendance.forEach((attendance: any, index: number) => {
+                            studentExtra.attendance.forEach((attendance: AttendanceRecord, index: number) => {
                               console.log(`  - Attendance ${index + 1}:`, attendance);
                             });
                           }
-                          
+
                           const [year, month] = studentAttendanceMonth.split("-");
                           console.log("📅 Split year/month for attendance - Year:", year, "Month:", month);
                           console.log("📅 Student Attendance Month:", studentAttendanceMonth);
-                          
-                          const monthlyAttendance = (studentExtra?.attendance || []).filter((a: any) => {
+
+                          const monthlyAttendance = (studentExtra?.attendance || []).filter((a: AttendanceRecord) => {
                             console.log("🔍 Checking attendance record:", a);
                             const hasDate = a.date && a.date.startsWith(`${year}-${month.padStart(2, "0")}`);
                             console.log("  - Has date matching", `${year}-${month.padStart(2, "0")}:`, hasDate);
@@ -2052,21 +2181,21 @@ const ManagementMonthlyReport = () => {
                           console.log("📊 Attendance Filtering Summary:");
                           console.log("  - Total raw records:", studentExtra?.attendance?.length || 0);
                           console.log("  - Total filtered records:", monthlyAttendance.length);
-                          
+
                           if (monthlyAttendance.length === 0 && studentExtra?.attendance?.length > 0) {
                             console.log("⚠️ Attendance exists but none match the selected month!");
                             console.log("🔍 Available attendance dates:");
-                            studentExtra.attendance.forEach((attendance: any, index: number) => {
+                            studentExtra.attendance.forEach((attendance: AttendanceRecord, index: number) => {
                               console.log(`  - Attendance ${index + 1} date:`, attendance.date);
                             });
                           }
 
-                          const present = monthlyAttendance.filter((a: any) => a.status === "Present").length;
-                          const absent = monthlyAttendance.filter((a: any) => a.status === "Absent").length;
-                          const late = monthlyAttendance.filter((a: any) => a.status === "Late").length;
-                          
+                          const present = monthlyAttendance.filter((a: AttendanceRecord) => a.status === "Present").length;
+                          const absent = monthlyAttendance.filter((a: AttendanceRecord) => a.status === "Absent").length;
+                          const late = monthlyAttendance.filter((a: AttendanceRecord) => a.status === "Late").length;
+
                           console.log("✅ Student Attendance Counts - Present:", present, "Absent:", absent, "Late:", late);
-                          
+
                           return (
                             <div className="space-y-2">
                               <div className="flex justify-between">
@@ -2108,28 +2237,28 @@ const ManagementMonthlyReport = () => {
                           console.log("📊 Raw Student Grades:", studentExtra?.grades);
                           console.log("📊 Grades data type:", typeof studentExtra?.grades);
                           console.log("📊 Grades length:", studentExtra?.grades?.length);
-                          
+
                           if (studentExtra?.grades && studentExtra.grades.length > 0) {
                             console.log("🔍 Sample grades record structure:");
                             console.log("  - First record keys:", Object.keys(studentExtra.grades[0] || {}));
                             console.log("  - First record:", studentExtra.grades[0]);
                             console.log("🔍 All grades records:");
-                            studentExtra.grades.forEach((grade: any, index: number) => {
+                            studentExtra.grades.forEach((grade: GradeRecord, index: number) => {
                               console.log(`  - Grade ${index + 1}:`, grade);
                             });
                           }
-                          
+
                           // Display ALL grades (no month filtering)
                           const allGrades = studentExtra.grades || [];
-                          
+
                           console.log("📈 All Grades (No Filtering):", allGrades);
                           console.log("📈 Total Grades Count:", allGrades.length);
-                          
+
                           return allGrades.length > 0 ? (
                             <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                              {allGrades.map((grade: any) => (
-                                <div 
-                                  key={grade.id} 
+                              {allGrades.map((grade: GradeRecord) => (
+                                <div
+                                  key={grade.id}
                                   onClick={() => {
                                     setSelectedGrade(grade);
                                     setShowGradeDetails(true);
@@ -2176,18 +2305,18 @@ const ManagementMonthlyReport = () => {
                         </div>
                         {(() => {
                           const [year, month] = studentLeaveMonth.split("-");
-                          const monthlyLeaves = studentExtra.leaves.filter((l: any) =>
+                          const monthlyLeaves = studentExtra.leaves.filter((l: LeaveRecord) =>
                             l.start_date && l.start_date.startsWith(`${year}-${month.padStart(2, "0")}`)
                           );
-                          
+
                           console.log("📅 Student Leave Month:", studentLeaveMonth);
                           console.log("🗓️ Monthly Leaves Filtered:", monthlyLeaves);
-                          
+
                           return monthlyLeaves.length > 0 ? (
                             <div className="space-y-2">
-                              {monthlyLeaves.slice(0, 3).map((leave: any) => (
-                                <div 
-                                  key={leave.id} 
+                              {monthlyLeaves.slice(0, 3).map((leave: LeaveRecord) => (
+                                <div
+                                  key={leave.id}
                                   onClick={() => {
                                     setSelectedLeave(leave);
                                     setShowLeaveDetails(true);
@@ -2201,11 +2330,10 @@ const ManagementMonthlyReport = () => {
                                     {leave.start_date} to {leave.end_date}
                                   </div>
                                   <div className="text-xs text-gray-400 mt-1">
-                                    Status: <span className={`font-semibold ${
-                                      leave.status === 'Approved' ? 'text-green-600' : 
-                                      leave.status === 'Pending' ? 'text-yellow-600' : 
-                                      'text-red-600'
-                                    }`}>{leave.status}</span>
+                                    Status: <span className={`font-semibold ${leave.status === 'Approved' ? 'text-green-600' :
+                                      leave.status === 'Pending' ? 'text-yellow-600' :
+                                        'text-red-600'
+                                      }`}>{leave.status}</span>
                                   </div>
                                 </div>
                               ))}
@@ -2228,7 +2356,7 @@ const ManagementMonthlyReport = () => {
                     <div className="bg-gray-50 p-6 rounded-xl lg:col-span-2">
                       <h3 className="text-xl font-bold text-gray-800 mb-4">📢 Recent Notices</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {studentExtra.notices.slice(0, 4).map((notice: any) => (
+                        {studentExtra.notices.slice(0, 4).map((notice: Notice) => (
                           <div key={notice.id} className="bg-white p-4 rounded-lg border border-gray-200">
                             <div className="flex justify-between items-start mb-2">
                               <h4 className="font-semibold text-gray-800">{notice.title}</h4>
@@ -2240,7 +2368,7 @@ const ManagementMonthlyReport = () => {
                             </div>
                             <p className="text-sm text-gray-600 mb-2 line-clamp-2">{notice.message}</p>
                             <div className="text-xs text-gray-500">
-                              By: {notice.notice_by} • {new Date(notice.posted_date).toLocaleDateString()}
+                              By: {notice.notice_by} • {new Date(notice.posted_date || Date.now()).toLocaleDateString()}
                             </div>
                           </div>
                         ))}
@@ -2272,13 +2400,15 @@ const ManagementMonthlyReport = () => {
                   <span>Back to Principals</span>
                 </button>
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
-                  <img
+                  <Image
                     src={selectedPrincipal.profile_picture || "https://i.pravatar.cc/150"}
-                    alt={selectedPrincipal.fullname}
-                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
+                    alt={selectedPrincipal.fullname || "Principal"}
+                    width={128}
+                    height={128}
+                    className="rounded-xl sm:rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
                   />
                   <div className="flex-1 text-center sm:text-left">
-                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedPrincipal.fullname}</h2>
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-2">{selectedPrincipal.fullname || "N/A"}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div><b>Principal ID:</b> {selectedPrincipal.principal_id}</div>
                       <div><b>School:</b> {selectedPrincipal.school_name}</div>
@@ -2388,11 +2518,11 @@ const ManagementMonthlyReport = () => {
                     </div>
                     {(() => {
                       const attendanceData = principalExtra.attendance || [];
-                      const present = attendanceData.filter((a: any) => a.status === "Present").length;
-                      const absent = attendanceData.filter((a: any) => a.status === "Absent").length;
-                      const late = attendanceData.filter((a: any) => a.status === "Late").length;
+                      const present = attendanceData.filter((a: AttendanceRecord) => a.status === "Present").length;
+                      const absent = attendanceData.filter((a: AttendanceRecord) => a.status === "Absent").length;
+                      const late = attendanceData.filter((a: AttendanceRecord) => a.status === "Late").length;
                       const total = attendanceData.length;
-                      
+
                       return (
                         <div className="space-y-3">
                           <div className="flex justify-between items-center">
@@ -2437,19 +2567,19 @@ const ManagementMonthlyReport = () => {
                       <div className="flex justify-between items-center text-green-600">
                         <span>Approved Leaves:</span>
                         <span className="font-semibold">
-                          {principalExtra.leaves.filter((l: any) => l.status === "Approved").length}
+                          {principalExtra.leaves.filter((l: LeaveRecord) => l.status === "Approved").length}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-yellow-600">
                         <span>Pending Leaves:</span>
                         <span className="font-semibold">
-                          {principalExtra.leaves.filter((l: any) => l.status === "Pending").length}
+                          {principalExtra.leaves.filter((l: LeaveRecord) => l.status === "Pending").length}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-red-600">
                         <span>Rejected Leaves:</span>
                         <span className="font-semibold">
-                          {principalExtra.leaves.filter((l: any) => l.status === "Rejected").length}
+                          {principalExtra.leaves.filter((l: LeaveRecord) => l.status === "Rejected").length}
                         </span>
                       </div>
                     </div>
@@ -2461,7 +2591,7 @@ const ManagementMonthlyReport = () => {
                   <div className="mt-6 bg-gray-50 p-6 rounded-xl">
                     <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Recent Reports</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {principalExtra.reports.slice(0, 4).map((report: any) => (
+                      {principalExtra.reports.slice(0, 4).map((report: Report) => (
                         <div key={report.id} className="bg-white p-4 rounded-lg border border-gray-200">
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-semibold text-gray-800">{report.title}</h4>
@@ -2473,7 +2603,7 @@ const ManagementMonthlyReport = () => {
                           </div>
                           <p className="text-sm text-gray-600 mb-2 line-clamp-2">{report.description}</p>
                           <div className="text-xs text-gray-500">
-                            By: {report.created_by} • {new Date(report.created_date).toLocaleDateString()}
+                            By: {report.created_by} • {report.created_date ? new Date(report.created_date).toLocaleDateString() : 'N/A'}
                           </div>
                         </div>
                       ))}
@@ -2504,7 +2634,7 @@ const ManagementMonthlyReport = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Grade Information */}
@@ -2513,28 +2643,28 @@ const ManagementMonthlyReport = () => {
                         <label className="text-sm text-gray-600">Student Name</label>
                         <div className="font-semibold text-lg">{selectedGrade.student_name || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Subject</label>
                         <div className="font-semibold text-lg">{selectedGrade.subject_name || selectedGrade.subject || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Teacher Name</label>
                         <div className="font-semibold">{selectedGrade.teacher_name || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Exam Type</label>
                         <div className="font-semibold">{selectedGrade.exam_type || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Exam Date</label>
                         <div className="font-semibold">{selectedGrade.exam_date || selectedGrade.date || 'N/A'}</div>
                       </div>
                     </div>
-                    
+
                     {/* Score Details */}
                     <div className="space-y-4">
                       <div>
@@ -2543,52 +2673,51 @@ const ManagementMonthlyReport = () => {
                           {selectedGrade.marks_obtained || 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Total Marks</label>
                         <div className="font-semibold text-2xl text-blue-600">
                           {selectedGrade.total_marks || 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Percentage</label>
                         <div className="font-semibold text-3xl text-purple-600">
                           {selectedGrade.percentage ? `${selectedGrade.percentage}%` : 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Student Email</label>
                         <div className="font-semibold text-sm">{selectedGrade.student || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Teacher Email</label>
                         <div className="font-semibold text-sm">{selectedGrade.teacher || 'N/A'}</div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Performance Indicator */}
                   <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-600">Performance Level</span>
-                      <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        (selectedGrade.percentage >= 90) ? 'bg-green-100 text-green-800' :
-                        (selectedGrade.percentage >= 80) ? 'bg-blue-100 text-blue-800' :
-                        (selectedGrade.percentage >= 70) ? 'bg-yellow-100 text-yellow-800' :
-                        (selectedGrade.percentage >= 60) ? 'bg-orange-100 text-orange-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {(selectedGrade.percentage >= 90) ? 'Excellent' :
-                         (selectedGrade.percentage >= 80) ? 'Very Good' :
-                         (selectedGrade.percentage >= 70) ? 'Good' :
-                         (selectedGrade.percentage >= 60) ? 'Average' : 'Needs Improvement'}
+                      <div className={`px-3 py-1 rounded-full text-sm font-semibold ${(Number(selectedGrade.percentage || 0) >= 90) ? 'bg-green-100 text-green-800' :
+                        (Number(selectedGrade.percentage || 0) >= 80) ? 'bg-blue-100 text-blue-800' :
+                          (Number(selectedGrade.percentage || 0) >= 70) ? 'bg-yellow-100 text-yellow-800' :
+                            (Number(selectedGrade.percentage || 0) >= 60) ? 'bg-orange-100 text-orange-800' :
+                              'bg-red-100 text-red-800'
+                        }`}>
+                        {(Number(selectedGrade.percentage || 0) >= 90) ? 'Excellent' :
+                          (Number(selectedGrade.percentage || 0) >= 80) ? 'Very Good' :
+                            (Number(selectedGrade.percentage || 0) >= 70) ? 'Good' :
+                              (Number(selectedGrade.percentage || 0) >= 60) ? 'Average' : 'Needs Improvement'}
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Remarks */}
                   <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                     <div>
@@ -2598,7 +2727,7 @@ const ManagementMonthlyReport = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Timestamps */}
                   <div className="mt-6 grid grid-cols-2 gap-4 text-xs text-gray-500">
                     <div>
@@ -2610,7 +2739,7 @@ const ManagementMonthlyReport = () => {
                       <div>{selectedGrade.updated_at || 'N/A'}</div>
                     </div>
                   </div>
-                  
+
                   {/* Action Buttons */}
                   <div className="mt-6 flex gap-3">
                     <button
@@ -2648,7 +2777,7 @@ const ManagementMonthlyReport = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Leave Information */}
@@ -2657,25 +2786,24 @@ const ManagementMonthlyReport = () => {
                         <label className="text-sm text-gray-600">Leave Type</label>
                         <div className="font-semibold text-lg">{selectedLeave.leave_type || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Status</label>
-                        <div className={`font-semibold text-lg ${
-                          selectedLeave.status === 'Approved' ? 'text-green-600' : 
-                          selectedLeave.status === 'Pending' ? 'text-yellow-600' : 
-                          'text-red-600'
-                        }`}>
+                        <div className={`font-semibold text-lg ${selectedLeave.status === 'Approved' ? 'text-green-600' :
+                          selectedLeave.status === 'Pending' ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
                           {selectedLeave.status || 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Duration</label>
                         <div className="font-semibold">
                           {selectedLeave.start_date || 'N/A'} to {selectedLeave.end_date || 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Total Days</label>
                         <div className="font-semibold text-lg">
@@ -2691,31 +2819,31 @@ const ManagementMonthlyReport = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Additional Details */}
                     <div className="space-y-4">
                       <div>
                         <label className="text-sm text-gray-600">Applied Date</label>
                         <div className="font-semibold">{selectedLeave.applied_date || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Reason</label>
                         <div className="font-semibold">{selectedLeave.reason || 'No reason provided'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Approved By</label>
                         <div className="font-semibold">{selectedLeave.approved_by || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-sm text-gray-600">Remarks</label>
                         <div className="font-semibold">{selectedLeave.remarks || 'No remarks'}</div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Action Buttons */}
                   <div className="mt-6 flex gap-3">
                     <button

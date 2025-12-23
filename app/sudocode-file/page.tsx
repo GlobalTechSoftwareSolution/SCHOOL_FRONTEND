@@ -285,7 +285,7 @@ export default function WordGridPage() {
                       key={cell.id}
                       onPointerDown={(e) => handlePointerDown(e, cell.id)}
                       onPointerEnter={(e) => handlePointerEnter(e, cell.id)}
-                      onPointerUp={(e) => handlePointerUp(e, cell.id)}
+                      onPointerUp={(e) => handlePointerUp(e)}
                       onClick={() => {
                         // click selects as well (desktop)
                         if (!touchActive.current) {

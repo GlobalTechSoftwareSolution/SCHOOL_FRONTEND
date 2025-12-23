@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   MessageCircle,
   Zap,
-  Image,
+  Image as ImageIcon,
   Users,
   CheckCircle,
   Link,
@@ -62,7 +62,7 @@ const Whatsapp = () => {
                 "/erpmodules/whatsapp/WhatsApp-Business-API-Integration.jpg",
             },
             {
-              icon: <Image className="text-green-700" size={26} aria-hidden="true" alt="" />,
+              icon: <ImageIcon className="text-green-700" size={26} aria-hidden="true" />,
               title: "Multimedia Messaging",
               desc: "Send not only text but also images, videos, PDFs, and voice messages for richer, more engaging communication.",
               image:
@@ -93,7 +93,7 @@ const Whatsapp = () => {
               icon: <CheckCircle className="text-green-700" size={26} />,
               title: "Read Receipts",
               desc: "Track message delivery and read status for better monitoring and accountability.",
-              image:"/erpmodules/whatsapp/read_recept.png",
+              image: "/erpmodules/whatsapp/read_recept.png",
             },
             {
               icon: <ShieldCheck className="text-green-700" size={26} />,

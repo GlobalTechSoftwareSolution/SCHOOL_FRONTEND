@@ -5,7 +5,7 @@ import { Dialog } from '@headlessui/react';
 import { Eye, EyeOff, User, Lock, Mail, School, Sparkles, BookOpen, GraduationCap } from 'lucide-react';
 
 function LoginPageContent() {
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
@@ -18,14 +18,14 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl');
-  
+
   // Helper: show dialog
   const showDialog = (title: string, message: string) => {
     setDialog({ open: true, title, message });
   };
-  
+
   // Helper function to handle redirects
-  const handleRedirect = useCallback(() => {    
+  const handleRedirect = useCallback(() => {
     // Redirect based on verified role or callback URL
     if (callbackUrl && callbackUrl.startsWith('/')) {
       router.push(callbackUrl);
@@ -42,10 +42,10 @@ function LoginPageContent() {
         console.error('Error parsing user info:', e);
         // Fallback to role state
         userRole = role.toLowerCase();
-      }      
+      }
       const redirectPaths: Record<string, string> = {
         'admin': '/admin',
-        'teacher': '/teachers', 
+        'teacher': '/teachers',
         'student': '/students',
         'management': '/management',
         'principal': '/principal',
@@ -61,27 +61,27 @@ function LoginPageContent() {
 
   useEffect(() => {
     isComponentMounted.current = true;
-    
+
     // Check if user is already logged in
     const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
     if (token && isComponentMounted.current) {
-      handleRedirect(token);
+      handleRedirect();
     }
-    
+
     // Set isMounted state for rendering
     setTimeout(() => {
       if (isComponentMounted.current) {
         setIsMounted(true);
       }
     }, 0);
-    
+
     // Cleanup function
     return () => {
       isComponentMounted.current = false;
     };
   }, [handleRedirect]);
   // Helper function to handle successful login
-  const handleSuccessfulLogin = async (userData: {email?: string, role?: string, is_active?: boolean, is_approved?: boolean, name?: string, fullname?: string, first_name?: string}) => {    
+  const handleSuccessfulLogin = async (userData: { email?: string, role?: string, is_active?: boolean, is_approved?: boolean, name?: string, fullname?: string, first_name?: string }) => {
     // Validate that user has the expected role or is approved
     if (!userData.role) {
       userData.role = role;
@@ -128,7 +128,7 @@ function LoginPageContent() {
 
     const redirectPaths: Record<string, string> = {
       'admin': '/admin',
-      'teacher': '/teachers', 
+      'teacher': '/teachers',
       'student': '/students',
       'management': '/management',
       'principal': '/principal',
@@ -141,7 +141,7 @@ function LoginPageContent() {
     router.push(redirectPath);
   };
   const login = async () => {
-    
+
     if (!email || !password) {
       showDialog("Invalid Input", "Please fill in all fields");
       return;
@@ -155,11 +155,11 @@ function LoginPageContent() {
 
       const tokenRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/token/`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          email, 
+        body: JSON.stringify({
+          email,
           password,
           role: formattedRole  // Capitalize role for backend compatibility
         })
@@ -238,7 +238,7 @@ function LoginPageContent() {
         <div className="absolute -top-40 -right-32 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
         <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
         <div className="absolute top-40 left-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-        
+
         {/* Floating Icons */}
         <div className="absolute top-1/4 left-1/6 animate-float">
           <BookOpen className="text-gray-900 w-8 h-8" />
@@ -292,7 +292,7 @@ function LoginPageContent() {
             {/* Decorative Elements */}
             <div className="absolute -top-3 -right-3 w-6 h-6 bg-purple-800 rounded-full"></div>
             <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-blue-800 rounded-full"></div>
-            
+
             <h2 className="text-2xl lg:text-3xl font-bold text-center text-gray-900 mb-2">
               Welcome Back!
             </h2>
@@ -365,11 +365,10 @@ function LoginPageContent() {
                 <button
                   onClick={login}
                   disabled={loading}
-                  className={`flex-1 py-4 rounded-2xl text-white font-semibold transition-all duration-300 transform hover:scale-105 ${
-                    loading 
-                      ? 'bg-gray-500 cursor-not-allowed' 
+                  className={`flex-1 py-4 rounded-2xl text-white font-semibold transition-all duration-300 transform hover:scale-105 ${loading
+                      ? 'bg-gray-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-purple-800 to-blue-800 hover:from-purple-900 hover:to-blue-900 shadow-lg hover:shadow-xl'
-                  }`}
+                    }`}
                 >
                   {loading ? (
                     <div className="flex items-center justify-center space-x-2">

@@ -119,7 +119,7 @@ const ParentDashboard = () => {
     const fetchParentData = async () => {
       try {
         setLoading(true);
-        
+
         const [studentsRes, attendanceRes, gradesRes, leavesRes, classesRes] = await Promise.all([
           axios.get(`${API_BASE}/students/`),
           axios.get(`${API_BASE}/student_attendance/`),
@@ -138,13 +138,13 @@ const ParentDashboard = () => {
           const classDetail = classesRes.data.find(
             (c: Record<string, unknown>) => c.id === student.class_id
           );
-          
+
           return {
             ...student,
-            class_name: classDetail?.class_name ,
+            class_name: classDetail?.class_name,
             section: classDetail?.sec,
-            class_teacher: classDetail?.class_teacher_name ,
-            teacher_email: classDetail?.teacher_email 
+            class_teacher: classDetail?.class_teacher_name,
+            teacher_email: classDetail?.teacher_email
           };
         });
 
@@ -190,10 +190,10 @@ const ParentDashboard = () => {
           const student = enrichedStudents.find((s: Record<string, unknown>) => s.email === grade.student);
           return {
             ...grade,
-            fullname: student?.fullname ,
-            email: student?.email ,
-            section: student?.sec ,
-            class_name: student?.class_name 
+            fullname: student?.fullname,
+            email: student?.email,
+            section: student?.sec,
+            class_name: student?.class_name
           };
         });
 
@@ -209,10 +209,10 @@ const ParentDashboard = () => {
           const student = enrichedStudents.find((s: Record<string, unknown>) => s.email === leave.applicant_email);
           return {
             ...leave,
-            fullname: student?.fullname ,
-            email: student?.email ,
-            section: student?.sec ,
-            class_name: student?.class_name 
+            fullname: student?.fullname,
+            email: student?.email,
+            section: student?.sec,
+            class_name: student?.class_name
           };
         });
 
@@ -245,11 +245,11 @@ const ParentDashboard = () => {
     const studentAttendance = attendanceData.filter(item => item.email === studentEmail);
     const studentGrades = grades.filter(item => item.student === studentEmail);
     const studentLeaves = leaves.filter(item => item.applicant_email === studentEmail);
-    
+
     const present = studentAttendance.filter(item => item.status === "Present").length;
     const totalAttendance = studentAttendance.length;
-    
-    const avgGrade = studentGrades.length > 0 
+
+    const avgGrade = studentGrades.length > 0
       ? studentGrades.reduce((sum, grade) => sum + (grade.percentage || 0), 0) / studentGrades.length
       : 0;
 
@@ -274,7 +274,7 @@ const ParentDashboard = () => {
       totalGrades,
       totalLeaves,
       attendancePercentage: attendanceStats.percentage,
-      avgGrade: grades.length > 0 
+      avgGrade: grades.length > 0
         ? Math.round(grades.reduce((sum, grade) => sum + (grade.percentage || 0), 0) / grades.length)
         : 0
     };
@@ -285,7 +285,7 @@ const ParentDashboard = () => {
     const matchesStudent = selectedStudent === "all" || item.email === selectedStudent;
     const matchesDate = !dateFilter || item.date === dateFilter;
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-    const matchesSearch = 
+    const matchesSearch =
       (item.fullname || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.class_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.remarks || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -430,11 +430,10 @@ const ParentDashboard = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 min-w-[100px] py-2 xs:py-2.5 px-2 xs:px-3 rounded-md text-xs xs:text-sm font-medium transition-colors whitespace-nowrap flex items-center justify-center gap-1 xs:gap-2 ${
-                  activeTab === tab.id
+                className={`flex-1 min-w-[100px] py-2 xs:py-2.5 px-2 xs:px-3 rounded-md text-xs xs:text-sm font-medium transition-colors whitespace-nowrap flex items-center justify-center gap-1 xs:gap-2 ${activeTab === tab.id
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
-                }`}
+                  }`}
               >
                 <tab.icon className="h-3 w-3 xs:h-4 xs:w-4" />
                 <span className="hidden xs:inline">{tab.label}</span>
@@ -519,19 +518,17 @@ const ParentDashboard = () => {
                   const studentStat = getStudentStats(student.email);
                   const isSelected = selectedStudent === student.email;
                   return (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       onClick={() => setSelectedStudent(student.email)}
-                      className={`border rounded-lg xs:rounded-xl p-4 xs:p-5 transition-all cursor-pointer group hover:shadow-lg ${
-                        isSelected
+                      className={`border rounded-lg xs:rounded-xl p-4 xs:p-5 transition-all cursor-pointer group hover:shadow-lg ${isSelected
                           ? "border-blue-500 bg-blue-50/50 shadow-md"
                           : "border-gray-200/60 hover:border-blue-300 bg-white"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3 xs:gap-4 mb-3 xs:mb-4">
-                        <div className={`w-10 h-10 xs:w-12 xs:h-12 rounded-full flex items-center justify-center overflow-hidden border-2 ${
-                          isSelected ? "border-blue-500" : "border-gray-200 group-hover:border-blue-300"
-                        }`}>
+                        <div className={`w-10 h-10 xs:w-12 xs:h-12 rounded-full flex items-center justify-center overflow-hidden border-2 ${isSelected ? "border-blue-500" : "border-gray-200 group-hover:border-blue-300"
+                          }`}>
                           {student.profile_picture ? (
                             <Image
                               src={student.profile_picture}
@@ -541,9 +538,8 @@ const ParentDashboard = () => {
                               className="w-10 h-10 xs:w-12 xs:h-12 rounded-full object-cover"
                             />
                           ) : (
-                            <div className={`w-full h-full rounded-full flex items-center justify-center ${
-                              isSelected ? "bg-blue-100" : "bg-gray-100 group-hover:bg-blue-50"
-                            }`}>
+                            <div className={`w-full h-full rounded-full flex items-center justify-center ${isSelected ? "bg-blue-100" : "bg-gray-100 group-hover:bg-blue-50"
+                              }`}>
                               <Users className="h-5 w-5 xs:h-6 xs:w-6 text-blue-600" />
                             </div>
                           )}
@@ -554,7 +550,7 @@ const ParentDashboard = () => {
                           <p className="text-xs text-gray-500 mt-1">ID: {student.student_id}</p>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-3 gap-2 xs:gap-3 text-center">
                         <div className="bg-blue-50/50 rounded-lg xs:rounded-xl p-2 group-hover:bg-blue-100/50 transition-colors">
                           <p className="text-base xs:text-lg font-bold text-blue-600">{studentStat.percentage}%</p>
@@ -656,7 +652,7 @@ const ParentDashboard = () => {
                 </div>
                 <h3 className="text-lg xs:text-xl font-semibold text-gray-900 mb-1 xs:mb-2">No attendance records found</h3>
                 <p className="text-gray-600 max-w-md mx-auto text-sm xs:text-base px-4">
-                  {attendanceData.length === 0 
+                  {attendanceData.length === 0
                     ? "No attendance records available for your children."
                     : "Try adjusting your filters to find what you're looking for."
                   }
@@ -677,7 +673,7 @@ const ParentDashboard = () => {
                           {record.profile_picture ? (
                             <Image
                               src={record.profile_picture}
-                              alt={record.fullname}
+                              alt={record.fullname || "Student"}
                               width={40}
                               height={40}
                               className="w-8 h-8 xs:w-10 xs:h-10 rounded-full object-cover"
@@ -691,11 +687,10 @@ const ParentDashboard = () => {
                             {record.fullname}
                           </h3>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${
-                              record.status === "Present"
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${record.status === "Present"
                                 ? "bg-green-50 text-green-700 border-green-200"
                                 : "bg-red-50 text-red-700 border-red-200"
-                            }`}>
+                              }`}>
                               {record.status}
                             </span>
                             <span className="text-xs text-gray-500">
@@ -711,8 +706,8 @@ const ParentDashboard = () => {
                         }}
                         className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300 flex-shrink-0"
                       >
-                        {expandedRecord === index ? 
-                          <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> : 
+                        {expandedRecord === index ?
+                          <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> :
                           <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-blue-600" />
                         }
                       </button>
@@ -726,14 +721,14 @@ const ParentDashboard = () => {
                           Date:
                         </span>
                         <span className="font-semibold text-gray-900">
-                          {new Date(record.date).toLocaleDateString('en-US', { 
-                            month: 'short', 
+                          {new Date(record.date).toLocaleDateString('en-US', {
+                            month: 'short',
                             day: 'numeric',
                             year: 'numeric'
                           })}
                         </span>
                       </div>
-                      
+
                       {record.remarks && (
                         <div className="text-xs xs:text-sm">
                           <span className="text-gray-600 font-medium">Remarks:</span>
@@ -768,7 +763,7 @@ const ParentDashboard = () => {
                               </div>
                             </div>
                           </div>
-                          
+
                           {record.remarks && (
                             <div>
                               <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
@@ -837,15 +832,14 @@ const ParentDashboard = () => {
                           <p className="text-xs xs:text-sm text-gray-600 truncate">{grade.fullname}</p>
                         </div>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
-                        grade.percentage >= 80 ? "bg-green-50 text-green-700 border-green-200" :
-                        grade.percentage >= 60 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                        "bg-red-50 text-red-700 border-red-200"
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${grade.percentage >= 80 ? "bg-green-50 text-green-700 border-green-200" :
+                          grade.percentage >= 60 ? "bg-blue-50 text-blue-700 border-blue-200" :
+                            "bg-red-50 text-red-700 border-red-200"
+                        }`}>
                         {grade.percentage}%
                       </span>
                     </div>
-                    
+
                     <div className="space-y-2 xs:space-y-3 text-xs xs:text-sm">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600">Exam Type:</span>
@@ -913,15 +907,14 @@ const ParentDashboard = () => {
                           <h3 className="font-bold text-gray-900 text-sm xs:text-base group-hover:text-orange-900 transition-colors line-clamp-1">
                             {leave.fullname}
                           </h3>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
-                            leave.status === "Approved" ? "bg-green-50 text-green-700 border-green-200" :
-                            leave.status === "Pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                            "bg-red-50 text-red-700 border-red-200"
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${leave.status === "Approved" ? "bg-green-50 text-green-700 border-green-200" :
+                              leave.status === "Pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                                "bg-red-50 text-red-700 border-red-200"
+                            }`}>
                             {leave.status}
                           </span>
                         </div>
-                        
+
                         <div className="space-y-2 text-xs xs:text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Leave Type:</span>
@@ -950,8 +943,8 @@ const ParentDashboard = () => {
                         }}
                         className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300 flex-shrink-0 ml-2"
                       >
-                        {expandedRecord === index ? 
-                          <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> : 
+                        {expandedRecord === index ?
+                          <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> :
                           <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-orange-600" />
                         }
                       </button>

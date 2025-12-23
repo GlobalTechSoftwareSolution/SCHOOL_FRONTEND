@@ -423,9 +423,9 @@ const PrincipalDashboard = () => {
                               </p>
                             </div>
                             <div className={`p-2 rounded-lg ${event.type === 'Cultural' ? 'bg-purple-100 text-purple-600' :
-                                event.type === 'Sports' ? 'bg-green-100 text-green-600' :
-                                  event.type === 'Academic' ? 'bg-blue-100 text-blue-600' :
-                                    'bg-gray-100 text-gray-600'
+                              event.type === 'Sports' ? 'bg-green-100 text-green-600' :
+                                event.type === 'Academic' ? 'bg-blue-100 text-blue-600' :
+                                  'bg-gray-100 text-gray-600'
                               }`}>
                               {event.type?.charAt(0) || 'G'}
                             </div>
@@ -466,7 +466,7 @@ const PrincipalDashboard = () => {
                 {(() => {
                   const today = new Date();
                   const todayRecords = attendanceData.filter((record) => {
-                    const recordDate = new Date(record.date);
+                    const recordDate = new Date(record.date || '');
                     return (
                       recordDate.getFullYear() === today.getFullYear() &&
                       recordDate.getMonth() === today.getMonth() &&

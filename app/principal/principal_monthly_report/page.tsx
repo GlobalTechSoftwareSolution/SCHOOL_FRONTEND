@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import axios from "axios";
 import Image from "next/image";
@@ -19,7 +19,8 @@ interface Teacher {
   department_name?: string;
   subject_list?: Subject[];
   fullname?: string;
-  [key: string]: string | number | boolean | string[] | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 interface Student {
@@ -32,7 +33,8 @@ interface Student {
   section?: string;
   roll_number?: string;
   class_id?: number;
-  [key: string]: string | number | boolean | string[] | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 interface Subject {
@@ -54,7 +56,7 @@ interface Class {
 interface AttendanceRecord {
   id: number;
   date: string;
-  status: 'present' | 'absent' | 'leave' | 'Present';
+  status: 'present' | 'absent' | 'leave' | 'Present' | 'Absent' | 'Late' | 'late';
   email?: string;
   teacher_email?: string;
   staff_email?: string;
@@ -73,7 +75,7 @@ interface LeaveRecord {
   start_date: string;
   end_date: string;
   reason: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'Pending' | 'Approved' | 'Rejected' | 'rejected';
   leave_type?: string;
   email?: string;
   applicant_email?: string;
@@ -157,9 +159,9 @@ const PrincipalMonthlyReport = () => {
   const [assigningClass, setAssigningClass] = useState(false);
   const [assignmentSuccess, setAssignmentSuccess] = useState<string>("");
 
-  const [studentExtra, setStudentExtra] = useState<{ 
-    leaves: LeaveRecord[]; 
-    grades: GradeRecord[]; 
+  const [studentExtra, setStudentExtra] = useState<{
+    leaves: LeaveRecord[];
+    grades: GradeRecord[];
     attendance: AttendanceRecord[];
     notices: Notice[];
   }>({
@@ -182,7 +184,7 @@ const PrincipalMonthlyReport = () => {
   });
   const [teacherExtra, setTeacherExtra] = useState<{
     leaves: LeaveRecord[];
-    classes: Class[];
+    classes: TimetableEntry[];
     reports: Report[];
     subjects: Subject[];
     attendance: AttendanceRecord[];
@@ -209,10 +211,10 @@ const PrincipalMonthlyReport = () => {
   // Function to get category from teacher ID
   const getTeacherCategory = (teacherId: string): string => {
     if (!teacherId) return "Unknown";
-    
+
     const firstChar = teacherId.charAt(0).toUpperCase();
-    
-    switch(firstChar) {
+
+    switch (firstChar) {
       case 'N': return "Nursery";
       case 'P': return "Higher Primary";
       case 'S': return "School";
@@ -225,10 +227,10 @@ const PrincipalMonthlyReport = () => {
   // Function to get category for filtering
   const getCategoryForFilter = (teacherId: string): string => {
     if (!teacherId) return "other";
-    
+
     const firstChar = teacherId.charAt(0).toUpperCase();
-    
-    switch(firstChar) {
+
+    switch (firstChar) {
       case 'N': return "nursery";
       case 'P': return "primary";
       case 'S': return "school";
@@ -265,33 +267,33 @@ const PrincipalMonthlyReport = () => {
 
   // Teachers filtered by category and department
   const filteredTeachersByCategoryAndDepartment = teachers.filter((teacher: Teacher) => {
-    const category = getCategoryForFilter(teacher.teacher_id);
+    const category = getCategoryForFilter(teacher.teacher_id || "");
     const matchesCategory = categoryFilter === "all" || category === categoryFilter;
     const matchesDepartment = departmentFilter === "all" || teacher.department_name === departmentFilter;
-    
+
     return matchesCategory && matchesDepartment;
   });
 
   // ✅ Updated handleSubjectClick with debugging
   const handleSubjectClick = (subject: Subject) => {
     setSelectedSubject(subject);
-    
+
     // Filter timetable for this specific subject - check multiple possible field names
     const subjectTimetable = teacherExtra.classes.filter((entry: TimetableEntry) => {
       const possibleFields = [
         entry.subject_id,
-        entry.subjectId, 
+        entry.subjectId,
         entry.subject,
         entry.subject_name,
         entry.subject_code,
         entry.subject_name_id
       ];
-      
+
       return possibleFields.some(field => field === subject.id) ||
-            possibleFields.some(field => field === subject.subject_name) ||
-            possibleFields.some(field => field === subject.subject_code);
+        possibleFields.some(field => field === subject.subject_name) ||
+        possibleFields.some(field => field === subject.subject_code);
     });
-    
+
     setFilteredTimetable(subjectTimetable);
   };
 
@@ -317,15 +319,15 @@ const PrincipalMonthlyReport = () => {
   const calculateStudentStats = (extra: { leaves: LeaveRecord[]; grades: GradeRecord[] }) => {
     const totalLeaves = extra.leaves.length;
     const totalGrades = extra.grades.length;
-    
+
     // Calculate attendance percentage (assuming 30 days in month, subtract leaves)
     const attendancePercentage = Math.max(0, Math.round(((30 - totalLeaves) / 30) * 100));
-    
+
     // Calculate average grade
-    const averageGrade = totalGrades > 0 
+    const averageGrade = totalGrades > 0
       ? (extra.grades.reduce((sum: number, grade: GradeRecord) => sum + (parseFloat(grade.grade || '0') || 0), 0) / totalGrades).toFixed(1)
       : '0';
-    
+
     return {
       attendancePercentage,
       totalGrades,
@@ -335,18 +337,18 @@ const PrincipalMonthlyReport = () => {
   };
 
   // Calculate teacher statistics
-  const calculateTeacherStats = (extra: { leaves: LeaveRecord[]; classes: Class[]; subjects: Subject[]; attendance: AttendanceRecord[] }) => {
+  const calculateTeacherStats = (extra: { leaves: LeaveRecord[]; classes: TimetableEntry[]; subjects: Subject[]; attendance: AttendanceRecord[] }) => {
     const totalLeaves = extra.leaves.length;
     const totalClasses = extra.classes.length;
     const totalSubjects = extra.subjects.length;
-    
+
     // Calculate attendance from actual attendance data
     const presentDays = extra.attendance.filter((a: AttendanceRecord) => a.status === "Present").length;
     const totalAttendanceDays = extra.attendance.length;
-    const attendancePercentage = totalAttendanceDays > 0 
+    const attendancePercentage = totalAttendanceDays > 0
       ? Math.round((presentDays / totalAttendanceDays) * 100)
       : Math.max(0, Math.round(((30 - totalLeaves) / 30) * 100)); // fallback to leave-based calculation
-    
+
     return {
       attendancePercentage,
       totalClasses,
@@ -394,7 +396,7 @@ const PrincipalMonthlyReport = () => {
       console.log("📚 Fetching all classes for assignment...");
       const response = await axios.get(`${API_BASE}/classes/`);
       const classesData = response.data || [];
-      
+
       console.log("✅ Available classes:", classesData);
       setAvailableClasses(classesData);
     } catch (err: unknown) {
@@ -420,8 +422,8 @@ const PrincipalMonthlyReport = () => {
       });
 
       // Find the class info
-      const selectedClass = availableClasses.find(cls => cls.id === classId);
-      
+      const selectedClass = availableClasses.find(cls => Number(cls.id) === Number(classId));
+
       if (!selectedClass) {
         setError("Class not found");
         setAssigningClass(false);
@@ -456,21 +458,22 @@ const PrincipalMonthlyReport = () => {
 
       // Refresh classes data
       await fetchAvailableClasses();
-      
+
       // Close modal after 2 seconds
       setTimeout(() => {
         setShowAssignClassModal(false);
         setAssignmentSuccess("");
       }, 2000);
 
-    } catch (err: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
       console.error("❌ Error assigning class teacher:", err);
       console.error("❌ Error details:", err instanceof Error ? err.message : String(err));
-      
+
       setError(
-        err.response?.data?.message || 
-        err.response?.data?.error || 
-        err.message || 
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
         "Failed to assign class teacher. Please try again."
       );
     } finally {
@@ -481,12 +484,12 @@ const PrincipalMonthlyReport = () => {
   // Open assign class modal
   const openAssignClassModal = async () => {
     if (!selectedTeacher) return;
-    
+
     setShowAssignClassModal(true);
     setSelectedClassForAssignment(null);
     setAssignmentSuccess("");
     setError("");
-    
+
     // Fetch available classes
     await fetchAvailableClasses();
   };
@@ -518,12 +521,12 @@ const PrincipalMonthlyReport = () => {
         try {
           const response = await axios.get(endpoint);
           const data = response.data || [];
-          
+
           if (Array.isArray(data) && data.length > 0) {
             allTimetableEntries = data;
             break;
           }
-        } catch (_err: unknown) {
+        } catch {
           // Endpoint failed, continue to next
         }
       }
@@ -533,11 +536,11 @@ const PrincipalMonthlyReport = () => {
         try {
           const allResponse = await axios.get(`${API_BASE}/timetable/`);
           const allData = allResponse.data || [];
-          
+
           if (Array.isArray(allData)) {
             // Filter by teacher email or teacher ID
-            allTimetableEntries = allData.filter((entry: TimetableEntry) => 
-              entry.teacher_email === teacher.email || 
+            allTimetableEntries = allData.filter((entry: TimetableEntry) =>
+              entry.teacher_email === teacher.email ||
               entry.teacher_id === teacher.teacher_id ||
               entry.teacher === teacher.teacher_id
             );
@@ -555,28 +558,26 @@ const PrincipalMonthlyReport = () => {
         classes = allTimetableEntries.filter((entry: TimetableEntry) => {
           const possibleFields = [
             entry.subject_id,
-            entry.subjectId, 
+            entry.subjectId,
             entry.subject,
             entry.subject_name_id
           ];
-          
-          const matches = possibleFields.some(field => 
-            teacherSubjectIds.includes(field || 0)
+
+          const matches = possibleFields.some(field =>
+            teacherSubjectIds.includes(Number(field) || 0)
           );
-          
+
           return matches;
         });
       }
-
-
 
       // 🔥 FIXED: Fetch leaves for the specific teacher
       let leaves: LeaveRecord[] = [];
       try {
 
-        
+
         const [leaveYear, leaveMonthNum] = leaveMonth.split("-");
-        
+
         // Try multiple leaves endpoints
         const leaveEndpoints = [
           `${API_BASE}/leaves/?email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
@@ -584,62 +585,62 @@ const PrincipalMonthlyReport = () => {
           `${API_BASE}/leaves/?teacher_email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
           `${API_BASE}/leaves/?staff_email=${teacher.email}&year=${leaveYear}&month=${leaveMonthNum}`,
         ];
-        
+
         for (const endpoint of leaveEndpoints) {
           try {
             const leavesResponse = await axios.get(endpoint);
             const data = leavesResponse.data || [];
-            
+
             if (Array.isArray(data) && data.length > 0) {
               // Filter to ensure we only get this teacher's leaves
               const filteredLeaves = data.filter((leave: LeaveRecord) => {
-                const matchesEmail = 
+                const matchesEmail =
                   leave.email === teacher.email ||
                   leave.applicant_email === teacher.email ||
                   leave.teacher_email === teacher.email ||
                   leave.staff_email === teacher.email;
-                
+
                 return matchesEmail;
               });
-              
+
               if (filteredLeaves.length > 0) {
                 leaves = filteredLeaves;
                 break;
               }
             }
-          } catch (_err: unknown) { // Line 609 - unused err
+          } catch { // Line 609 - unused err
             // Endpoint failed, continue to next
           }
         }
-        
+
         // If still no leaves, try to fetch all leaves and filter client-side
         if (leaves.length === 0) {
           try {
             const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
             const allLeaves = allLeavesResponse.data || [];
-            
+
             // Filter by teacher email
             leaves = allLeaves.filter((leave: LeaveRecord) => {
-              const matchesEmail = 
+              const matchesEmail =
                 leave.email === teacher.email ||
                 leave.applicant_email === teacher.email ||
                 leave.teacher_email === teacher.email ||
                 leave.staff_email === teacher.email;
-              
+
               // Also filter by month if available
               if (matchesEmail && leave.start_date) {
                 const leaveDate = new Date(leave.start_date);
                 const leaveYearMonth = `${leaveDate.getFullYear()}-${String(leaveDate.getMonth() + 1).padStart(2, '0')}`;
                 return leaveYearMonth === leaveMonth;
               }
-              
+
               return matchesEmail;
             });
-          } catch (_err: unknown) { // Line 637 - unused err
+          } catch { // Line 637 - unused err
             // Failed to fetch all leaves
           }
         }
-        
+
 
       } catch (_err) {
         console.log("❌ Failed to fetch leaves:", _err);
@@ -649,9 +650,9 @@ const PrincipalMonthlyReport = () => {
       let attendance: AttendanceRecord[] = [];
       try {
 
-        
+
         const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
-        
+
         // Try multiple attendance endpoints for teachers
         const attendanceEndpoints = [
           `${API_BASE}/attendance/?email=${teacher.email}&year=${attendanceYear}&month=${attendanceMonthNum}`,
@@ -664,64 +665,64 @@ const PrincipalMonthlyReport = () => {
           try {
             const attendanceResponse = await axios.get(endpoint);
             const data = attendanceResponse.data || [];
-            
+
             if (Array.isArray(data) && data.length > 0) {
               // Filter to ensure we only get this teacher's attendance
               const filteredAttendance = data.filter((record: AttendanceRecord) => {
-                const matchesEmail = 
+                const matchesEmail =
                   record.email === teacher.email ||
                   record.teacher_email === teacher.email ||
                   record.staff_email === teacher.email ||
                   record.user_email === teacher.email;
-                
+
                 // Also check role if available
                 const role = (record.role || record.user_type || '').toString().toLowerCase();
                 const isTeacherRole = !role || role.includes('teacher') || role.includes('staff');
-                
+
                 return matchesEmail && isTeacherRole;
               });
-              
+
               if (filteredAttendance.length > 0) {
                 attendance = filteredAttendance;
                 break;
               }
             }
-          } catch (_err: unknown) { // Line 688 - unused err
+          } catch { // Line 688 - unused err
             // Endpoint failed, continue to next
           }
         }
-        
+
         // If still no attendance, try to fetch all attendance and filter client-side
         if (attendance.length === 0) {
           try {
             const allAttendanceResponse = await axios.get(`${API_BASE}/attendance/`);
             const allAttendance = allAttendanceResponse.data || [];
-            
+
             // Filter by teacher email and month
             attendance = allAttendance.filter((record: AttendanceRecord) => {
-              const matchesEmail = 
+              const matchesEmail =
                 record.email === teacher.email ||
                 record.teacher_email === teacher.email ||
                 record.staff_email === teacher.email;
-              
-              const isTeacherRole = !record.role || 
+
+              const isTeacherRole = !record.role ||
                 record.role.toString().toLowerCase().includes('teacher') ||
                 record.role.toString().toLowerCase().includes('staff');
-              
+
               // Filter by month if date is available
               if (matchesEmail && isTeacherRole && record.date) {
                 const recordDate = new Date(record.date);
                 const recordYearMonth = `${recordDate.getFullYear()}-${String(recordDate.getMonth() + 1).padStart(2, '0')}`;
                 return recordYearMonth === attendanceMonth;
               }
-              
+
               return matchesEmail && isTeacherRole;
             });
-          } catch (_err: unknown) {
+          } catch {
             // Failed to fetch all attendance
           }
         }
-        
+
 
       } catch (err) {
         console.log("❌ Failed to fetch attendance:", err);
@@ -757,13 +758,13 @@ const PrincipalMonthlyReport = () => {
           } else {
             // Fallback subject object from timetable entry
             derivedSubjects.push({
-              id: subjectId,
+              id: Number(subjectId),
               subject_name: entry.subject_name || String(subjectId),
               subject_code: entry.subject_code || '',
             });
           }
         });
-      } catch (_err) { // Line 765 - unused err
+      } catch { // Line 765 - unused err
         derivedSubjects = [];
       }
 
@@ -777,7 +778,7 @@ const PrincipalMonthlyReport = () => {
         reports: [],
         attendance: attendance,
       });
-    } catch (_err) {
+    } catch {
       setTeacherExtra({
         leaves: [],
         subjects: teacher.subject_list || [],
@@ -793,7 +794,7 @@ const PrincipalMonthlyReport = () => {
   // 🔥 FIXED: Refresh attendance data when month/year changes
   const refreshAttendanceData = useCallback(async () => {
     if (!selectedTeacher) return;
-    
+
     try {
       const [attendanceYear, attendanceMonthNum] = attendanceMonth.split("-");
       let attendance: AttendanceRecord[] = [];
@@ -809,31 +810,31 @@ const PrincipalMonthlyReport = () => {
         try {
           const response = await axios.get(endpoint);
           const data = response.data || [];
-          
+
           if (Array.isArray(data) && data.length > 0) {
             // Filter by teacher email
             const filteredAttendance = data.filter((record: AttendanceRecord) => {
-              const matchesEmail = 
+              const matchesEmail =
                 record.email === selectedTeacher.email ||
                 record.teacher_email === selectedTeacher.email ||
                 record.staff_email === selectedTeacher.email;
-              
+
               return matchesEmail;
             });
-            
+
             if (filteredAttendance.length > 0) {
               attendance = filteredAttendance;
               break;
             }
           }
-        } catch (err) {
+        } catch {
           // Endpoint failed, continue to next
         }
       }
 
       // Update teacher extra data
       setTeacherExtra(prev => ({ ...prev, attendance }));
-    } catch (_err) { // Line 835 - unused err
+    } catch { // Line 835 - unused err
       // Error refreshing attendance
     }
   }, [selectedTeacher, attendanceMonth]);
@@ -841,7 +842,7 @@ const PrincipalMonthlyReport = () => {
   // 🔥 FIXED: Refresh leaves data when month/year changes
   const refreshLeavesData = useCallback(async () => {
     if (!selectedTeacher) return;
-    
+
     try {
       const [leaveYear, leaveMonthNum] = leaveMonth.split("-");
       let leaves: LeaveRecord[] = [];
@@ -857,38 +858,38 @@ const PrincipalMonthlyReport = () => {
         try {
           const response = await axios.get(endpoint);
           const data = response.data || [];
-          
+
           if (Array.isArray(data) && data.length > 0) {
             // Filter by teacher email
             const filteredLeaves = data.filter((leave: LeaveRecord) => {
-              const matchesEmail = 
+              const matchesEmail =
                 leave.email === selectedTeacher.email ||
                 leave.applicant_email === selectedTeacher.email ||
                 leave.teacher_email === selectedTeacher.email;
-              
+
               return matchesEmail;
             });
-            
+
             if (filteredLeaves.length > 0) {
               leaves = filteredLeaves;
               break;
             }
           }
-        } catch (err) {
+        } catch {
           // Endpoint failed, continue to next
         }
       }
 
       // Update teacher extra data
       setTeacherExtra(prev => ({ ...prev, leaves }));
-    } catch (_err) { // Line 883 - unused err
+    } catch { // Line 883 - unused err
       // Error refreshing leaves
     }
-  };
+  }, [selectedTeacher, leaveMonth]);
 
   // Refresh data when month/year changes
   useEffect(() => {
-    if (selectedTeacher) {  
+    if (selectedTeacher) {
       refreshAttendanceData();
     }
   }, [attendanceMonth, refreshAttendanceData, selectedTeacher]);
@@ -899,24 +900,9 @@ const PrincipalMonthlyReport = () => {
     }
   }, [leaveMonth, refreshLeavesData, selectedTeacher]);
 
-  // Refresh student attendance data when month changes
-  useEffect(() => {
-    if (selectedStudent) {
-      refreshStudentAttendanceData();
-    }
-  }, [studentAttendanceMonth, refreshStudentAttendanceData, selectedStudent]);
-
-  // Refresh student leaves data when month changes
-  useEffect(() => {
-    if (selectedStudent) {
-      refreshStudentLeavesData();
-    }
-  }, [studentLeaveMonth, refreshStudentLeavesData, selectedStudent]);
-
   const refreshStudentAttendanceData = useCallback(async () => {
     if (!selectedStudent) return;
-    
-    const [year, month] = studentAttendanceMonth.split("-");
+
     let attendance: AttendanceRecord[] = [];
 
     try {
@@ -952,16 +938,15 @@ const PrincipalMonthlyReport = () => {
         ...prev,
         attendance: attendance,
       }));
-      
-    } catch (_err) {
+
+    } catch {
       // Error refreshing student attendance
     }
   }, [selectedStudent, studentAttendanceMonth]);
 
-  // 🔥 FIXED: Refresh student leaves data when month changes
   const refreshStudentLeavesData = useCallback(async () => {
     if (!selectedStudent) return;
-    
+
     const [year, month] = studentLeaveMonth.split("-");
     let leaves: LeaveRecord[] = [];
 
@@ -970,24 +955,24 @@ const PrincipalMonthlyReport = () => {
       try {
         const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}&year=${year}&month=${month}`);
         const rawLeaves = leavesResponse.data || [];
-        
+
         // Filter client-side
-        leaves = rawLeaves.filter((leave: LeaveRecord) => 
+        leaves = rawLeaves.filter((leave: LeaveRecord) =>
           leave.applicant_email === selectedStudent.email ||
           leave.email === selectedStudent.email ||
           leave.student_email === selectedStudent.email
         );
-      } catch (_err: unknown) {
+      } catch {
         try {
           const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${selectedStudent.email}`);
           const rawLeaves = leavesResponse.data || [];
-          
-          leaves = rawLeaves.filter((leave: LeaveRecord) => 
+
+          leaves = rawLeaves.filter((leave: LeaveRecord) =>
             leave.applicant_email === selectedStudent.email ||
             leave.email === selectedStudent.email ||
             leave.student_email === selectedStudent.email
           );
-        } catch (_err2: unknown) {
+        } catch {
           // All leaves endpoints failed
         }
       }
@@ -997,11 +982,27 @@ const PrincipalMonthlyReport = () => {
         ...prev,
         leaves: leaves,
       }));
-      
-    } catch (_err) {
+
+    } catch {
       // Error refreshing student leaves
     }
-  });
+  }, [selectedStudent, studentLeaveMonth]);
+
+
+  // Refresh student attendance data when month changes
+  useEffect(() => {
+    if (selectedStudent) {
+      refreshStudentAttendanceData();
+    }
+  }, [studentAttendanceMonth, refreshStudentAttendanceData, selectedStudent]);
+
+  // Refresh student leaves data when month changes
+  useEffect(() => {
+    if (selectedStudent) {
+      refreshStudentLeavesData();
+    }
+  }, [studentLeaveMonth, refreshStudentLeavesData, selectedStudent]);
+
 
   // Helper: resolve class info for a student using class_id and allClasses
   const getClassInfoForStudent = (student: Student) => {
@@ -1021,13 +1022,13 @@ const PrincipalMonthlyReport = () => {
   const studentUniqueSectionsForClass = studentClassFilter === "all"
     ? []
     : Array.from(
-        new Set(
-          allClasses
-            .filter((cls: Class) => cls.class_name === studentClassFilter)
-            .map((cls: Class) => cls.sec)
-            .filter((sec: string) => Boolean(sec))
-        )
-      );
+      new Set(
+        allClasses
+          .filter((cls: Class) => cls.class_name === studentClassFilter)
+          .map((cls: Class) => cls.sec)
+          .filter((sec: string | undefined): sec is string => Boolean(sec))
+      )
+    );
 
   // Students filtered by class/section
   const filteredStudentsByClass = students.filter((student: Student) => {
@@ -1047,9 +1048,9 @@ const PrincipalMonthlyReport = () => {
   const fetchStudentDetails = async (student: Student) => {
     setSelectedStudent(student);
     setLoading(true);
-    
+
     const [year, month] = selectedMonth.split("-");
-    
+
     try {
       // Try multiple endpoint variations for each API
       let leaves: LeaveRecord[] = [];
@@ -1060,50 +1061,50 @@ const PrincipalMonthlyReport = () => {
       try {
         const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${student.email}&year=${year}&month=${month}`);
         const rawLeaves = leavesResponse.data || [];
-        
+
         // Always filter client-side to ensure we only get student's leaves
         leaves = rawLeaves.filter((leave: LeaveRecord) => {
           const matches = leave.applicant_email === student.email ||
-                         leave.email === student.email ||
-                         leave.student_email === student.email ||
-                         leave.student_id === student.email;
-          
+            leave.email === student.email ||
+            leave.student_email === student.email ||
+            leave.student_id === student.email;
+
           return matches;
         });
-        
-      } catch (err: unknown) {
+
+      } catch {
         try {
           const leavesResponse = await axios.get(`${API_BASE}/leaves/?applicant_email=${student.email}`);
           const rawLeaves = leavesResponse.data || [];
-          
+
           // Filter client-side
-          leaves = rawLeaves.filter((leave: LeaveRecord) => 
+          leaves = rawLeaves.filter((leave: LeaveRecord) =>
             leave.applicant_email === student.email ||
             leave.email === student.email ||
             leave.student_email === student.email ||
             leave.student_id === student.email
           );
-          
-        } catch (err2: unknown) {
+
+        } catch {
           // Try fetching all leaves and filter client-side
           try {
             const allLeavesResponse = await axios.get(`${API_BASE}/leaves/`);
             const allLeaves = allLeavesResponse.data || [];
-            
+
             // Filter by applicant_email with detailed logging
             const filteredLeaves = allLeaves.filter((leave: LeaveRecord) => {
               const matches = leave.applicant_email === student.email ||
-                             leave.email === student.email ||
-                             leave.student_email === student.email ||
-                             leave.student_id === student.email;
-              
+                leave.email === student.email ||
+                leave.student_email === student.email ||
+                leave.student_id === student.email;
+
               return matches;
             });
-            
+
             if (filteredLeaves.length > 0) {
               leaves = filteredLeaves;
             }
-          } catch (err3: unknown) {
+          } catch {
             // All leaves endpoint also failed
           }
         }
@@ -1113,19 +1114,19 @@ const PrincipalMonthlyReport = () => {
       try {
         const gradesResponse = await axios.get(`${API_BASE}/grades/?student=${student.email}&year=${year}&month=${month}`);
         const rawGrades = gradesResponse.data || [];
-        
+
         // Always filter client-side to ensure we only get student's grades
         grades = rawGrades.filter((record: GradeRecord) => {
           const matches = record.student === student.email ||
-                         record.student_email === student.email ||
-                         record.email === student.email ||
-                         record.student_id === student.email ||
-                         record.studentid === student.email;
-          
+            record.student_email === student.email ||
+            record.email === student.email ||
+            record.student_id === student.email ||
+            record.studentid === student.email;
+
           return matches;
         });
-        
-      } catch (err: unknown) {
+
+      } catch {
         const gradeEndpoints = [
           `${API_BASE}/grades/?student=${student.email}&year=${year}&month=${month}`,
           `${API_BASE}/grades/?student=${student.email}`,
@@ -1134,38 +1135,38 @@ const PrincipalMonthlyReport = () => {
           `${API_BASE}/grades/?email=${student.email}&year=${year}&month=${month}`,
           `${API_BASE}/grades/`,
         ];
-        
+
         for (const endpoint of gradeEndpoints) {
           try {
             const gradesResponse = await axios.get(endpoint);
             const data = gradesResponse.data || [];
-            
+
             if (Array.isArray(data) && data.length > 0) {
               // If we got all grades, filter by student email
-              const filteredGrades = endpoint.includes('?') 
+              const filteredGrades = endpoint.includes('?')
                 ? data.filter((grade: GradeRecord) => {
-                    const matches = grade.student === student.email ||
-                                   grade.student_email === student.email ||
-                                   grade.email === student.email ||
-                                   grade.student_id === student.email;
-                                
-                    return matches;
-                  })
+                  const matches = grade.student === student.email ||
+                    grade.student_email === student.email ||
+                    grade.email === student.email ||
+                    grade.student_id === student.email;
+
+                  return matches;
+                })
                 : data.filter((grade: GradeRecord) => {
-                    const matches = grade.student === student.email ||
-                                   grade.student_email === student.email ||
-                                   grade.email === student.email ||
-                                   grade.student_id === student.email;
-                                
-                    return matches;
-                  });
-                          
+                  const matches = grade.student === student.email ||
+                    grade.student_email === student.email ||
+                    grade.email === student.email ||
+                    grade.student_id === student.email;
+
+                  return matches;
+                });
+
               if (filteredGrades.length > 0) {
                 grades = filteredGrades;
                 break;
               }
             }
-          } catch (err: unknown) {
+          } catch {
             // Endpoint failed, continue to next
           }
         }
@@ -1198,7 +1199,7 @@ const PrincipalMonthlyReport = () => {
           return emailMatch && monthMatch;
         });
 
-      } catch (err: unknown) {
+      } catch {
         // student_attendance API failed
       }
 
@@ -1210,7 +1211,7 @@ const PrincipalMonthlyReport = () => {
         attendance: attendance, // Store attendance data
         notices: [], // Initialize notices as empty array
       });
-    } catch (err) {
+    } catch {
       // Set empty data on error to prevent crashes
       setStudentExtra({
         leaves: [],
@@ -1225,7 +1226,7 @@ const PrincipalMonthlyReport = () => {
 
   // Function to get category display name
   const getCategoryDisplayName = (category: string): string => {
-    switch(category) {
+    switch (category) {
       case 'nursery': return 'Nursery';
       case 'primary': return 'Higher Primary';
       case 'school': return 'School';
@@ -1268,11 +1269,10 @@ const PrincipalMonthlyReport = () => {
                 setSelectedTeacher(null);
                 fetchTeachers();
               }}
-              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 ${
-                view === "teachers"
-                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
-                  : "bg-white text-gray-700 border border-gray-300 hover:border-blue-500"
-              }`}
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 ${view === "teachers"
+                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
+                : "bg-white text-gray-700 border border-gray-300 hover:border-blue-500"
+                }`}
             >
               👨‍🏫 View Teachers Report
             </button>
@@ -1282,11 +1282,10 @@ const PrincipalMonthlyReport = () => {
                 setSelectedStudent(null);
                 fetchStudents();
               }}
-              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 ${
-                view === "students"
-                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
-                  : "bg-white text-gray-700 border border-gray-300 hover:border-green-500"
-              }`}
+              className={`px-4 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 ${view === "students"
+                ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
+                : "bg-white text-gray-700 border border-gray-300 hover:border-green-500"
+                }`}
             >
               👨‍🎓 View Students Report
             </button>
@@ -1341,15 +1340,15 @@ const PrincipalMonthlyReport = () => {
                     </select>
                   </div>
                 </div>
-                
+
                 <div className="text-sm text-gray-600">
                   Showing <span className="font-semibold">{filteredTeachersByCategoryAndDepartment.length}</span> teachers
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {filteredTeachersByCategoryAndDepartment.map((teacher, index) => {
-                  const category = getTeacherCategory(teacher.teacher_id);
+                  const category = getTeacherCategory(teacher.teacher_id || "");
                   const categoryColor = {
                     "Nursery": "bg-pink-100 border-pink-300",
                     "Higher Primary": "bg-green-100 border-green-300",
@@ -1368,7 +1367,7 @@ const PrincipalMonthlyReport = () => {
                         <div className="relative">
                           <Image
                             src={teacher.profile_picture || "https://i.pravatar.cc/150"}
-                            alt={teacher.fullname}
+                            alt={teacher.fullname || "Teacher"}
                             width={80}
                             height={80}
                             className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white shadow-md mx-auto"
@@ -1382,13 +1381,12 @@ const PrincipalMonthlyReport = () => {
                         <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-bold text-gray-800">{teacher.fullname}</h3>
                         <p className="text-xs sm:text-sm text-blue-600 font-medium">{teacher.department_name}</p>
                         <div className="mt-2">
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                            category === "Nursery" ? "bg-pink-100 text-pink-800" :
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${category === "Nursery" ? "bg-pink-100 text-pink-800" :
                             category === "Higher Primary" ? "bg-green-100 text-green-800" :
-                            category === "School" ? "bg-blue-100 text-blue-800" :
-                            category === "College" ? "bg-purple-100 text-purple-800" :
-                            "bg-gray-100 text-gray-800"
-                          }`}>
+                              category === "School" ? "bg-blue-100 text-blue-800" :
+                                category === "College" ? "bg-purple-100 text-purple-800" :
+                                  "bg-gray-100 text-gray-800"
+                            }`}>
                             {category}
                           </span>
                         </div>
@@ -1427,7 +1425,7 @@ const PrincipalMonthlyReport = () => {
                   <div className="relative">
                     <Image
                       src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={selectedTeacher.fullname}
+                      alt={selectedTeacher.fullname || "Teacher"}
                       width={128}
                       height={128}
                       className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl border-4 border-white shadow-lg mx-auto md:mx-0"
@@ -1441,14 +1439,13 @@ const PrincipalMonthlyReport = () => {
                   <div className="flex-1 w-full">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                       <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-center md:text-left">{selectedTeacher.fullname}</h2>
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        getTeacherCategory(selectedTeacher.teacher_id) === "Nursery" ? "bg-pink-100 text-pink-800" :
-                        getTeacherCategory(selectedTeacher.teacher_id) === "Higher Primary" ? "bg-green-100 text-green-800" :
-                        getTeacherCategory(selectedTeacher.teacher_id) === "School" ? "bg-blue-100 text-blue-800" :
-                        getTeacherCategory(selectedTeacher.teacher_id) === "College" ? "bg-purple-100 text-purple-800" :
-                        "bg-gray-100 text-gray-800"
-                      }`}>
-                        {getTeacherCategory(selectedTeacher.teacher_id)}
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getTeacherCategory(selectedTeacher.teacher_id || "") === "Nursery" ? "bg-pink-100 text-pink-800" :
+                        getTeacherCategory(selectedTeacher.teacher_id || "") === "Higher Primary" ? "bg-green-100 text-green-800" :
+                          getTeacherCategory(selectedTeacher.teacher_id || "") === "School" ? "bg-blue-100 text-blue-800" :
+                            getTeacherCategory(selectedTeacher.teacher_id || "") === "College" ? "bg-purple-100 text-purple-800" :
+                              "bg-gray-100 text-gray-800"
+                        }`}>
+                        {getTeacherCategory(selectedTeacher.teacher_id || "")}
                       </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
@@ -1459,7 +1456,7 @@ const PrincipalMonthlyReport = () => {
                       <div><b>Phone:</b> {selectedTeacher.phone}</div>
                       <div><b>Email:</b> {selectedTeacher.email}</div>
                     </div>
-                    
+
                     {/* Assign Class Teacher Button */}
                     <div className="mt-4">
                       <button
@@ -1512,14 +1509,13 @@ const PrincipalMonthlyReport = () => {
                     </h3>
                     <div className="space-y-2 sm:space-y-3">
                       {teacherExtra.subjects.map((sub: Subject) => (
-                        <div 
-                          key={sub.id} 
+                        <div
+                          key={sub.id}
                           onClick={() => handleSubjectClick(sub)}
-                          className={`bg-white p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                            selectedSubject?.id === sub.id 
-                              ? "border-blue-500 ring-2 ring-blue-300 bg-blue-50" 
-                              : "border-gray-200 hover:border-blue-300"
-                          }`}
+                          className={`bg-white p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${selectedSubject?.id === sub.id
+                            ? "border-blue-500 ring-2 ring-blue-300 bg-blue-50"
+                            : "border-gray-200 hover:border-blue-300"
+                            }`}
                         >
                           <div className="font-semibold text-gray-800 text-sm sm:text-base">{sub.subject_name}</div>
                           <div className="text-xs sm:text-sm text-gray-600">Code: {sub.subject_code}</div>
@@ -1527,7 +1523,7 @@ const PrincipalMonthlyReport = () => {
                         </div>
                       ))}
                     </div>
-                    
+
 
                   </div>
 
@@ -1537,9 +1533,9 @@ const PrincipalMonthlyReport = () => {
                       <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">
                         🕒 Timetable for {selectedSubject.subject_name}
                       </h3>
-                      
 
-                      
+
+
                       {filteredTimetable.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                           {filteredTimetable.map((entry: TimetableEntry, index: number) => {
@@ -1588,11 +1584,11 @@ const PrincipalMonthlyReport = () => {
                     </div>
                     {(() => {
                       const attendanceData = teacherExtra.attendance || [];
-                      const present = attendanceData.filter((a: AttendanceRecord) => a.status === "Present").length;
-                      const absent = attendanceData.filter((a: AttendanceRecord) => a.status === "Absent").length;
-                      const late = attendanceData.filter((a: AttendanceRecord) => a.status === "Late").length;
+                      const present = attendanceData.filter((a: AttendanceRecord) => (a.status as string) === "Present" || (a.status as string) === "present").length;
+                      const absent = attendanceData.filter((a: AttendanceRecord) => (a.status as string) === "Absent" || (a.status as string) === "absent").length;
+                      const late = attendanceData.filter((a: AttendanceRecord) => (a.status as string) === "Late" || (a.status as string) === "late").length;
                       const total = attendanceData.length;
-                      
+
                       return (
                         <div className="space-y-2 sm:space-y-3">
                           <div className="flex justify-between items-center text-sm sm:text-base">
@@ -1643,13 +1639,13 @@ const PrincipalMonthlyReport = () => {
                       <div className="flex justify-between items-center text-yellow-600 text-sm sm:text-base">
                         <span>Pending Leaves:</span>
                         <span className="font-semibold">
-                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: LeaveRecord) => l.status === "Pending").length : 0}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: LeaveRecord) => (l.status as string) === "Pending" || (l.status as string) === "pending").length : 0}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-red-600 text-sm sm:text-base">
                         <span>Rejected Leaves:</span>
                         <span className="font-semibold">
-                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: LeaveRecord) => l.status === "Rejected").length : 0}
+                          {Array.isArray(teacherExtra.leaves) ? teacherExtra.leaves.filter((l: LeaveRecord) => (l.status as string) === "Rejected" || (l.status as string) === "rejected").length : 0}
                         </span>
                       </div>
                     </div>
@@ -1710,39 +1706,39 @@ const PrincipalMonthlyReport = () => {
               {/* Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {filteredStudentsByClass.map((student, index) => (
-                (() => {
-                  const classInfo = getClassInfoForStudent(student);
-                  const className = classInfo?.class_name;
-                  const section = classInfo?.sec;
+                  (() => {
+                    const classInfo = getClassInfoForStudent(student);
+                    const className = classInfo?.class_name;
+                    const section = classInfo?.sec;
 
-                  return (
-                    <div
-                      key={student.id || index}
-                      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
-                      onClick={() => fetchStudentDetails(student)}
-                    >
-                      <div className="p-4 sm:p-6 text-center">
-                        <Image
-                          src={student.profile_picture || "https://i.pravatar.cc/150"}
-                          alt={student.fullname}
-                          width={80}
-                          height={80}
-                          className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-green-100 shadow-md mx-auto"
-                        />
-                        <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-bold text-gray-800">{student.fullname}</h3>
-                        <p className="text-xs sm:text-sm text-green-600 font-semibold mt-1">
-                          {className || "Class ?"} {section ? `• Sec ${section}` : ""}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          ID: {student.student_id || "N/A"}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">
-                          {student.email}
-                        </p>
+                    return (
+                      <div
+                        key={student.id || index}
+                        className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-gray-200"
+                        onClick={() => fetchStudentDetails(student)}
+                      >
+                        <div className="p-4 sm:p-6 text-center">
+                          <Image
+                            src={student.profile_picture || "https://i.pravatar.cc/150"}
+                            alt={student.fullname || "Student"}
+                            width={80}
+                            height={80}
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-green-100 shadow-md mx-auto"
+                          />
+                          <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-bold text-gray-800">{student.fullname}</h3>
+                          <p className="text-xs sm:text-sm text-green-600 font-semibold mt-1">
+                            {className || "Class ?"} {section ? `• Sec ${section}` : ""}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            ID: {student.student_id || "N/A"}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            {student.email}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })()
+                    );
+                  })()
                 ))}
               </div>
             </>
@@ -1768,12 +1764,12 @@ const PrincipalMonthlyReport = () => {
                   <span>←</span>
                   <span>Back to Students</span>
                 </button>
-                
+
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-6 mb-4">
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start w-full">
                     <Image
                       src={selectedStudent.profile_picture || "https://i.pravatar.cc/150"}
-                      alt={selectedStudent.fullname}
+                      alt={selectedStudent.fullname || "Student"}
                       width={120}
                       height={120}
                       className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl border-4 border-white shadow-lg mx-auto sm:mx-0"
@@ -1944,16 +1940,16 @@ const PrincipalMonthlyReport = () => {
                         </div>
                         {(() => {
                           const [year, month] = studentAttendanceMonth.split("-");
-                          
+
                           const monthlyAttendance = (studentExtra?.attendance || []).filter((a: AttendanceRecord) => {
                             const hasDate = a.date && a.date.startsWith(`${year}-${month.padStart(2, "0")}`);
                             return hasDate;
                           });
 
-                          const present = monthlyAttendance.filter((a: AttendanceRecord) => a.status === "Present").length;
-                          const absent = monthlyAttendance.filter((a: AttendanceRecord) => a.status === "Absent").length;
-                          const late = monthlyAttendance.filter((a: AttendanceRecord) => a.status === "Late").length;
-                          
+                          const present = monthlyAttendance.filter((a: AttendanceRecord) => (a.status as string) === "Present" || (a.status as string) === "present").length;
+                          const absent = monthlyAttendance.filter((a: AttendanceRecord) => (a.status as string) === "Absent" || (a.status as string) === "absent").length;
+                          const late = monthlyAttendance.filter((a: AttendanceRecord) => (a.status as string) === "Late" || (a.status as string) === "late").length;
+
                           return (
                             <div className="space-y-2">
                               <div className="flex justify-between text-xs sm:text-sm">
@@ -1993,12 +1989,12 @@ const PrincipalMonthlyReport = () => {
                         {(() => {
                           // Display ALL grades (no month filtering)
                           const allGrades = studentExtra.grades || [];
-                          
+
                           return allGrades.length > 0 ? (
                             <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
                               {allGrades.map((grade: GradeRecord) => (
-                                <div 
-                                  key={grade.id} 
+                                <div
+                                  key={grade.id}
                                   onClick={() => {
                                     setSelectedGrade(grade);
                                     setShowGradeDetails(true);
@@ -2048,14 +2044,14 @@ const PrincipalMonthlyReport = () => {
                           const monthlyLeaves = studentExtra.leaves.filter((l: LeaveRecord) =>
                             l.start_date && l.start_date.startsWith(`${year}-${month.padStart(2, "0")}`)
                           );
-                          
 
-                          
+
+
                           return monthlyLeaves.length > 0 ? (
                             <div className="space-y-2">
                               {monthlyLeaves.slice(0, 3).map((leave: LeaveRecord) => (
-                                <div 
-                                  key={leave.id} 
+                                <div
+                                  key={leave.id}
                                   onClick={() => {
                                     setSelectedLeave(leave);
                                     setShowLeaveDetails(true);
@@ -2069,11 +2065,10 @@ const PrincipalMonthlyReport = () => {
                                     {leave.start_date} to {leave.end_date}
                                   </div>
                                   <div className="text-xs text-gray-400 mt-1">
-                                    Status: <span className={`font-semibold ${
-                                      leave.status === 'Approved' ? 'text-green-600' : 
-                                      leave.status === 'Pending' ? 'text-yellow-600' : 
-                                      'text-red-600'
-                                    }`}>{leave.status}</span>
+                                    Status: <span className={`font-semibold ${leave.status === 'Approved' ? 'text-green-600' :
+                                      leave.status === 'Pending' ? 'text-yellow-600' :
+                                        'text-red-600'
+                                      }`}>{leave.status}</span>
                                   </div>
                                 </div>
                               ))}
@@ -2108,7 +2103,7 @@ const PrincipalMonthlyReport = () => {
                             </div>
                             <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">{notice.message}</p>
                             <div className="text-xs text-gray-500">
-                              By: {notice.notice_by} • {new Date(notice.posted_date).toLocaleDateString()}
+                              By: {notice.notice_by} • {new Date(notice.posted_date || '').toLocaleDateString()}
                             </div>
                           </div>
                         ))}
@@ -2140,7 +2135,7 @@ const PrincipalMonthlyReport = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     {/* Grade Information */}
@@ -2149,28 +2144,28 @@ const PrincipalMonthlyReport = () => {
                         <label className="text-xs sm:text-sm text-gray-600">Student Name</label>
                         <div className="font-semibold text-base sm:text-lg">{selectedGrade.student_name || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Subject</label>
                         <div className="font-semibold text-base sm:text-lg">{selectedGrade.subject_name || selectedGrade.subject || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Teacher Name</label>
                         <div className="font-semibold text-sm sm:text-base">{selectedGrade.teacher_name || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Exam Type</label>
                         <div className="font-semibold text-sm sm:text-base">{selectedGrade.exam_type || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Exam Date</label>
                         <div className="font-semibold text-sm sm:text-base">{selectedGrade.exam_date || selectedGrade.date || 'N/A'}</div>
                       </div>
                     </div>
-                    
+
                     {/* Score Details */}
                     <div className="space-y-3 sm:space-y-4">
                       <div>
@@ -2179,52 +2174,51 @@ const PrincipalMonthlyReport = () => {
                           {selectedGrade.marks_obtained || 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Total Marks</label>
                         <div className="font-semibold text-xl sm:text-2xl text-blue-600">
                           {selectedGrade.total_marks || 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Percentage</label>
                         <div className="font-semibold text-2xl sm:text-3xl text-purple-600">
                           {selectedGrade.percentage ? `${selectedGrade.percentage}%` : 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Student Email</label>
                         <div className="font-semibold text-xs sm:text-sm">{selectedGrade.student || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Teacher Email</label>
                         <div className="font-semibold text-xs sm:text-sm">{selectedGrade.teacher || 'N/A'}</div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Performance Indicator */}
                   <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                       <span className="text-xs sm:text-sm font-medium text-gray-600">Performance Level</span>
-                      <div className={`px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-semibold ${
-                        (selectedGrade.percentage >= 90) ? 'bg-green-100 text-green-800' :
-                        (selectedGrade.percentage >= 80) ? 'bg-blue-100 text-blue-800' :
-                        (selectedGrade.percentage >= 70) ? 'bg-yellow-100 text-yellow-800' :
-                        (selectedGrade.percentage >= 60) ? 'bg-orange-100 text-orange-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {(selectedGrade.percentage >= 90) ? 'Excellent' :
-                         (selectedGrade.percentage >= 80) ? 'Very Good' :
-                         (selectedGrade.percentage >= 70) ? 'Good' :
-                         (selectedGrade.percentage >= 60) ? 'Average' : 'Needs Improvement'}
+                      <div className={`px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-semibold ${(Number(selectedGrade.percentage || 0) >= 90) ? 'bg-green-100 text-green-800' :
+                        (Number(selectedGrade.percentage || 0) >= 80) ? 'bg-blue-100 text-blue-800' :
+                          (Number(selectedGrade.percentage || 0) >= 70) ? 'bg-yellow-100 text-yellow-800' :
+                            (Number(selectedGrade.percentage || 0) >= 60) ? 'bg-orange-100 text-orange-800' :
+                              'bg-red-100 text-red-800'
+                        }`}>
+                        {(Number(selectedGrade.percentage || 0) >= 90) ? 'Excellent' :
+                          (Number(selectedGrade.percentage || 0) >= 80) ? 'Very Good' :
+                            (Number(selectedGrade.percentage || 0) >= 70) ? 'Good' :
+                              (Number(selectedGrade.percentage || 0) >= 60) ? 'Average' : 'Needs Improvement'}
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Remarks */}
                   <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
                     <div>
@@ -2234,7 +2228,7 @@ const PrincipalMonthlyReport = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Timestamps */}
                   <div className="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs text-gray-500">
                     <div>
@@ -2246,7 +2240,7 @@ const PrincipalMonthlyReport = () => {
                       <div>{selectedGrade.updated_at || 'N/A'}</div>
                     </div>
                   </div>
-                  
+
                   {/* Action Buttons */}
                   <div className="mt-4 sm:mt-6 flex gap-3">
                     <button
@@ -2284,7 +2278,7 @@ const PrincipalMonthlyReport = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     {/* Leave Information */}
@@ -2293,25 +2287,24 @@ const PrincipalMonthlyReport = () => {
                         <label className="text-xs sm:text-sm text-gray-600">Leave Type</label>
                         <div className="font-semibold text-base sm:text-lg">{selectedLeave.leave_type || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Status</label>
-                        <div className={`font-semibold text-base sm:text-lg ${
-                          selectedLeave.status === 'Approved' ? 'text-green-600' : 
-                          selectedLeave.status === 'Pending' ? 'text-yellow-600' : 
-                          'text-red-600'
-                        }`}>
+                        <div className={`font-semibold text-base sm:text-lg ${selectedLeave.status === 'Approved' ? 'text-green-600' :
+                          selectedLeave.status === 'Pending' ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
                           {selectedLeave.status || 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Duration</label>
                         <div className="font-semibold text-sm sm:text-base">
                           {selectedLeave.start_date || 'N/A'} to {selectedLeave.end_date || 'N/A'}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Total Days</label>
                         <div className="font-semibold text-base sm:text-lg">
@@ -2327,31 +2320,31 @@ const PrincipalMonthlyReport = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Additional Details */}
                     <div className="space-y-3 sm:space-y-4">
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Applied Date</label>
                         <div className="font-semibold text-sm sm:text-base">{selectedLeave.applied_date || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Reason</label>
                         <div className="font-semibold text-sm sm:text-base">{selectedLeave.reason || 'No reason provided'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Approved By</label>
                         <div className="font-semibold text-sm sm:text-base">{selectedLeave.approved_by || 'N/A'}</div>
                       </div>
-                      
+
                       <div>
                         <label className="text-xs sm:text-sm text-gray-600">Remarks</label>
                         <div className="font-semibold text-sm sm:text-base">{selectedLeave.remarks || 'No remarks'}</div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Action Buttons */}
                   <div className="mt-4 sm:mt-6 flex gap-3">
                     <button
@@ -2391,7 +2384,7 @@ const PrincipalMonthlyReport = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="p-4 sm:p-6">
                   <div className="mb-4 sm:mb-6">
                     <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">Teacher Information</h3>
@@ -2399,7 +2392,7 @@ const PrincipalMonthlyReport = () => {
                       <div className="flex items-center gap-3">
                         <Image
                           src={selectedTeacher.profile_picture || "https://i.pravatar.cc/150"}
-                          alt={selectedTeacher.fullname}
+                          alt={selectedTeacher.fullname || "Teacher"}
                           width={48}
                           height={48}
                           className="w-12 h-12 rounded-full border-2 border-white shadow-sm"
@@ -2415,13 +2408,13 @@ const PrincipalMonthlyReport = () => {
 
                   <div className="mb-4 sm:mb-6">
                     <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3">Select Class to Assign</h3>
-                    
+
                     {assignmentSuccess && (
                       <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-800 rounded-lg">
                         ✅ {assignmentSuccess}
                       </div>
                     )}
-                    
+
                     {error && (
                       <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-800 rounded-lg">
                         ❌ {error}
@@ -2438,12 +2431,11 @@ const PrincipalMonthlyReport = () => {
                         {availableClasses.map((classItem: Class) => (
                           <div
                             key={classItem.id}
-                            onClick={() => setSelectedClassForAssignment(classItem.id)}
-                            className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all ${
-                              selectedClassForAssignment === classItem.id
-                                ? "border-green-500 ring-2 ring-green-200 bg-green-50"
-                                : "border-gray-200 hover:border-green-300 hover:bg-gray-50"
-                            }`}
+                            onClick={() => setSelectedClassForAssignment(classItem)}
+                            className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all ${selectedClassForAssignment?.id === classItem.id
+                              ? "border-green-500 ring-2 ring-green-200 bg-green-50"
+                              : "border-gray-200 hover:border-green-300 hover:bg-gray-50"
+                              }`}
                           >
                             <div className="flex justify-between items-start">
                               <div>
@@ -2457,7 +2449,7 @@ const PrincipalMonthlyReport = () => {
                                   </p>
                                 )}
                               </div>
-                              {selectedClassForAssignment === classItem.id && (
+                              {selectedClassForAssignment?.id === classItem.id && (
                                 <span className="text-green-500">✓</span>
                               )}
                             </div>
@@ -2482,7 +2474,7 @@ const PrincipalMonthlyReport = () => {
                     <button
                       onClick={() => {
                         if (selectedClassForAssignment) {
-                          assignClassTeacher(selectedClassForAssignment);
+                          assignClassTeacher(selectedClassForAssignment.id.toString());
                         } else {
                           setError("Please select a class first");
                         }

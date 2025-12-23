@@ -46,7 +46,7 @@ interface ClassInfo {
   id: number;
   class_name: string;
   sec: string;
-} 
+}
 
 interface Student {
   id: number;
@@ -171,24 +171,24 @@ const TeacherMonthlyreport = () => {
       student.image,
       student.avatar
     ];
-    
+
     for (const source of imageSources) {
       if (source) {
         // If it's already a full URL or data URL
         if (source.startsWith('http://') || source.startsWith('https://') || source.startsWith('data:')) {
           return source;
         }
-        
+
         // If it's a relative path, construct full URL
         if (source.startsWith('/')) {
           return `${API_BASE.replace('/api/', '')}${source.substring(1)}`;
         }
-        
+
         // If it's just a filename, construct the full URL
         return `${API_BASE}media/${source}`;
       }
     }
-    
+
     return null; // No image found
   };
 
@@ -297,7 +297,7 @@ const TeacherMonthlyreport = () => {
       }));
 
       setStudents(formattedStudents);
-      
+
       // Scroll to students section
       setTimeout(() => {
         studentsListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -354,11 +354,11 @@ const TeacherMonthlyreport = () => {
       );
 
       setPerformance({ attendance, leaves, grades });
-      
+
       // Scroll to performance section after data is loaded
       setTimeout(() => {
-        performanceSectionRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
+        performanceSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
           block: 'start'
         });
       }, 300);
@@ -406,18 +406,18 @@ const TeacherMonthlyreport = () => {
   const gradeSummary = performance?.grades ? {
     average: performance.grades.length > 0 ?
       Math.round(performance.grades.reduce((acc, g) => {
-        const marks = parseFloat(g.marks_obtained) || parseFloat(g.grade) || 0;
-        const total = parseFloat(g.total_marks) || 100;
+        const marks = parseFloat(String(g.marks_obtained)) || parseFloat(String(g.grade)) || 0;
+        const total = parseFloat(String(g.total_marks)) || 100;
         return acc + (marks / total) * 100;
       }, 0) / performance.grades.length) : 0,
     highest: Math.max(...performance.grades.map(g => {
-      const marks = parseFloat(g.marks_obtained) || parseFloat(g.grade) || 0;
-      const total = parseFloat(g.total_marks) || 100;
+      const marks = parseFloat(String(g.marks_obtained)) || parseFloat(String(g.grade)) || 0;
+      const total = parseFloat(String(g.total_marks)) || 100;
       return Math.round((marks / total) * 100);
     })) || 0,
     lowest: Math.min(...performance.grades.map(g => {
-      const marks = parseFloat(g.marks_obtained) || parseFloat(g.grade) || 0;
-      const total = parseFloat(g.total_marks) || 100;
+      const marks = parseFloat(String(g.marks_obtained)) || parseFloat(String(g.grade)) || 0;
+      const total = parseFloat(String(g.total_marks)) || 100;
       return Math.round((marks / total) * 100);
     })) || 0
   } : { average: 0, highest: 0, lowest: 0 };
@@ -508,7 +508,7 @@ const TeacherMonthlyreport = () => {
             scroll-behavior: smooth;
           }
         `}</style>
-        
+
         {/* Header Section */}
         <div className="bg-white professional-card p-4 mb-4">
           <div className="flex flex-col items-center gap-3 mb-4">
@@ -593,29 +593,26 @@ const TeacherMonthlyreport = () => {
                 <p className="text-gray-600 text-sm">Select a class to view students</p>
               </div>
             </div>
-            
+
             {/* Professional Classes Grid */}
             <div className="grid grid-cols-1 gap-3">
               {classes.map((cls) => (
                 <div
                   key={cls.id}
                   onClick={() => fetchStudents(cls)}
-                  className={`professional-card cursor-pointer p-4 transition-all duration-200 ${
-                    selectedClass?.id === cls.id
-                      ? "border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50"
-                      : "bg-white hover:border-blue-300"
-                  }`}
+                  className={`professional-card cursor-pointer p-4 transition-all duration-200 ${selectedClass?.id === cls.id
+                    ? "border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50"
+                    : "bg-white hover:border-blue-300"
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-sm ${
-                        selectedClass?.id === cls.id
-                          ? "bg-gradient-to-r from-blue-500 to-indigo-600"
-                          : "bg-gray-100"
-                      }`}>
-                        <BookOpen className={`w-5 h-5 ${
-                          selectedClass?.id === cls.id ? "text-white" : "text-gray-600"
-                        }`} />
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-sm ${selectedClass?.id === cls.id
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-600"
+                        : "bg-gray-100"
+                        }`}>
+                        <BookOpen className={`w-5 h-5 ${selectedClass?.id === cls.id ? "text-white" : "text-gray-600"
+                          }`} />
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900 text-lg">
@@ -624,9 +621,8 @@ const TeacherMonthlyreport = () => {
                         <p className="text-gray-500 text-sm">Class ID: {cls.id}</p>
                       </div>
                     </div>
-                    <div className={`w-3 h-3 rounded-full ${
-                      selectedClass?.id === cls.id ? 'bg-blue-500' : 'bg-gray-300'
-                    }`}></div>
+                    <div className={`w-3 h-3 rounded-full ${selectedClass?.id === cls.id ? 'bg-blue-500' : 'bg-gray-300'
+                      }`}></div>
                   </div>
                 </div>
               ))}
@@ -690,14 +686,13 @@ const TeacherMonthlyreport = () => {
                   return (
                     <div
                       key={student.id}
-                      className={`student-card transition-all duration-200 ${
-                        selectedStudent?.id === student.id
-                          ? "border-green-500 bg-gradient-to-r from-green-50 to-emerald-50"
-                          : "bg-white"
-                      }`}
+                      className={`student-card transition-all duration-200 ${selectedStudent?.id === student.id
+                        ? "border-green-500 bg-gradient-to-r from-green-50 to-emerald-50"
+                        : "bg-white"
+                        }`}
                     >
                       {/* Student Card Header - Enhanced Design with Individual Profile Image */}
-                      <div 
+                      <div
                         className="p-4 cursor-pointer"
                         onClick={() => {
                           if (expandedStudent === student.id) {
@@ -723,11 +718,10 @@ const TeacherMonthlyreport = () => {
                                       // If image fails to load, show initials
                                       e.currentTarget.style.display = 'none';
                                       const placeholder = document.createElement('div');
-                                      placeholder.className = `w-12 h-12 rounded-lg flex items-center justify-center shadow-sm ${
-                                        selectedStudent?.id === student.id
-                                          ? "bg-gradient-to-r from-green-500 to-emerald-600"
-                                          : "bg-gradient-to-r from-blue-500 to-indigo-600"
-                                      }`;
+                                      placeholder.className = `w-12 h-12 rounded-lg flex items-center justify-center shadow-sm ${selectedStudent?.id === student.id
+                                        ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                        : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                        }`;
                                       if (initials) {
                                         placeholder.innerHTML = `<span class="text-white font-bold text-sm">${initials}</span>`;
                                       } else {
@@ -738,11 +732,10 @@ const TeacherMonthlyreport = () => {
                                   />
                                 </div>
                               ) : (
-                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-sm ${
-                                  selectedStudent?.id === student.id
-                                    ? "bg-gradient-to-r from-green-500 to-emerald-600"
-                                    : "bg-gradient-to-r from-blue-500 to-indigo-600"
-                                }`}>
+                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow-sm ${selectedStudent?.id === student.id
+                                  ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                  : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                  }`}>
                                   {initials ? (
                                     <span className="text-white font-bold text-sm">{initials}</span>
                                   ) : (
@@ -791,14 +784,14 @@ const TeacherMonthlyreport = () => {
                                 <Phone className="w-4 h-4 text-gray-500" />
                                 <span className="font-medium">{student.phone || 'Not provided'}</span>
                               </div>
-                              
+
                               {student.parent_name && (
                                 <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
                                   <UserCheck className="w-4 h-4 text-gray-500" />
                                   <span className="font-medium">Parent: {student.parent_name}</span>
                                 </div>
                               )}
-                              
+
                               {(student.gender || student.date_of_birth) && (
                                 <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
                                   <User className="w-4 h-4 text-gray-500" />
@@ -807,26 +800,26 @@ const TeacherMonthlyreport = () => {
                                   </span>
                                 </div>
                               )}
-                              
+
                               <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
                                 <Calendar className="w-4 h-4 text-gray-500" />
                                 <span className="font-medium">Enrolled: {student.enrollment_date || 'Unknown'}</span>
                               </div>
-                              
+
                               {student.blood_group && (
                                 <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
                                   <Shield className="w-4 h-4 text-gray-500" />
                                   <span className="font-medium">Blood: {student.blood_group}</span>
                                 </div>
                               )}
-                              
+
                               {student.nationality && (
                                 <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
                                   <Globe className="w-4 h-4 text-gray-500" />
                                   <span className="font-medium">Nationality: {student.nationality}</span>
                                 </div>
                               )}
-                              
+
                               {student.previous_school && (
                                 <div className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg shadow-sm">
                                   <Book className="w-4 h-4 text-gray-500" />
@@ -906,19 +899,19 @@ const TeacherMonthlyreport = () => {
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     {selectedStudent.first_name} {selectedStudent.last_name}
                   </h2>
-                  
+
                   {/* Student Info - Card Format */}
                   <div className="grid grid-cols-1 gap-2">
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="w-4 h-4 text-gray-500" />
                       <span>{selectedStudent.email}</span>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="w-4 h-4 text-gray-500" />
                       <span>{selectedStudent.phone || 'Not provided'}</span>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 text-sm">
                       <MapPin className="w-4 h-4 text-gray-500" />
                       <span>{selectedStudent.address || 'Not provided'}</span>
@@ -926,7 +919,7 @@ const TeacherMonthlyreport = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Additional Student Info - Enhanced Expandable Section */}
               <div className="mt-4 border-t border-gray-200 pt-4">
                 <button
@@ -945,7 +938,7 @@ const TeacherMonthlyreport = () => {
                     </>
                   )}
                 </button>
-                
+
                 {expandedPerformance === selectedStudent.id && (
                   <div className="mt-3 grid grid-cols-1 gap-2">
                     {selectedStudent.student_id && (
@@ -954,56 +947,56 @@ const TeacherMonthlyreport = () => {
                         <span>Student ID: {selectedStudent.student_id}</span>
                       </div>
                     )}
-                    
+
                     {selectedStudent.gender && (
                       <div className="flex items-center gap-2 text-sm">
                         <User className="w-4 h-4 text-gray-500" />
                         <span>Gender: {selectedStudent.gender}</span>
                       </div>
                     )}
-                    
+
                     {selectedStudent.date_of_birth && (
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="w-4 h-4 text-gray-500" />
                         <span>DOB: {selectedStudent.date_of_birth}</span>
                       </div>
                     )}
-                    
+
                     {selectedStudent.parent_name && (
                       <div className="flex items-center gap-2 text-sm">
                         <UserCheck className="w-4 h-4 text-gray-500" />
                         <span>Parent: {selectedStudent.parent_name}</span>
                       </div>
                     )}
-                    
+
                     {selectedStudent.parent_phone && (
                       <div className="flex items-center gap-2 text-sm">
                         <Phone className="w-4 h-4 text-gray-500" />
                         <span>Parent Contact: {selectedStudent.parent_phone}</span>
                       </div>
                     )}
-                    
+
                     {selectedStudent.blood_group && (
                       <div className="flex items-center gap-2 text-sm">
                         <Shield className="w-4 h-4 text-gray-500" />
                         <span>Blood Group: {selectedStudent.blood_group}</span>
                       </div>
                     )}
-                    
+
                     {selectedStudent.nationality && (
                       <div className="flex items-center gap-2 text-sm">
                         <Globe className="w-4 h-4 text-gray-500" />
                         <span>Nationality: {selectedStudent.nationality}</span>
                       </div>
                     )}
-                    
+
                     {selectedStudent.previous_school && (
                       <div className="flex items-center gap-2 text-sm">
                         <Book className="w-4 h-4 text-gray-500" />
                         <span>Previous School: {selectedStudent.previous_school}</span>
                       </div>
                     )}
-                    
+
                     {selectedStudent.academic_year && (
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="w-4 h-4 text-gray-500" />
@@ -1052,8 +1045,8 @@ const TeacherMonthlyreport = () => {
                     <span className="text-2xl font-bold text-gray-900">{attendanceSummary.attendanceRate}%</span>
                   </div>
                   <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
+                    <div
+                      className="bg-blue-600 h-2 rounded-full"
                       style={{ width: `${attendanceSummary.attendanceRate}%` }}
                     ></div>
                   </div>
@@ -1138,15 +1131,15 @@ const TeacherMonthlyreport = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={attendanceData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                        <XAxis 
-                          dataKey="date" 
-                          stroke="#6B7280" 
+                        <XAxis
+                          dataKey="date"
+                          stroke="#6B7280"
                           fontSize={12}
                           tickLine={false}
                           axisLine={false}
                         />
-                        <YAxis 
-                          stroke="#6B7280" 
+                        <YAxis
+                          stroke="#6B7280"
                           fontSize={12}
                           tickLine={false}
                           axisLine={false}
@@ -1154,9 +1147,9 @@ const TeacherMonthlyreport = () => {
                           tickCount={2}
                           tickFormatter={(value) => value === 1 ? 'Present' : 'Absent'}
                         />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'white', 
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'white',
                             borderRadius: '8px',
                             border: '1px solid #E5E7EB',
                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
@@ -1215,9 +1208,9 @@ const TeacherMonthlyreport = () => {
                             <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'white', 
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'white',
                             borderRadius: '8px',
                             border: '1px solid #E5E7EB',
                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
@@ -1225,9 +1218,9 @@ const TeacherMonthlyreport = () => {
                           formatter={(value) => [`${value}%`, 'Score']}
                           labelStyle={{ fontWeight: 'bold', color: '#1F2937' }}
                         />
-                        <Legend 
-                          layout="horizontal" 
-                          verticalAlign="bottom" 
+                        <Legend
+                          layout="horizontal"
+                          verticalAlign="bottom"
                           align="center"
                           wrapperStyle={{ paddingTop: '20px' }}
                         />
@@ -1263,9 +1256,9 @@ const TeacherMonthlyreport = () => {
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {performance.grades.map((grade, index) => {
-                          const marks = parseFloat(grade.marks_obtained) || parseFloat(grade.grade) || 0;
-                          const total = parseFloat(grade.total_marks) || 100;
-                          const percentage = grade.percentage || Math.round((marks / total) * 100);
+                          const marks = parseFloat(String(grade.marks_obtained)) || parseFloat(String(grade.grade)) || 0;
+                          const total = parseFloat(String(grade.total_marks)) || 100;
+                          const percentage = grade.percentage !== undefined ? Number(grade.percentage) : Math.round((marks / total) * 100);
 
                           return (
                             <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
@@ -1275,11 +1268,10 @@ const TeacherMonthlyreport = () => {
                               <td className="p-3 text-center font-bold text-gray-900">{marks}</td>
                               <td className="p-3 text-center text-gray-600">{total}</td>
                               <td className="p-3 text-center">
-                                <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                                  percentage >= 80 ? 'bg-green-100 text-green-800' :
+                                <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${percentage >= 80 ? 'bg-green-100 text-green-800' :
                                   percentage >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}>
+                                    'bg-red-100 text-red-800'
+                                  }`}>
                                   {percentage}%
                                 </span>
                               </td>
@@ -1310,11 +1302,10 @@ const TeacherMonthlyreport = () => {
                           <h4 className="font-bold text-gray-900 text-lg">
                             {leave.leave_type || 'Leave Application'}
                           </h4>
-                          <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                            leave.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${leave.status === 'Approved' ? 'bg-green-100 text-green-800' :
                             leave.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
                             {leave.status || 'Pending'}
                           </span>
                         </div>
@@ -1356,7 +1347,7 @@ const TeacherMonthlyreport = () => {
             </div>
           </div>
         )}
-        
+
         {/* Custom responsive styles for small devices */}
         <style jsx global>{`
           @media (max-width: 640px) {

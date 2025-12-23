@@ -135,7 +135,8 @@ interface Teacher {
 
 export default function ActivitiesManager() {
   const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null); // Unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [error, setError] = useState<string | null>(null);
 
   // Data states
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -212,32 +213,8 @@ export default function ActivitiesManager() {
     difficulty: 'easy'
   });
 
-  // Load activities
-  const loadActivities = useCallback(async () => {
-    try {
-      const activitiesRes = await axios.get(`${API}/activities/`);
-      setActivities(activitiesRes.data || []);
-
-      // Load related data
-      const [quizRes, puzzlesRes, codingRes, studentActRes] = await Promise.all([
-        axios.get(`${API}/quiz_questions/`),
-        axios.get(`${API}/puzzles/`),
-        axios.get(`${API}/coding_challenges/`),
-        axios.get(`${API}/student_activities/`)
-      ]);
-
-      setQuizQuestions(quizRes.data || []);
-      setPuzzles(puzzlesRes.data || []);
-      setCodingChallenges(codingRes.data || []);
-      setStudentActivities(studentActRes.data || []);
-    } catch (err: unknown) {
-      console.error("Error loading activities:", err);
-      createSampleData();
-    }
-  }, []);
-
   // Create sample data for demo
-  const createSampleData = () => {
+  const createSampleData = useCallback(() => {
     const sampleActivities: Activity[] = [
       {
         id: 1,
@@ -348,7 +325,31 @@ export default function ActivitiesManager() {
 
     setActivities(sampleActivities);
     setQuizQuestions(sampleQuizQuestions);
-  };
+  }, [setActivities, setQuizQuestions, teacher?.email]);
+
+  // Load activities
+  const loadActivities = useCallback(async () => {
+    try {
+      const activitiesRes = await axios.get(`${API}/activities/`);
+      setActivities(activitiesRes.data || []);
+
+      // Load related data
+      const [quizRes, puzzlesRes, codingRes, studentActRes] = await Promise.all([
+        axios.get(`${API}/quiz_questions/`),
+        axios.get(`${API}/puzzles/`),
+        axios.get(`${API}/coding_challenges/`),
+        axios.get(`${API}/student_activities/`)
+      ]);
+
+      setQuizQuestions(quizRes.data || []);
+      setPuzzles(puzzlesRes.data || []);
+      setCodingChallenges(codingRes.data || []);
+      setStudentActivities(studentActRes.data || []);
+    } catch (err: unknown) {
+      console.error("Error loading activities:", err);
+      createSampleData();
+    }
+  }, [createSampleData]);
 
   // Load all initial data
   const loadInitialData = useCallback(async (teacherEmail: string) => {
@@ -416,10 +417,10 @@ export default function ActivitiesManager() {
       }
 
       // Search filter
-      if (searchTerm && 
-          !activity.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
-          !activity.description.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !activity.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))) {
+      if (searchTerm &&
+        !activity.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !activity.description.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !activity.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))) {
         return false;
       }
 
@@ -448,7 +449,7 @@ export default function ActivitiesManager() {
     if (!activity) return null;
 
     const studentActivitiesForThis = studentActivities.filter(sa => sa.activity_id === activityId);
-    
+
     return {
       totalAttempts: activity.attempts,
       averageScore: activity.average_score,
@@ -456,7 +457,7 @@ export default function ActivitiesManager() {
       totalStudents: studentActivitiesForThis.length,
       inProgress: studentActivitiesForThis.filter(sa => sa.status === 'in_progress').length,
       completed: studentActivitiesForThis.filter(sa => sa.status === 'completed').length,
-      topScore: studentActivitiesForThis.length > 0 ? 
+      topScore: studentActivitiesForThis.length > 0 ?
         Math.max(...studentActivitiesForThis.map(sa => sa.score)) : 0
     };
   };
@@ -774,7 +775,7 @@ export default function ActivitiesManager() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
             <p className="text-gray-600">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -806,7 +807,7 @@ export default function ActivitiesManager() {
                   </p>
                 </div>
               </div>
-              
+
               <button
                 onClick={() => initActivityForm()}
                 className="px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-medium flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
@@ -858,7 +859,7 @@ export default function ActivitiesManager() {
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-2">Avg. Score</p>
                   <p className="text-2xl md:text-3xl font-bold text-gray-900">
-                    {activities.length > 0 
+                    {activities.length > 0
                       ? Math.round(activities.reduce((sum, activity) => sum + activity.average_score, 0) / activities.length)
                       : 0}%
                   </p>
@@ -878,7 +879,7 @@ export default function ActivitiesManager() {
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-2">Completion Rate</p>
                   <p className="text-2xl md:text-3xl font-bold text-gray-900">
-                    {activities.length > 0 
+                    {activities.length > 0
                       ? Math.round(activities.reduce((sum, activity) => sum + activity.completion_rate, 0) / activities.length)
                       : 0}%
                   </p>
@@ -911,11 +912,10 @@ export default function ActivitiesManager() {
                     <button
                       key={key}
                       onClick={() => setActiveTab(key as 'all' | 'quizzes' | 'puzzles' | 'coding' | 'games' | 'drafts')}
-                      className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg md:rounded-xl transition-all duration-200 font-medium text-sm ${
-                        activeTab === key 
-                          ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25" 
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                      className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg md:rounded-xl transition-all duration-200 font-medium text-sm ${activeTab === key
+                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
                     >
                       <Icon className="h-4 w-4" />
                       <span>{label}</span>
@@ -1015,8 +1015,8 @@ export default function ActivitiesManager() {
                     {/* Activity Thumbnail */}
                     <div className="relative h-48 bg-gradient-to-br from-purple-100 to-indigo-100 overflow-hidden">
                       {activity.thumbnail_url ? (
-                        <Image 
-                          src={activity.thumbnail_url} 
+                        <Image
+                          src={activity.thumbnail_url}
                           alt={activity.title}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -1070,8 +1070,8 @@ export default function ActivitiesManager() {
                       {/* Tags */}
                       <div className="flex flex-wrap gap-1 mb-4">
                         {activity.tags.slice(0, 3).map(tag => (
-                          <span 
-                            key={tag} 
+                          <span
+                            key={tag}
                             className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
                           >
                             {tag}
@@ -1192,8 +1192,8 @@ export default function ActivitiesManager() {
                               <h5 className="font-medium text-gray-900 mb-2">Puzzle Preview</h5>
                               <div className="grid grid-cols-9 gap-1">
                                 {Array.from({ length: 81 }).map((_, i) => (
-                                  <div 
-                                    key={i} 
+                                  <div
+                                    key={i}
                                     className="aspect-square border border-gray-300 flex items-center justify-center text-sm"
                                   >
                                     {Math.random() > 0.7 ? Math.floor(Math.random() * 9) + 1 : ''}
@@ -1225,12 +1225,11 @@ export default function ActivitiesManager() {
                             leaderboardData.map((item, index) => (
                               <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border">
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                                    index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
                                     index === 1 ? 'bg-gray-100 text-gray-700' :
-                                    index === 2 ? 'bg-amber-100 text-amber-700' :
-                                    'bg-gray-50 text-gray-600'
-                                  }`}>
+                                      index === 2 ? 'bg-amber-100 text-amber-700' :
+                                        'bg-gray-50 text-gray-600'
+                                    }`}>
                                     {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : item.rank}
                                   </div>
                                   <div>
@@ -1296,7 +1295,7 @@ export default function ActivitiesManager() {
                       {/* Left Column - Activity Details */}
                       <div className="lg:col-span-2 space-y-6">
                         <h3 className="text-lg font-semibold text-gray-900">Activity Details</h3>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1305,7 +1304,7 @@ export default function ActivitiesManager() {
                             <input
                               type="text"
                               value={activityForm.title}
-                              onChange={(e) => setActivityForm({...activityForm, title: e.target.value})}
+                              onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
                               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                               placeholder="e.g., Python Basics Quiz"
                             />
@@ -1318,7 +1317,7 @@ export default function ActivitiesManager() {
                             <select
                               value={activityForm.type}
                               onChange={(e) => {
-                                setActivityForm({...activityForm, type: e.target.value as Activity['type']});
+                                setActivityForm({ ...activityForm, type: e.target.value as Activity['type'] });
                                 setActivityType(e.target.value as Activity['type']);
                               }}
                               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -1338,7 +1337,7 @@ export default function ActivitiesManager() {
                             </label>
                             <select
                               value={activityForm.category}
-                              onChange={(e) => setActivityForm({...activityForm, category: e.target.value as Activity['category']})}
+                              onChange={(e) => setActivityForm({ ...activityForm, category: e.target.value as Activity['category'] })}
                               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             >
                               <option value="general">General</option>
@@ -1359,7 +1358,7 @@ export default function ActivitiesManager() {
                             </label>
                             <select
                               value={activityForm.difficulty}
-                              onChange={(e) => setActivityForm({...activityForm, difficulty: e.target.value as Activity['difficulty']})}
+                              onChange={(e) => setActivityForm({ ...activityForm, difficulty: e.target.value as Activity['difficulty'] })}
                               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             >
                               <option value="beginner">Beginner</option>
@@ -1376,7 +1375,7 @@ export default function ActivitiesManager() {
                             <input
                               type="number"
                               value={activityForm.points}
-                              onChange={(e) => setActivityForm({...activityForm, points: parseInt(e.target.value)})}
+                              onChange={(e) => setActivityForm({ ...activityForm, points: parseInt(e.target.value) })}
                               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                               min="1"
                               max="1000"
@@ -1390,7 +1389,7 @@ export default function ActivitiesManager() {
                             <input
                               type="number"
                               value={activityForm.duration}
-                              onChange={(e) => setActivityForm({...activityForm, duration: parseInt(e.target.value)})}
+                              onChange={(e) => setActivityForm({ ...activityForm, duration: parseInt(e.target.value) })}
                               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                               min="1"
                               max="180"
@@ -1403,7 +1402,7 @@ export default function ActivitiesManager() {
                             </label>
                             <select
                               value={activityForm.status}
-                              onChange={(e) => setActivityForm({...activityForm, status: e.target.value as Activity['status']})}
+                              onChange={(e) => setActivityForm({ ...activityForm, status: e.target.value as Activity['status'] })}
                               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             >
                               <option value="draft">Draft</option>
@@ -1419,7 +1418,7 @@ export default function ActivitiesManager() {
                             <input
                               type="text"
                               value={activityForm.thumbnail_url}
-                              onChange={(e) => setActivityForm({...activityForm, thumbnail_url: e.target.value})}
+                              onChange={(e) => setActivityForm({ ...activityForm, thumbnail_url: e.target.value })}
                               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                               placeholder="https://example.com/image.jpg"
                             />
@@ -1432,7 +1431,7 @@ export default function ActivitiesManager() {
                           </label>
                           <textarea
                             value={activityForm.description}
-                            onChange={(e) => setActivityForm({...activityForm, description: e.target.value})}
+                            onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })}
                             rows={2}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             placeholder="Describe what this activity is about..."
@@ -1445,7 +1444,7 @@ export default function ActivitiesManager() {
                           </label>
                           <textarea
                             value={activityForm.instructions}
-                            onChange={(e) => setActivityForm({...activityForm, instructions: e.target.value})}
+                            onChange={(e) => setActivityForm({ ...activityForm, instructions: e.target.value })}
                             rows={3}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             placeholder="Provide instructions for students..."
@@ -1460,7 +1459,7 @@ export default function ActivitiesManager() {
                             type="text"
                             value={activityForm.tags?.join(', ')}
                             onChange={(e) => setActivityForm({
-                              ...activityForm, 
+                              ...activityForm,
                               tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
                             })}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -1475,7 +1474,7 @@ export default function ActivitiesManager() {
                           <h3 className="text-lg font-semibold text-gray-900 mb-4">
                             {activityType.charAt(0).toUpperCase() + activityType.slice(1)} Content
                           </h3>
-                          
+
                           {activityType === 'quiz' && (
                             <div className="space-y-4">
                               <div className="flex items-center justify-between">
@@ -1597,7 +1596,7 @@ export default function ActivitiesManager() {
                                 </label>
                                 <select
                                   value={puzzleData.puzzle_type}
-                                  onChange={(e) => setPuzzleData({...puzzleData, puzzle_type: e.target.value as Puzzle['puzzle_type']})}
+                                  onChange={(e) => setPuzzleData({ ...puzzleData, puzzle_type: e.target.value as Puzzle['puzzle_type'] })}
                                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
                                   <option value="sudoku">Sudoku</option>
@@ -1657,7 +1656,7 @@ export default function ActivitiesManager() {
                                 </label>
                                 <select
                                   value={codingData.language}
-                                  onChange={(e) => setCodingData({...codingData, language: e.target.value as CodingChallenge['language']})}
+                                  onChange={(e) => setCodingData({ ...codingData, language: e.target.value as CodingChallenge['language'] })}
                                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
                                   <option value="python">Python</option>
@@ -1674,7 +1673,7 @@ export default function ActivitiesManager() {
                                 </label>
                                 <textarea
                                   value={codingData.problem_statement}
-                                  onChange={(e) => setCodingData({...codingData, problem_statement: e.target.value})}
+                                  onChange={(e) => setCodingData({ ...codingData, problem_statement: e.target.value })}
                                   rows={4}
                                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   placeholder="Describe the coding problem..."
@@ -1687,7 +1686,7 @@ export default function ActivitiesManager() {
                                 </label>
                                 <textarea
                                   value={codingData.starter_code}
-                                  onChange={(e) => setCodingData({...codingData, starter_code: e.target.value})}
+                                  onChange={(e) => setCodingData({ ...codingData, starter_code: e.target.value })}
                                   rows={6}
                                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
                                   placeholder="Write the starter code..."
@@ -1728,7 +1727,7 @@ export default function ActivitiesManager() {
                         <button
                           onClick={() => {
                             // Save as draft
-                            setActivityForm({...activityForm, status: 'draft'});
+                            setActivityForm({ ...activityForm, status: 'draft' });
                             setTimeout(saveActivity, 100);
                           }}
                           className="px-5 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium"
@@ -1803,7 +1802,7 @@ export default function ActivitiesManager() {
                           <div className="space-y-4">
                             <div>
                               <h4 className="font-medium text-gray-900 mb-3">Assignment Options</h4>
-                              
+
                               <div className="space-y-3">
                                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                   <div>
