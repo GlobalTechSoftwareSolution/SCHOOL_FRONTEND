@@ -145,7 +145,7 @@ interface ExamWithDetails extends OnlineTest {
 }
 
 export default function CreateExamPage() {
-  console.log('[COMPONENT] CreateExamPage rendering');
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [viewDetailsLoading, setViewDetailsLoading] = useState<Record<number, boolean>>({});
@@ -188,7 +188,7 @@ export default function CreateExamPage() {
 
   // Debug effect to log student profiles changes
   useEffect(() => {
-    console.log('[DEBUG] Student profiles updated:', studentProfiles);
+
   }, [studentProfiles]);
 
   const [showStudentDetails, setShowStudentDetails] = useState(false);
@@ -233,28 +233,18 @@ export default function CreateExamPage() {
       if (!email) {
         console.warn("[FETCH TEACHER DATA] Teacher email not found in localStorage, will attempt to fetch all teachers");
       }
-      console.log("[FETCH TEACHER DATA] Fetching teacher data for email:", email);
-      console.log("[FETCH TEACHER DATA] localStorage contents:", {
-        userData: localStorage.getItem("userData"),
-        userEmail: localStorage.getItem("userEmail"),
-        accessToken: localStorage.getItem("accessToken"),
-        userRole: localStorage.getItem("userRole")
-      });
 
-      // Add console.log to show we're fetching subjects from teacher API
-      console.log("[FETCH TEACHER DATA] Making API request to fetch teacher subjects...");
-      // Add console.log to show we're fetching subjects from teacher API
-      console.log("[FETCH TEACHER DATA] Making API request to fetch teacher subjects...");
+
+
 
       let teacherRes; try {
         teacherRes = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/teachers/?email=${email}`);
-        console.log("[FETCH TEACHER DATA] Successfully received response from teacher API:", teacherRes.data);
       } catch (error: unknown) {
         console.error("[FETCH TEACHER DATA] Error fetching teacher data:", error);
 
         // If there's a CORS error, try a different approach
         if (axios.isAxiosError(error) && (error.response?.status === 403 || error.message?.includes('CORS'))) {
-          console.log("[FETCH TEACHER DATA] CORS error detected, trying alternative approach");
+
           // Try without the email parameter
           teacherRes = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/teachers/`);
           // Filter by email
@@ -265,13 +255,12 @@ export default function CreateExamPage() {
           }
         } else {
           // Provide fallback data structure
-          console.log("[FETCH TEACHER DATA] Providing fallback teacher data");
+
           teacherRes = { data: [{ email: email, subject_list: [] }] };
         }
       }
       const teacher = teacherRes.data && teacherRes.data.length > 0 ? teacherRes.data[0] : null;
 
-      console.log("[FETCH TEACHER DATA] Teacher API response:", teacher);
 
       // Set teacher email from API response - SINGLE SOURCE OF TRUTH
       if (!teacher?.email) {
@@ -292,8 +281,7 @@ export default function CreateExamPage() {
       // Only fetch subjects from the subject_list field as requested
       let subjects: Subject[] = [];
 
-      // Add console.log to show we're processing subjects
-      console.log("[FETCH TEACHER DATA] Processing subjects from teacher data...");
+
 
       if (teacher) {
         // Handle different possible structures of subject_list
@@ -315,7 +303,7 @@ export default function CreateExamPage() {
             return null;
           }).filter((s: Subject | null): s is Subject => s !== null && s.id > 0); // Type guard to ensure valid subjects
         } else {
-          console.log("[FETCH TEACHER DATA] subject_list is not an array");
+
 
           // Try to handle different possible structures of subject_list
           // Check if it's an object with subject data
@@ -350,13 +338,11 @@ export default function CreateExamPage() {
           }
         }
       } else {
-        console.log("[FETCH TEACHER DATA] No teacher data available, using empty subjects array");
+
       }
 
-      console.log("[FETCH TEACHER DATA] Extracted subjects from subject_list:", subjects);
 
       const validSubjects = subjects.filter((s) => s && s.id);
-      console.log("[FETCH TEACHER DATA] Valid subjects after filtering:", validSubjects);
 
 
       setTeacherSubjects(validSubjects);
@@ -383,7 +369,7 @@ export default function CreateExamPage() {
 
         // If there's a CORS error, provide empty data
         if (axios.isAxiosError(error) && (error.response?.status === 403 || error.message?.includes('CORS'))) {
-          console.log("[FETCH ALL CLASSES] CORS error detected, returning empty data");
+
           classRes = { data: [] };
         } else {
           throw error;
@@ -433,7 +419,6 @@ export default function CreateExamPage() {
       }
 
       if (!email) {
-        console.log("[FETCH ONLINE TESTS] Teacher email not available");
         // Even without email, try to fetch all exams and filter on client side if needed
         let testsRes;
         try {
@@ -443,7 +428,6 @@ export default function CreateExamPage() {
 
           // If there's a CORS error, provide empty data
           if (axios.isAxiosError(error) && (error.response?.status === 403 || error.message?.includes('CORS'))) {
-            console.log("[FETCH ONLINE TESTS] CORS error detected, returning empty data");
             testsRes = { data: [] };
           } else {
             throw error;
@@ -456,7 +440,6 @@ export default function CreateExamPage() {
         return allTestsData;
       }
 
-      console.log("[FETCH ONLINE TESTS] Fetching online tests for email:", email);
       let testsRes;
       try {
         testsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/exams/?sub_teacher=${email}`);
@@ -465,17 +448,14 @@ export default function CreateExamPage() {
 
         // If there's a CORS error, provide empty data
         if (axios.isAxiosError(error) && (error.response?.status === 403 || error.message?.includes('CORS'))) {
-          console.log("[FETCH ONLINE TESTS] CORS error detected, returning empty data");
           testsRes = { data: [] };
         } else {
           // Fallback: try to fetch all exams and filter by email
           try {
-            console.log("[FETCH ONLINE TESTS] Trying fallback - fetching all exams");
             const allTestsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/exams/`);
             const filteredTests = allTestsRes.data.filter((test: OnlineTest) =>
               test.sub_teacher === email
             );
-            console.log("[FETCH ONLINE TESTS] Filtered tests by email:", filteredTests);
             setOnlineTests(filteredTests);
             return filteredTests;
           } catch (fallbackError) {
@@ -486,14 +466,21 @@ export default function CreateExamPage() {
       }
 
       const testsData = testsRes.data || [];
-      setOnlineTests(testsData);
-      return testsData;
+
+      // Filter exams to only show those for subjects the teacher teaches
+      const teacherSubjectIds = teacherSubjects.map(s => s.id);
+      const filteredTests = teacherSubjectIds.length > 0
+        ? testsData.filter((test: OnlineTest) => teacherSubjectIds.includes(test.sub))
+        : testsData;
+
+      setOnlineTests(filteredTests);
+      return filteredTests;
     } catch (err) {
       console.error("Error fetching online tests:", err);
       setOnlineTests([]);
       return [];
     }
-  }, [teacherEmail]);
+  }, [teacherEmail, teacherSubjects]);
 
   // --------------------------- Fetch Exam Details (with caching) ---------------------------
   const fetchExamDetails = async (examId: number): Promise<ExamWithDetails | null> => {

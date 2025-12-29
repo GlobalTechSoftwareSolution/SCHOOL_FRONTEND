@@ -44,13 +44,38 @@ const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultEmai
       await onSubmit();
     } catch (err: unknown) {
       console.error('ID card generation failed:', err);
-      const errorMessage = axios.isAxiosError(err) 
-        ? err.response?.data?.detail || 
-          err.response?.data?.error || 
-          err.response?.data?.message || 
-          err.message ||
-          'Unable to generate ID card. The backend service may be experiencing issues. Please contact your administrator or try again later.'
-        : 'An unexpected error occurred. Please try again later.';
+      let errorMessage = 'Unable to generate ID card. The backend service may be experiencing issues. Please contact your administrator or try again later.';
+      
+      if (axios.isAxiosError(err)) {
+        console.error('Axios error details:', {
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+          headers: err.response?.headers
+        });
+        
+        // Try to get a more specific error message
+        if (err.response?.data?.detail) {
+          errorMessage = err.response.data.detail;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (typeof err.response?.data === 'string' && err.response.data.includes('S3Error')) {
+          errorMessage = 'Storage error: ID card generation is temporarily unavailable due to file storage issues. Please contact your administrator.';
+        } else if (err.response?.status === 500) {
+          errorMessage = 'Server error: ID card generation service is temporarily unavailable. Please try again later.';
+        } else if (err.response?.status === 400) {
+          errorMessage = 'Invalid request: Please check your information and try again.';
+        } else if (err.response?.status === 401) {
+          errorMessage = 'Unauthorized: Please log in and try again.';
+        } else if (err.response?.status === 403) {
+          errorMessage = 'Access denied: You do not have permission to generate ID cards.';
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+      }
+      
       setError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -126,14 +151,23 @@ const AllIdCards = () => {
         setLoading(true);
         setError('');
         
-        const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
-        
+        const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000 // 10 second timeout
+        });
         
         setIdCards(cardsRes.data || []);
         
         // Only fetch students if needed
         try {
-          const studentsRes = await axios.get<StudentRecord[]>(`${API_BASE}/students/`);
+          const studentsRes = await axios.get<StudentRecord[]>(`${API_BASE}/students/`, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            timeout: 10000 // 10 second timeout
+          });
           setStudents(studentsRes.data || []);
         } catch (studErr) {
           console.warn('Failed to fetch students:', studErr);
@@ -185,10 +219,21 @@ const AllIdCards = () => {
       // Use the correct API endpoint for generating ID cards
       await axios.post(`${API_BASE}/id_cards/generate/`, {
         email: userEmail
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        timeout: 30000 // 30 second timeout
       });
 
       // Refresh the ID cards list after generation
-      const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
+      const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000 // 10 second timeout
+      });
       setIdCards(cardsRes.data || []);
       setShowForm(false);
     } catch (err: unknown) {
@@ -302,12 +347,12 @@ const AllIdCards = () => {
                     </span>
                   </div>
 
-                  {card.id_card_url ? (
+                  {(card.id_card_url || card.pdf_url) ? (
                     <div className="flex flex-col sm:flex-row gap-3">
                       <button
                         type="button"
                         onClick={() => {
-                          setPreviewUrl(card.id_card_url!);
+                          setPreviewUrl(card.id_card_url || card.pdf_url || '');
                           setTimeout(() => {
                             if (previewRef.current) {
                               previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -323,7 +368,7 @@ const AllIdCards = () => {
                         type="button"
                         onClick={() => {
                           const link = document.createElement('a');
-                          link.href = card.id_card_url!;
+                          link.href = card.id_card_url || card.pdf_url || '';
                           link.download = 'id_card.pdf';
                           document.body.appendChild(link);
                           link.click();
@@ -345,17 +390,52 @@ const AllIdCards = () => {
                           try {
                             await axios.post(`${API_BASE}/id_cards/generate/`,{ 
                               email: card.user_email 
+                            }, {
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                              },
+                              timeout: 30000 // 30 second timeout
                             });
                             // Refresh the list
-                            const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`);
+                            const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`, {
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              timeout: 10000 // 10 second timeout
+                            });
                             setIdCards(cardsRes.data || []);
                             alert('ID card regeneration started. Please refresh in a moment.');
                           } catch (err: unknown) {
                             console.error('Regeneration error:', err);
+                            console.error('Regeneration error details:', {
+                              message: err instanceof Error ? err.message : 'Unknown error',
+                              response: axios.isAxiosError(err) ? err.response?.data : undefined,
+                              status: axios.isAxiosError(err) ? err.response?.status : undefined,
+                              statusText: axios.isAxiosError(err) ? err.response?.statusText : undefined
+                            });
+                            
+                            let errorMessage = 'Failed to regenerate ID card. Please try again.';
                             if (axios.isAxiosError(err)) {
-                              console.error('Error response:', err.response?.data);
+                              if (typeof err.response?.data === 'string' && err.response.data.includes('S3Error')) {
+                                errorMessage = 'Storage error: ID card regeneration is temporarily unavailable due to file storage issues. Please contact your administrator.';
+                              } else if (err.response?.status === 500) {
+                                errorMessage = 'Server error: ID card regeneration service is temporarily unavailable.';
+                              } else if (err.response?.status === 400) {
+                                errorMessage = 'Invalid request: Please check your information.';
+                              } else if (err.response?.status === 401) {
+                                errorMessage = 'Unauthorized: Please log in again.';
+                              } else if (err.response?.status === 403) {
+                                errorMessage = 'Access denied: You do not have permission.';
+                              } else if (err.response?.data?.detail) {
+                                errorMessage = err.response.data.detail;
+                              } else if (err.response?.data?.error) {
+                                errorMessage = err.response.data.error;
+                              } else if (err.response?.data?.message) {
+                                errorMessage = err.response.data.message;
+                              }
                             }
-                            alert('Failed to regenerate ID card. Please try again.');
+                            alert(errorMessage);
                           }
                         }}
                         className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all"

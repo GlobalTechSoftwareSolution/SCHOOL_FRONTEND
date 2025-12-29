@@ -3,7 +3,6 @@
 import DashboardLayout from "@/app/components/DashboardLayout";
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface StudentDocs {
   email?: string | { email?: string };
@@ -50,6 +49,10 @@ const StudentDocsPage = () => {
     }
   };
 
+  const getStoredToken = (): string | null => {
+    return localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+  };
+
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
     try {
@@ -84,6 +87,7 @@ const StudentDocsPage = () => {
     e.preventDefault();
 
     const email = getStoredEmail();
+    const token = getStoredToken();
     const { doc_type, file } = uploadForm;
 
     if (!email || !doc_type || !file) {
@@ -101,7 +105,9 @@ const StudentDocsPage = () => {
       formData.append(doc_type, file);
 
       await axios.post(`${API_BASE}/upload/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             setUploadProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
@@ -126,17 +132,17 @@ const StudentDocsPage = () => {
   const formattedDocs: FormattedDoc[] =
     docs
       ? Object.entries(docs)
-          .filter(
-            ([key, value]) =>
-              typeof value === "string" && value && key !== "email" && key !== "uploaded_at"
-          )
-          .map(([key, value]) => ({
-            key,
-            name: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-            url: value as string,
-            type: key,
-            uploaded_at: typeof docs.uploaded_at === "string" ? docs.uploaded_at : undefined
-          }))
+        .filter(
+          ([key, value]) =>
+            typeof value === "string" && value && key !== "email" && key !== "uploaded_at"
+        )
+        .map(([key, value]) => ({
+          key,
+          name: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+          url: value as string,
+          type: key,
+          uploaded_at: typeof docs.uploaded_at === "string" ? docs.uploaded_at : undefined
+        }))
       : [];
 
   const docOptions = [
@@ -174,11 +180,7 @@ const StudentDocsPage = () => {
       <DashboardLayout role="students">
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"
-            />
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4 animate-spin" />
             <p className="text-gray-600 font-medium">Loading your documents...</p>
           </div>
         </div>
@@ -189,28 +191,19 @@ const StudentDocsPage = () => {
     <DashboardLayout role="students">
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+
           {/* Header Section */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
-          >
+          <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Document Management
             </h1>
             <p className="text-gray-600">
               Upload and manage your academic documents
             </p>
-          </motion.div>
+          </div>
 
           {/* Upload Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8"
-          >
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload Document</h2>
 
             <form onSubmit={handleUpload} className="space-y-4">
@@ -253,40 +246,29 @@ const StudentDocsPage = () => {
 
               {/* Progress Bar */}
               {uploading && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="space-y-1"
-                >
+                <div className="space-y-1">
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Uploading...</span>
                     <span>{uploadProgress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${uploadProgress}%` }}
+                    <div
                       className="bg-blue-600 h-1.5 rounded-full"
+                      style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {/* Upload Button */}
-              <motion.button
-                whileHover={{ scale: uploading ? 1 : 1.01 }}
-                whileTap={{ scale: uploading ? 1 : 0.99 }}
+              <button
                 disabled={uploading}
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {uploading ? (
                   <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                    />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Uploading...
                   </>
                 ) : (
@@ -295,16 +277,12 @@ const StudentDocsPage = () => {
                     Upload Document
                   </>
                 )}
-              </motion.button>
+              </button>
             </form>
-          </motion.div>
+          </div>
 
           {/* Documents Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+          <div>
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
                 <div className="text-red-600 text-sm">{error}</div>
@@ -323,50 +301,44 @@ const StudentDocsPage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <AnimatePresence>
-                    {formattedDocs.map((doc, index) => (
-                      <motion.div
-                        key={doc.key}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.05 }}
-                        whileHover={{ y: -2 }}
-                        className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow cursor-pointer"
-                        onClick={() => setSelectedDoc(doc)}
-                      >
-                        {/* Document Header */}
-                        <div className="bg-blue-50 p-4 border-b border-gray-200">
-                          <div className="flex items-center gap-3">
-                            <div className="text-2xl">
-                              {getDocIcon(doc.type)}
-                            </div>
-                            <div>
-                              <h3 className="font-medium text-gray-900 truncate">
-                                {doc.name}
-                              </h3>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Recently'}
-                              </p>
-                            </div>
+                  {formattedDocs.map((doc) => (
+                    <div
+                      key={doc.key}
+                      className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow cursor-pointer"
+                      onClick={() => setSelectedDoc(doc)}
+                    >
+                      {/* Document Header */}
+                      <div className="bg-blue-50 p-4 border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <div className="text-2xl">
+                            {getDocIcon(doc.type)}
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900 truncate">
+                              {doc.name}
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Recently'}
+                            </p>
                           </div>
                         </div>
+                      </div>
 
-                        {/* Document Actions */}
-                        <div className="p-3">
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="block bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium py-2 px-3 rounded-md text-center transition-colors"
-                          >
-                            <span>👁️</span>
-                            View Document
-                          </a>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+                      {/* Document Actions */}
+                      <div className="p-3">
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="block bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium py-2 px-3 rounded-md text-center transition-colors"
+                        >
+                          <span>👁️</span>
+                          View Document
+                        </a>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : (
@@ -380,84 +352,76 @@ const StudentDocsPage = () => {
                 </p>
               </div>
             )}
-          </motion.div>
+          </div>
 
           {/* Document Detail Modal */}
-          <AnimatePresence>
-            {selectedDoc && (
-              <motion.div
-                className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setSelectedDoc(null)}
+          {selectedDoc && (
+            <div
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setSelectedDoc(null)}
+            >
+              <div
+                className="bg-white rounded-lg shadow-lg max-w-md w-full"
+                onClick={(e) => e.stopPropagation()}
               >
-                <motion.div
-                  className="bg-white rounded-lg shadow-lg max-w-md w-full"
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Modal Header */}
-                  <div className="border-b border-gray-200 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="text-2xl">
-                          {getDocIcon(selectedDoc.type)}
+                {/* Modal Header */}
+                <div className="border-b border-gray-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">
+                        {getDocIcon(selectedDoc.type)}
+                      </div>
+                      <div>
+                        <h2 className="font-medium text-gray-900">{selectedDoc.name}</h2>
+                        <p className="text-xs text-gray-500">
+                          {selectedDoc.type.replace(/_/g, ' ')}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedDoc(null)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-4">
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 rounded-md p-3">
+                      <h3 className="text-sm font-medium text-gray-900 mb-2">Document Details</h3>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Type:</span>
+                          <span className="text-gray-900">{selectedDoc.type.replace(/_/g, ' ')}</span>
                         </div>
-                        <div>
-                          <h2 className="font-medium text-gray-900">{selectedDoc.name}</h2>
-                          <p className="text-xs text-gray-500">
-                            {selectedDoc.type.replace(/_/g, ' ')}
-                          </p>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Uploaded:</span>
+                          <span className="text-gray-900">
+                            {selectedDoc.uploaded_at ? new Date(selectedDoc.uploaded_at).toLocaleDateString() : 'Recently'}
+                          </span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => setSelectedDoc(null)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-gray-900">Actions</h3>
+                      <a
+                        href={selectedDoc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md text-center transition-colors"
                       >
-                        ✕
-                      </button>
+                        View Document
+                      </a>
                     </div>
                   </div>
-
-                  {/* Modal Content */}
-                  <div className="p-4">
-                    <div className="space-y-4">
-                      <div className="bg-gray-50 rounded-md p-3">
-                        <h3 className="text-sm font-medium text-gray-900 mb-2">Document Details</h3>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Type:</span>
-                            <span className="text-gray-900">{selectedDoc.type.replace(/_/g, ' ')}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Uploaded:</span>
-                            <span className="text-gray-900">
-                              {selectedDoc.uploaded_at ? new Date(selectedDoc.uploaded_at).toLocaleDateString() : 'Recently'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-medium text-gray-900">Actions</h3>
-                        <a
-                          href={selectedDoc.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md text-center transition-colors"
-                        >
-                          View Document
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

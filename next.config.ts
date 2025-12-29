@@ -23,6 +23,15 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'cdn.pixabay.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'minio.globaltechsoftwaresolutions.cloud',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '8000',
+      },
     ],
   },
   async rewrites() {

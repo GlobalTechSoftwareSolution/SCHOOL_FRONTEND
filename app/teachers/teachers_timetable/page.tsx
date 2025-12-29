@@ -3,13 +3,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
-import { 
-  Calendar, 
-  Clock, 
-  BookOpen, 
-  Users, 
-  Search, 
-  Filter, 
+import {
+  Calendar,
+  Clock,
+  BookOpen,
+  Users,
+  Search,
+  Filter,
   RefreshCw,
   AlertCircle,
   CheckCircle2,
@@ -17,7 +17,7 @@ import {
   User
 } from "lucide-react";
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface TimetableEntry {
   id: number;
@@ -76,17 +76,16 @@ const TeachersTimetablePage = () => {
       try {
         const userData = localStorage.getItem("userData");
         const userInfo = localStorage.getItem("userInfo");
-        
+
         if (userData || userInfo) {
           const ud = userData ? JSON.parse(userData) : null;
           const ui = userInfo ? JSON.parse(userInfo) : null;
-          
+
           const email = ud?.email || ui?.email || null;
           const name = ud?.fullname || ui?.fullname || ui?.name || "Teacher";
-          
+
           setTeacherEmail(email);
           setTeacherName(name);
-          console.log("👨‍🏫 Teacher loaded:", { email, name });
         }
       } catch (e) {
         console.error("❌ Error reading teacher info:", e);
@@ -100,10 +99,8 @@ const TeachersTimetablePage = () => {
   // Fetch classes for filtering
   const fetchClasses = useCallback(async () => {
     try {
-      console.log("📡 Fetching classes");
-      const res = await axios.get(`${API_BASE}classes/`);
+      const res = await axios.get(`${API_BASE}/classes/`);
       const allClasses: ClassInfo[] = res.data || [];
-      console.log("📋 Total classes:", allClasses.length);
       setClasses(allClasses);
     } catch (err: unknown) {
       console.error("❌ Error fetching classes:", err);
@@ -115,7 +112,7 @@ const TeachersTimetablePage = () => {
     const totalClasses = entries.length;
     const totalSubjects = new Set(entries.map(e => e.subject_name)).size;
     const teachingDays = new Set(entries.map(e => e.day_of_week)).size;
-    
+
     // Calculate total weekly hours
     const weeklyHours = entries.reduce((total, entry) => {
       const start = new Date(`1970-01-01T${entry.start_time}`);
@@ -141,25 +138,22 @@ const TeachersTimetablePage = () => {
     } else {
       setLoading(true);
     }
-    
+
     setError(null);
-    
+
     try {
-      console.log("📡 Fetching timetable for teacher:", teacherEmail);
       const [timetableRes, classesRes] = await Promise.all([
-        axios.get(`${API_BASE}timetable/`),
-        axios.get(`${API_BASE}classes/`)
+        axios.get(`${API_BASE}/timetable/`),
+        axios.get(`${API_BASE}/classes/`)
       ]);
-      
+
       const allEntries: TimetableEntry[] = timetableRes.data || [];
       const allClasses: ClassInfo[] = classesRes.data || [];
-      console.log("📋 Total timetable entries:", allEntries.length);
-      console.log("📚 Total classes:", allClasses.length);
 
       const teacherEntries = allEntries.filter(
-        (t) => t.teacher.toLowerCase() === teacherEmail.toLowerCase()
+        (t) => t.teacher?.toLowerCase() === teacherEmail?.toLowerCase()
       );
-      
+
       // Enhance timetable entries with class information
       const enhancedEntries = teacherEntries.map(entry => {
         const classInfo = allClasses.find(cls => cls.id === entry.class_id);
@@ -169,20 +163,19 @@ const TeachersTimetablePage = () => {
           section: classInfo?.sec || entry.section || ""
         };
       });
-      
-      console.log("✅ Filtered and enhanced teacher timetable entries:", enhancedEntries);
+
       setTimetable(enhancedEntries);
       setFilteredTimetable(enhancedEntries);
-      
+
       // Calculate statistics
       if (enhancedEntries.length > 0) {
         setStats(calculateStats(enhancedEntries));
       }
-      
+
     } catch (err: unknown) {
       console.error("❌ Error fetching teacher timetable:", err);
       setError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         "Failed to load timetable. Please check your connection and try again."
       );
     } finally {
@@ -202,8 +195,8 @@ const TeachersTimetablePage = () => {
 
     // Filter by day
     if (filters.day !== "all") {
-      filtered = filtered.filter(entry => 
-        entry.day_of_week.toLowerCase() === filters.day.toLowerCase()
+      filtered = filtered.filter(entry =>
+        entry.day_of_week?.toLowerCase() === filters.day.toLowerCase()
       );
     }
 
@@ -211,10 +204,10 @@ const TeachersTimetablePage = () => {
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       filtered = filtered.filter(entry =>
-        entry.subject_name?.toLowerCase().includes(searchTerm) ||
-        entry.class_name?.toLowerCase().includes(searchTerm) ||
-        entry.section?.toLowerCase().includes(searchTerm) ||
-        entry.room_number?.toLowerCase().includes(searchTerm)
+        entry.subject_name?.toLowerCase()?.includes(searchTerm) ||
+        entry.class_name?.toLowerCase()?.includes(searchTerm) ||
+        entry.section?.toLowerCase()?.includes(searchTerm) ||
+        entry.room_number?.toLowerCase()?.includes(searchTerm)
       );
     }
 
@@ -232,14 +225,14 @@ const TeachersTimetablePage = () => {
 
     // Filter by class ID
     if (filters.classId !== "all") {
-      filtered = filtered.filter(entry => 
+      filtered = filtered.filter(entry =>
         entry.class_id === parseInt(filters.classId)
       );
     }
 
     // Filter by section
     if (filters.section !== "all") {
-      filtered = filtered.filter(entry => 
+      filtered = filtered.filter(entry =>
         entry.section?.toLowerCase() === filters.section.toLowerCase()
       );
     }
@@ -340,7 +333,7 @@ const TeachersTimetablePage = () => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-2 sm:gap-3">
                 <button
                   onClick={() => fetchTimetable(true)}
@@ -359,9 +352,9 @@ const TeachersTimetablePage = () => {
                 <div className="flex items-center gap-2 sm:gap-3">
                   <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   <span className="font-semibold text-gray-800 text-sm sm:text-base">
-                    Today: {new Date().toLocaleDateString("en-US", { 
-                      weekday: "long", 
-                      month: "long", 
+                    Today: {new Date().toLocaleDateString("en-US", {
+                      weekday: "long",
+                      month: "long",
                       day: "numeric",
                       year: "numeric"
                     })}
@@ -383,7 +376,7 @@ const TeachersTimetablePage = () => {
                   )}
                 </div>
               </div>
-              
+
               {hasTodaysClasses && (
                 <div className="mt-2 sm:mt-3 flex flex-wrap gap-1 sm:gap-2">
                   {todaysClasses.map((classItem, index) => (
@@ -419,7 +412,7 @@ const TeachersTimetablePage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-4 lg:p-5">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="p-1 sm:p-2 bg-green-100 rounded-lg sm:rounded-xl">
@@ -431,7 +424,7 @@ const TeachersTimetablePage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-4 lg:p-5">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="p-1 sm:p-2 bg-purple-100 rounded-lg sm:rounded-xl">
@@ -443,7 +436,7 @@ const TeachersTimetablePage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-4 lg:p-5">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="p-1 sm:p-2 bg-orange-100 rounded-lg sm:rounded-xl">
@@ -466,7 +459,7 @@ const TeachersTimetablePage = () => {
                 <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
                 <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Filter Schedule</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 w-full">
                 <div className="relative">
                   <Search className="h-3 w-3 sm:h-4 sm:w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -478,7 +471,7 @@ const TeachersTimetablePage = () => {
                     className="w-full pl-9 sm:pl-10 pr-4 py-2 border border-gray-300 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                
+
                 <select
                   value={filters.day}
                   onChange={(e) => setFilters(prev => ({ ...prev, day: e.target.value }))}
@@ -489,7 +482,7 @@ const TeachersTimetablePage = () => {
                     <option key={day} value={day}>{day}</option>
                   ))}
                 </select>
-                
+
                 <select
                   value={filters.timeRange}
                   onChange={(e) => setFilters(prev => ({ ...prev, timeRange: e.target.value }))}
@@ -499,7 +492,7 @@ const TeachersTimetablePage = () => {
                   <option value="morning">Morning</option>
                   <option value="afternoon">Afternoon</option>
                 </select>
-                
+
                 <select
                   value={filters.classId}
                   onChange={(e) => setFilters(prev => ({ ...prev, classId: e.target.value }))}
@@ -512,7 +505,7 @@ const TeachersTimetablePage = () => {
                     </option>
                   ))}
                 </select>
-                
+
                 <select
                   value={filters.section}
                   onChange={(e) => setFilters(prev => ({ ...prev, section: e.target.value }))}
@@ -550,7 +543,7 @@ const TeachersTimetablePage = () => {
                 {timetable.length === 0 ? "No Timetable Assigned" : "No Matching Classes"}
               </h3>
               <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">
-                {timetable.length === 0 
+                {timetable.length === 0
                   ? "Your teaching schedule will appear here once classes are assigned to you by the administration."
                   : "No classes match your current filters. Try adjusting your search criteria."
                 }
@@ -582,7 +575,7 @@ const TeachersTimetablePage = () => {
                       {groupedByDay[day].length} class{groupedByDay[day].length === 1 ? "" : "es"}
                     </span>
                   </div>
-                  
+
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Total hours</p>
                     <p className="text-xs sm:text-sm font-semibold text-gray-700">
@@ -607,7 +600,7 @@ const TeachersTimetablePage = () => {
                           <div className="p-2 sm:p-3 bg-blue-500/10 rounded-xl sm:rounded-2xl group-hover:bg-blue-500/20 transition-colors flex-shrink-0">
                             <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-600" />
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 mb-1 sm:mb-2">
                               <h3 className="font-bold text-gray-900 text-sm sm:text-base lg:text-lg truncate">
@@ -617,7 +610,7 @@ const TeachersTimetablePage = () => {
                                 {entry.class_name} {entry.section && `• ${entry.section}`}
                               </span>
                             </div>
-                            
+
                             <div className="flex flex-col xs:flex-row xs:items-center gap-1 sm:gap-2 lg:gap-4 text-xs sm:text-sm text-gray-600">
                               <span className="flex items-center gap-1">
                                 <Building className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -630,7 +623,7 @@ const TeachersTimetablePage = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="text-left sm:text-right">
                           <span className="inline-flex items-center px-3 sm:px-4 py-1 sm:py-2 rounded-full bg-slate-100 text-slate-800 border border-slate-200 font-semibold text-xs sm:text-sm group-hover:bg-blue-100 group-hover:border-blue-300 group-hover:text-blue-700 transition-colors">
                             <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />

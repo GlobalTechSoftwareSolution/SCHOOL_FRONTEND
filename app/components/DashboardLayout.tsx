@@ -13,7 +13,7 @@ type Props = {
 };
 
 const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
-  parents:[
+  parents: [
     { name: "Dashboard", path: "/parents/parents_dashboard" },
     { name: "Attendence", path: "/parents/parents_attendence" },
     { name: "Reports", path: "/parents/parents_report" },
@@ -54,7 +54,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Notice", path: "/principal/principal_notice" },
     { name: "Programs", path: "/principal/principal_programs" },
     { name: "Projects", path: "/principal/principal_projects" },
-    { name: "Monthly Report", path: "/principal/principal_monthly_report" },  
+    { name: "Monthly Report", path: "/principal/principal_monthly_report" },
     { name: "ID card", path: "/principal/principal_id_card" },
     { name: "Timetable Creation", path: "/principal/principal_timetablecreation" },
     { name: "Profile", path: "/principal/principal_profile" },
@@ -129,7 +129,7 @@ function parseJwt(token: string): { [key: string]: unknown } | null {
     const jsonPayload = decodeURIComponent(
       atob(base64)
         .split('')
-        .map(function(c) {
+        .map(function (c) {
           return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         })
         .join('')
@@ -154,21 +154,21 @@ export default function DashboardLayout({ children, role }: Props) {
   // Check authentication on mount and route changes
   useEffect(() => {
     console.log('[DASHBOARD LAYOUT] Checking authentication');
-    
+
     // Check if user is authenticated
-    const token = localStorage.getItem('accessToken') || 
-                  localStorage.getItem('authToken') || 
-                  getCookie("token");
-    
+    const token = localStorage.getItem('accessToken') ||
+      localStorage.getItem('authToken') ||
+      getCookie("token");
+
     if (!token) {
       // Redirect to login if not authenticated
       console.log('[DASHBOARD LAYOUT] No token found, redirecting to login');
       router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
-    
+
     console.log('[DASHBOARD LAYOUT] Token found, proceeding with user data fetch');
-    
+
     // Parse user info from token or localStorage
     let tokenRole: string | null = null;
     if (token) {
@@ -186,90 +186,85 @@ export default function DashboardLayout({ children, role }: Props) {
         }
       }
     }
-    
+
     // Fetch user details
     async function fetchUserDetails() {
       if (typeof window !== "undefined") {
         const storedUser = localStorage.getItem("userInfo");
         console.log('[DASHBOARD LAYOUT] Stored user info:', storedUser);
-        
+
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
             const email = parsedUser.email;
-            // setUserEmail(email || "Unknown User");
 
             if (email) {
               try {
                 // Use tokenRole if available, else fallback to prop role
                 const effectiveRole = tokenRole || role.toLowerCase();
-                // If effectiveRole not in roleLinksMap keys, fallback to role prop
                 const roleForApi = Object.keys(roleLinksMap).includes(effectiveRole) ? effectiveRole : role.toLowerCase();
-                // For admin, use singular endpoint; for others, use singular (no plural 's')
-                const endpoint = `https://school.globaltechsoftwaresolutions.cloud/${roleForApi}/${email}/`
-                console.log("Fetching user from:", endpoint);
-                try {
-                  const response = await fetch(endpoint);
-                  if (response.ok) {
-                    const data = await response.json();
-                    const userDetails = data.user_details || {};
-                    // Try to get the full name from various possible fields
-                    const fullname = data.fullname || data.name || data.first_name || userDetails.fullname || userDetails.name || userDetails.first_name || null;
-                    const roleFromApi = userDetails.role || null;
-                    const profilePic = data.profile_picture || userDetails.profile_picture || null;
 
-                    // Use role from API if valid, else fallback to tokenRole or prop role
-                    const finalRole = roleFromApi ? roleFromApi.toLowerCase() : (tokenRole || role.toLowerCase());
-                    console.log('[DASHBOARD LAYOUT] Final role determination:', { roleFromApi, tokenRole, propRole: role, finalRole });
+                // Use environment variable for API base or fallback
+                const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "https://school.globaltechsoftwaresolutions.cloud";
+                const endpoint = `${apiBase}/${roleForApi}/${email}/`;
 
-                    // Set user name with fallbacks
-                    setUserName(fullname || (email.split("@")[0] || "User"));
-                    setUserRole(finalRole.toUpperCase());
-                    setProfilePicture(profilePic || null);
-                  } else {
-                    // fallback if fetch fails (404, 500, etc.)
-                    console.log("ℹ️ User details endpoint not available (" + response.status + "), using defaults");
-                    // Try to extract name from email or use fallback
-                    const nameFromEmail = email.split("@")[0] || "User";
-                    setUserName(nameFromEmail);
-                    setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
-                    setProfilePicture(null);
+                console.log("[DASHBOARD LAYOUT] Fetching user from:", endpoint);
+
+                const response = await fetch(endpoint, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                   }
-                } catch (fetchErr) {
-                  console.log("ℹ️ Could not fetch user details:", fetchErr);
-                  // Try to extract name from email or use fallback
+                });
+
+                if (response.ok) {
+                  const data = await response.json();
+                  console.log("[DASHBOARD LAYOUT] User data fetched:", data);
+
+                  const userDetails = data.user_details || {};
+                  // Try to get the full name from various possible fields
+                  const fullname = data.fullname || data.name || data.first_name || userDetails.fullname || userDetails.name || userDetails.first_name || null;
+                  const roleFromApi = userDetails.role || null;
+                  let profilePic = data.profile_picture || data.profile_pic || userDetails.profile_picture || null;
+
+                  // Handle relative image paths
+                  if (profilePic && !profilePic.startsWith('http')) {
+                    profilePic = `${apiBase}${profilePic.startsWith('/') ? '' : '/'}${profilePic}`;
+                  }
+
+                  // Use role from API if valid, else fallback to tokenRole or prop role
+                  const finalRole = roleFromApi ? roleFromApi.toLowerCase() : (tokenRole || role.toLowerCase());
+
+                  setUserName(fullname || (email.split("@")[0] || "User"));
+                  setUserRole(finalRole.toUpperCase());
+                  setProfilePicture(profilePic);
+                } else {
+                  console.warn("[DASHBOARD LAYOUT] Profile fetch failed with status:", response.status);
                   const nameFromEmail = email.split("@")[0] || "User";
                   setUserName(nameFromEmail);
                   setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
-                  setProfilePicture(null);
                 }
-              } catch {
-                // Try to extract name from email or use fallback
+              } catch (fetchErr) {
+                console.error("[DASHBOARD LAYOUT] Error fetching user details:", fetchErr);
                 const nameFromEmail = email.split("@")[0] || "User";
                 setUserName(nameFromEmail);
                 setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
-                setProfilePicture(null);
               }
             } else {
               setUserName("Unknown User");
               setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
-              setProfilePicture(null);
             }
-          } catch {
-            // setUserEmail("Unknown User");
+          } catch (e) {
+            console.error("[DASHBOARD LAYOUT] Error parsing userInfo:", e);
             setUserName("Unknown User");
             setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
-            setProfilePicture(null);
           }
         } else {
-          // setUserEmail(null);
-          setUserName(null);
           setUserRole((tokenRole || role.toLowerCase()).toUpperCase());
-          setProfilePicture(null);
         }
       }
     }
-    
+
     fetchUserDetails();
   }, [role, router, pathname]);
 
@@ -305,14 +300,13 @@ export default function DashboardLayout({ children, role }: Props) {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto flex flex-col p-4 space-y-2">
+        <nav className="flex-1 overflow-y-auto flex flex-col p-4 space-y-2 custom-scrollbar">
           {roleLinks?.map((link) => (
             <Link
               href={link.path}
               key={link.name}
-              className={`px-4 py-2 rounded-lg transition-all font-medium hover:bg-blue-500 hover:shadow-md ${
-                pathname === link.path ? "bg-blue-500 shadow-md" : ""
-              }`}
+              className={`px-4 py-2 rounded-lg transition-all font-medium hover:bg-blue-500 hover:shadow-md ${pathname === link.path ? "bg-blue-500 shadow-md" : ""
+                }`}
             >
               {link.name}
             </Link>
@@ -336,7 +330,7 @@ export default function DashboardLayout({ children, role }: Props) {
             className="fixed inset-0 bg-black bg-opacity-40"
             onClick={() => setMenuOpen(false)}
           />
-          <div className="relative ml-4 my-4 w-64 bg-gradient-to-b from-blue-600 to-blue-800 text-white rounded-xl shadow-2xl z-10 overflow-hidden">
+          <div className="relative ml-4 my-4 w-64 bg-gradient-to-b from-blue-600 to-blue-800 text-white rounded-xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[calc(100vh-2rem)]">
             <div className="p-4 flex justify-between items-center border-b border-blue-700">
               <div className="flex items-center gap-2">
                 <Image
@@ -361,15 +355,14 @@ export default function DashboardLayout({ children, role }: Props) {
                 <FiX size={20} />
               </button>
             </div>
-            <nav className="flex-1 overflow-y-auto flex flex-col p-4 space-y-2">
+            <nav className="flex-1 overflow-y-auto flex flex-col p-4 space-y-2 custom-scrollbar">
               {roleLinks?.map((link) => (
                 <Link
                   href={link.path}
                   key={link.name}
                   onClick={() => setMenuOpen(false)}
-                  className={`px-4 py-2 rounded-lg transition-all font-medium hover:bg-blue-500 ${
-                    pathname === link.path ? "bg-blue-500" : ""
-                  }`}
+                  className={`px-4 py-2 rounded-lg transition-all font-medium hover:bg-blue-500 ${pathname === link.path ? "bg-blue-500" : ""
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -391,60 +384,51 @@ export default function DashboardLayout({ children, role }: Props) {
       {/* Main Content */}
       <div className="md:ml-72 flex-1 flex flex-col min-h-screen">
         {/* Top Bar */}
-        <header className="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-10">
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
-          >
-            <FiMenu size={24} />
-          </button>
-          <div className="flex items-center gap-3 ml-auto">
-            <div className="flex items-center gap-2">
-              {/* <Image
-                src={profilePicture || "/default-avatar.png"}
-                alt="Profile"
-                width={36}
-                height={36}
-                unoptimized
-                className="rounded-full border-2 border-gray-200 object-cover w-9 h-9"
-              /> */}
-              {/* <div className="hidden sm:block">
-                <p className="text-sm font-semibold">{userName ? userName : "User"}</p>
-                <p className="text-xs text-gray-500">{userRole ? userRole : role}</p>
-              </div> */}
-            </div>
+        <header className="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-10 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors mr-2"
+            >
+              <FiMenu size={24} />
+            </button>
+            <h1 className="text-xl font-bold text-blue-600 capitalize sm:block">
+              {role} Dashboard
+            </h1>
           </div>
         </header>
 
         {/* Page Content */}
         <main className="flex-1 p-4 md:p-6">{children}</main>
-      </div>
+      </div >
 
       {/* Logout Confirmation Modal */}
-      {logoutModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Confirm Logout</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to logout? You will need to sign in again to access your account.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setLogoutModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-              >
-                Logout
-              </button>
+      {
+        logoutModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Confirm Logout</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to logout? You will need to sign in again to access your account.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setLogoutModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

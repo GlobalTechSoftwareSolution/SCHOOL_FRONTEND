@@ -3,26 +3,26 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
-import { 
-  Calendar, 
-  Clock, 
-  Download, 
-  Send, 
-  AlertCircle, 
-  CheckCircle2, 
-  XCircle,
+import {
+  Calendar,
+  Clock,
   Search,
   Filter,
   BookOpen,
-  Users,
-  CalendarDays,
-  ChevronDown,
   Upload,
-  MessageCircle
+  XCircle,
+  AlertCircle,
+  CheckCircle2,
+  CalendarDays,
+  Users,
+  Send,
+  MessageCircle,
+  Download,
+  ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const API_BASE = "https://school.globaltechsoftwaresolutions.cloud/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 interface Assignment {
   id: number;
@@ -74,19 +74,19 @@ const getUserEmail = (): string | null => {
 const AssignmentUtils = {
   getStatus: (dueDate: string, submitted?: boolean) => {
     if (submitted) return { label: "Submitted", color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle2 };
-    
+
     const due = new Date(dueDate);
     const now = new Date();
     const days = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (due < now) return { label: "Overdue", color: "bg-red-100 text-red-700 border-red-200", icon: AlertCircle };
     if (days <= 1) return { label: "Due Today", color: "bg-orange-100 text-orange-700 border-orange-200", icon: Clock };
     if (days <= 2) return { label: "Due Tomorrow", color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock };
     if (days <= 7) return { label: "This Week", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Calendar };
-    
+
     return { label: "Upcoming", color: "bg-gray-100 text-gray-700 border-gray-200", icon: CalendarDays };
   },
-  
+
   formatDate: (d: string) =>
     new Date(d).toLocaleDateString("en-US", {
       weekday: "short",
@@ -94,13 +94,13 @@ const AssignmentUtils = {
       day: "numeric",
       year: "numeric",
     }),
-  
+
   formatTime: (d: string) =>
     new Date(d).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit"
     }),
-  
+
   getDaysLeft: (dueDate: string) => {
     const due = new Date(dueDate);
     const now = new Date();
@@ -126,14 +126,13 @@ const Popup: React.FC<{ message: string; type: "success" | "error"; onClose: () 
         initial={{ opacity: 0, y: 40, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 40, scale: 0.95 }}
-        className={`fixed bottom-8 right-8 p-4 rounded-xl shadow-lg text-white z-50 min-w-80 ${
-          type === "success" ? "bg-green-600" : "bg-red-600"
-        }`}
+        className={`fixed bottom-8 right-8 p-4 rounded-xl shadow-lg text-white z-50 min-w-80 ${type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
       >
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
-            {type === "success" ? 
-              <CheckCircle2 className="w-5 h-5" /> : 
+            {type === "success" ?
+              <CheckCircle2 className="w-5 h-5" /> :
               <XCircle className="w-5 h-5" />
             }
           </div>
@@ -178,7 +177,7 @@ const SubmitAssignmentModal: React.FC<{
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setFile(e.dataTransfer.files[0]);
     }
@@ -208,10 +207,10 @@ const SubmitAssignmentModal: React.FC<{
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { error?: string } } };
-      const msg =
-        axiosError.response?.data?.error ||
-        "Failed to submit assignment. Please check your class or try again.";
+      let msg = "Failed to submit assignment. Please check your class or try again.";
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        msg = err.response.data.error;
+      }
       setError(msg);
     } finally {
       setUploading(false);
@@ -235,22 +234,22 @@ const SubmitAssignmentModal: React.FC<{
           className="bg-white rounded-2xl w-full max-w-lg shadow-xl"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-t-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-4 sm:p-6 rounded-t-2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2 bg-white/20 rounded-lg">
                   <Upload className="w-5 h-5" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold">Submit Assignment</h2>
-                  <p className="text-green-100 text-sm mt-1">{assignment.title}</p>
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-bold truncate">Submit Assignment</h2>
+                  <p className="text-green-100 text-sm mt-1 truncate">{assignment.title}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={onClose}
-                className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white self-start sm:self-auto"
               >
-                ✕
+                <XCircle className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -276,19 +275,17 @@ const SubmitAssignmentModal: React.FC<{
                 Upload Your Work *
               </label>
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-                  dragActive 
-                    ? "border-green-500 bg-green-50" 
-                    : "border-gray-300 hover:border-gray-400 bg-gray-50"
-                }`}
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${dragActive
+                  ? "border-green-500 bg-green-50"
+                  : "border-gray-300 hover:border-gray-400 bg-gray-50"
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <Upload className={`w-12 h-12 mx-auto mb-3 ${
-                  dragActive ? "text-green-500" : "text-gray-400"
-                }`} />
+                <Upload className={`w-12 h-12 mx-auto mb-3 ${dragActive ? "text-green-500" : "text-gray-400"
+                  }`} />
                 <p className="text-gray-600 mb-2">
                   {file ? file.name : "Drag & drop your file here"}
                 </p>
@@ -337,11 +334,11 @@ const SubmitAssignmentModal: React.FC<{
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4 pt-5 border-t border-gray-200 mt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors"
+                className="px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors w-full sm:w-auto"
                 disabled={uploading}
               >
                 Cancel
@@ -349,7 +346,7 @@ const SubmitAssignmentModal: React.FC<{
               <button
                 type="submit"
                 disabled={uploading || !file}
-                className="px-6 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                className="px-6 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 {uploading ? (
                   <>
@@ -387,24 +384,25 @@ const AssignmentCard: React.FC<{
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`bg-white rounded-2xl border p-6 shadow-sm hover:shadow-xl transition-all duration-300 group ${
-          submitted ? "border-green-200" : "border-gray-200 hover:border-green-300"
-        }`}
+        className={`bg-white rounded-2xl border p-6 shadow-sm hover:shadow-xl transition-all duration-300 group ${submitted ? "border-green-200" : "border-gray-200 hover:border-green-300"
+          }`}
       >
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-900 group-hover:text-green-700 transition-colors line-clamp-2">
+            <h3 className="text-xl font-bold text-gray-900 group-hover:text-green-700 transition-colors line-clamp-1">
               {assignment.title}
             </h3>
+
+            <div className={`px-3 py-1.5 rounded-full m-3 border text-sm font-medium flex items-center gap-1.5 ${status.color}`}>
+              <StatusIcon className="w-3.5 h-3.5" />
+              {status.label}
+            </div>
+
             <p className="text-gray-600 mt-1 flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               {assignment.subject_name}
             </p>
-          </div>
-          <div className={`px-3 py-1.5 rounded-full border text-sm font-medium flex items-center gap-1.5 ${status.color}`}>
-            <StatusIcon className="w-3.5 h-3.5" />
-            {status.label}
           </div>
         </div>
 
@@ -414,43 +412,46 @@ const AssignmentCard: React.FC<{
         </p>
 
         {/* Metadata Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Calendar className="w-4 h-4" />
-            <span>Due: {AssignmentUtils.formatDate(assignment.due_date)}</span>
+            <span className="truncate max-w-[140px]">Due: {AssignmentUtils.formatDate(assignment.due_date)}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Clock className="w-4 h-4" />
-            <span>{AssignmentUtils.formatTime(assignment.due_date)}</span>
+            <span className="truncate max-w-[140px]">{AssignmentUtils.formatTime(assignment.due_date)}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Users className="w-4 h-4" />
-            <span>{assignment.class_name} - {assignment.section}</span>
+            <span className="truncate max-w-[140px]">{assignment.class_name} - {assignment.section}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <CalendarDays className="w-4 h-4" />
-            <span>Created: {AssignmentUtils.formatDate(assignment.created_at)}</span>
+            <span className="truncate max-w-[140px]">Created: {AssignmentUtils.formatDate(assignment.created_at)}</span>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-          {assignment.attachment && (
-            <a
-              href={assignment.attachment}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Download Files
-            </a>
-          )}
-          
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-4 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {assignment.attachment && (
+              <a
+                href={assignment.attachment}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors self-start"
+              >
+                <Download className="w-4 h-4" />
+                Download Files
+              </a>
+            )}
+            {!assignment.attachment && <div></div>}
+          </div>
+
           <div className="flex-1"></div>
-          
+
           {submitted ? (
-            <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium border border-green-200">
+            <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2.5 rounded-lg font-medium border border-green-200">
               <CheckCircle2 className="w-4 h-4" />
               Submitted
             </div>
@@ -459,7 +460,7 @@ const AssignmentCard: React.FC<{
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setOpen(true)}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-green-200"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-green-200 w-full sm:w-auto"
             >
               <Send className="w-4 h-4" />
               Submit Now
@@ -491,19 +492,19 @@ const StudentAssignmentsPage = () => {
   const [sortBy, setSortBy] = useState<SortType>("due_date");
   const [showFilters, setShowFilters] = useState(false);
 
-  const fetchStudent = useCallback(async () => {
+  const fetchStudent = async () => {
     const email = getUserEmail();
     if (!email) throw new Error("No student email found.");
     const res = await axios.get(`${API_BASE}/students/${email}/`);
     return res.data;
-  }, []);
+  };
 
-  const fetchAssignments = useCallback(async (class_id: number) => {
+  const fetchAssignments = async (class_id: number) => {
     const res = await axios.get(`${API_BASE}/assignments/?class_id=${class_id}`);
     return res.data;
-  }, []);
+  };
 
-  const fetchSubmittedAssignments = useCallback(async (email: string) => {
+  const fetchSubmittedAssignments = async (email: string) => {
     const res = await axios.get(`${API_BASE}/submitted_assignments/`).catch(() => {
       return { data: [] };
     });
@@ -513,7 +514,7 @@ const StudentAssignmentsPage = () => {
       (record) => record?.student?.toLowerCase?.() === email.toLowerCase()
     );
     return filtered;
-  }, []);
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -531,7 +532,7 @@ const StudentAssignmentsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchStudent, fetchAssignments, fetchSubmittedAssignments]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -542,23 +543,21 @@ const StudentAssignmentsPage = () => {
     setPopup({ message: "Assignment submitted successfully!", type: "success" });
   }, [loadData]);
 
-  const isSubmitted = useCallback(
-    (assignmentId: number) => submitted.some((s) => s.assignment === assignmentId),
-    [submitted]
-  );
+  const isSubmitted = useCallback((assignmentId: number) =>
+    submitted.some((s) => s.assignment === assignmentId), [submitted]);
 
   const filteredAndSortedAssignments = useMemo(() => {
     const filtered = assignments.filter(assignment => {
       const matchesSearch = assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           assignment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           assignment.subject_name.toLowerCase().includes(searchTerm.toLowerCase());
-      
+        assignment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assignment.subject_name.toLowerCase().includes(searchTerm.toLowerCase());
+
       const submittedStatus = isSubmitted(assignment.id);
-      
+
       if (tab === "pending") return matchesSearch && !submittedStatus && new Date(assignment.due_date) >= new Date();
       if (tab === "overdue") return matchesSearch && !submittedStatus && new Date(assignment.due_date) < new Date();
       if (tab === "submitted") return matchesSearch && submittedStatus;
-      
+
       return matchesSearch;
     });
 
@@ -581,15 +580,12 @@ const StudentAssignmentsPage = () => {
     return filtered;
   }, [assignments, tab, searchTerm, sortBy, isSubmitted]);
 
-  const stats = useMemo(
-    () => ({
-      total: assignments.length,
-      pending: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) >= new Date()).length,
-      overdue: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) < new Date()).length,
-      submitted: assignments.filter(a => isSubmitted(a.id)).length,
-    }),
-    [assignments, isSubmitted]
-  );
+  const stats = useMemo(() => ({
+    total: assignments.length,
+    pending: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) >= new Date()).length,
+    overdue: assignments.filter(a => !isSubmitted(a.id) && new Date(a.due_date) < new Date()).length,
+    submitted: assignments.filter(a => isSubmitted(a.id)).length,
+  }), [assignments, isSubmitted]);
 
   if (loading) {
     return (
@@ -614,8 +610,8 @@ const StudentAssignmentsPage = () => {
         />
       )}
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-8 sm:space-y-10">
           {/* Header Section */}
           <div className="text-center">
             <motion.div
@@ -641,7 +637,7 @@ const StudentAssignmentsPage = () => {
             >
               Manage and submit your academic assignments in one place
             </motion.p>
-            
+
             {/* Student Info */}
             {student && (
               <motion.div
@@ -663,7 +659,7 @@ const StudentAssignmentsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"
           >
             {[
               { label: "Total", value: stats.total, color: "bg-blue-500" },
@@ -692,7 +688,7 @@ const StudentAssignmentsPage = () => {
             transition={{ delay: 0.5 }}
             className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200"
           >
-            <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex flex-col sm:flex-col md:flex-row gap-4">
               {/* Search */}
               <div className="flex-1">
                 <div className="relative">
@@ -710,7 +706,7 @@ const StudentAssignmentsPage = () => {
               {/* Filters Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="lg:w-48 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                className="md:w-48 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
               >
                 <Filter className="w-5 h-5" />
                 <span>Filters</span>
@@ -727,7 +723,7 @@ const StudentAssignmentsPage = () => {
                   exit={{ opacity: 0, height: 0 }}
                   className="mt-6 pt-6 border-t border-gray-200"
                 >
-                  <div className="flex flex-col lg:flex-row gap-6">
+                  <div className="flex flex-col md:flex-row gap-6">
                     {/* Tabs */}
                     <div className="flex-1">
                       <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -743,11 +739,10 @@ const StudentAssignmentsPage = () => {
                           <button
                             key={key}
                             onClick={() => setTab(key)}
-                            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                              tab === key
-                                ? "bg-green-600 text-white shadow-lg shadow-green-200"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            }`}
+                            className={`px-4 py-2 rounded-lg font-medium transition-all ${tab === key
+                              ? "bg-green-600 text-white shadow-lg shadow-green-200"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
                           >
                             {label} <span className="ml-1 opacity-80">({count})</span>
                           </button>
@@ -756,7 +751,7 @@ const StudentAssignmentsPage = () => {
                     </div>
 
                     {/* Sort */}
-                    <div className="lg:w-64">
+                    <div className="md:w-64">
                       <label className="block text-sm font-semibold text-gray-700 mb-3">
                         Sort By
                       </label>
@@ -785,7 +780,7 @@ const StudentAssignmentsPage = () => {
             className="space-y-6"
           >
             {filteredAndSortedAssignments.length > 0 ? (
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
                 {filteredAndSortedAssignments.map((assignment) => (
                   <AssignmentCard
                     key={assignment.id}
@@ -809,7 +804,7 @@ const StudentAssignmentsPage = () => {
                   {searchTerm || tab !== "all" ? "No matching assignments" : "No assignments yet"}
                 </h3>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  {searchTerm || tab !== "all" 
+                  {searchTerm || tab !== "all"
                     ? "Try adjusting your search or filter criteria to find what you're looking for."
                     : "You don't have any assignments at the moment. They will appear here once your teachers create them."
                   }

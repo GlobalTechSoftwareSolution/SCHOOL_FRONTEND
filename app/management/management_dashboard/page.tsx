@@ -448,9 +448,21 @@ const ManagementDashboard = () => {
             }))
           ];
 
-          // Combine API activities with generated ones, limit to 5 total
-          recentActivities = [...recentActivities, ...generatedActivities].slice(0, 5);
+          // Combine API activities with generated ones
+          recentActivities = [...recentActivities, ...generatedActivities];
         }
+
+        // Sort by timestamp/date descending if available, and limit to latest 5
+        recentActivities.sort((a, b) => {
+          const dateA = a.fullData?.created_at || a.fullData?.timestamp || a.fullData?.date || "";
+          const dateB = b.fullData?.created_at || b.fullData?.timestamp || b.fullData?.date || "";
+          if (dateA && dateB) {
+            return new Date(dateB).getTime() - new Date(dateA).getTime();
+          }
+          return 0;
+        });
+
+        recentActivities = recentActivities.slice(0, 5);
 
         // Calculate quick stats
         const quickStats: QuickStats = {
@@ -711,6 +723,16 @@ const ManagementDashboard = () => {
                     </div>
                   ))}
                 </div>
+                {safeRecentActivities.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                    <Link href="/management/management_activites" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold transition-colors group">
+                      <span>View All Activities</span>
+                      <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Notices Section */}

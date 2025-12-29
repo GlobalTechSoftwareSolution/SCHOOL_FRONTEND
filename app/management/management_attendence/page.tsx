@@ -2,9 +2,11 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import axios from "axios";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import {
-  Calendar,
+  Calendar as LucideCalendar,
   Users,
   UserCheck,
   UserX,
@@ -79,11 +81,13 @@ export default function AttendanceByRole() {
   const [mode, setMode] = useState<
     "students" | "teachers" | "principal" | "management" | "admin"
   >("students");
-  const [dateStr, setDateStr] = useState(() => {
-    const t = new Date();
-    return t.toISOString().slice(0, 10);
-  });
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const dateStr = useMemo(() => {
+    return selectedDate.toISOString().slice(0, 10);
+  }, [selectedDate]);
+
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
 
   // New state for filtering
   const [selectedClass, setSelectedClass] = useState<string>("all");
@@ -94,7 +98,7 @@ export default function AttendanceByRole() {
   // Extract unique classes and sections
   const availableClasses = useMemo(() => {
     const classMap = new Map<number, { id: number; name: string; sections: Set<string> }>();
-    
+
     classes.forEach(cls => {
       if (cls.id && cls.class_name) {
         classMap.set(cls.id, {
@@ -204,15 +208,13 @@ export default function AttendanceByRole() {
       if (loading) return; // Don't load attendance if initial data is still loading
 
       try {
-        let attRes;
-
         // Use different APIs based on mode
-        if (mode === "students") {
-          attRes = await axios.get(`${API}/student_attendance/`);
-        } else {
-          // For teachers, principals, management, and admin, use the general attendance API
-          attRes = await axios.get(`${API}/attendance/`);
-        }
+        const endpoint = mode === "students"
+          ? `${API}/student_attendance/`
+          : `${API}/attendance/`;
+
+        // Optimized fetching: append date parameter
+        const attRes = await axios.get(`${endpoint}?date=${dateStr}`);
 
         let normalizedAttendance = [];
 
@@ -282,12 +284,8 @@ export default function AttendanceByRole() {
     loadAttendance();
   }, [mode, loading, dateStr]);
 
-  // compute filtered attendance by selected date
-  const attendanceForDate = useMemo(() => {
-    return attendance.filter((a) => {
-      return String(a.date || "").startsWith(dateStr);
-    });
-  }, [attendance, dateStr]);
+  // No longer need client-side date filtering since we fetch by date
+  const attendanceForDate = attendance;
 
   // compute rows based on mode with class/section/department filtering
   const filteredByMode = useMemo(() => {
@@ -384,14 +382,14 @@ export default function AttendanceByRole() {
   }, [selectedClass, availableClasses]);
 
   // prev / next date handlers
-  const addDays = (dStr: string, delta: number) => {
-    const d = new Date(dStr + "T00:00:00");
-    d.setDate(d.getDate() + delta);
-    return d.toISOString().slice(0, 10);
+  const addDays = (d: Date, delta: number) => {
+    const newDate = new Date(d);
+    newDate.setDate(newDate.getDate() + delta);
+    return newDate;
   };
 
-  const gotoPrev = () => setDateStr((cur) => addDays(cur, -1));
-  const gotoNext = () => setDateStr((cur) => addDays(cur, 1));
+  const gotoPrev = () => setSelectedDate((cur) => addDays(cur, -1));
+  const gotoNext = () => setSelectedDate((cur) => addDays(cur, 1));
 
   // Clear all filters
   const clearFilters = () => {
@@ -408,7 +406,7 @@ export default function AttendanceByRole() {
     const absent = filteredByMode.filter(a => a.status === "Absent").length;
     const leaves = filteredByMode.filter(a => a.status === "Leave").length;
     const presentPercentage = total > 0 ? Math.round((present / total) * 100) : 0;
-    
+
     return { total, present, absent, leaves, presentPercentage };
   }, [filteredByMode]);
 
@@ -445,7 +443,7 @@ export default function AttendanceByRole() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Data</h3>
             <p className="text-gray-600">Please check your connection and try again.</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -477,13 +475,13 @@ export default function AttendanceByRole() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2 sm:gap-3">
                 <button className="hidden sm:flex items-center gap-1 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 shadow-sm text-xs sm:text-sm">
                   <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                   Export
                 </button>
-                <button 
+                <button
                   onClick={() => setShowFilters(!showFilters)}
                   className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-white border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 shadow-sm text-xs sm:text-sm"
                 >
@@ -565,18 +563,18 @@ export default function AttendanceByRole() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 sm:mb-2">Date</p>
-                  <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900">{new Date(dateStr).toLocaleDateString('en-US', { 
+                  <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900">{new Date(dateStr).toLocaleDateString('en-US', {
                     weekday: 'short',
-                    month: 'short', 
+                    month: 'short',
                     day: 'numeric'
                   })}</p>
                   <div className="hidden sm:flex items-center gap-1 mt-2">
-                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
+                    <LucideCalendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
                     <span className="text-xs sm:text-sm text-purple-600 font-medium">Selected date</span>
                   </div>
                 </div>
                 <div className="p-2 sm:p-3 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg sm:rounded-xl">
-                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                  <LucideCalendar className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
               </div>
             </div>
@@ -593,7 +591,7 @@ export default function AttendanceByRole() {
                     <X className="h-5 w-5 text-gray-500" />
                   </button>
                 </div>
-                <FiltersSection 
+                <FiltersSection
                   mode={mode}
                   selectedClass={selectedClass}
                   setSelectedClass={setSelectedClass}
@@ -622,11 +620,10 @@ export default function AttendanceByRole() {
                     <button
                       key={key}
                       onClick={() => setMode(key as keyof typeof modeConfig)}
-                      className={`flex items-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl transition-all duration-200 font-medium text-xs sm:text-sm ${
-                        mode === key
-                          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                      className={`flex items-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl transition-all duration-200 font-medium text-xs sm:text-sm ${mode === key
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
                     >
                       {config.icon && <config.icon className="h-3 w-3 sm:h-4 sm:w-4" />}
                       <span className="truncate">{config.label}</span>
@@ -637,7 +634,7 @@ export default function AttendanceByRole() {
 
               {/* Desktop Filters */}
               <div className="hidden lg:block w-full lg:w-2/3">
-                <FiltersSection 
+                <FiltersSection
                   mode={mode}
                   selectedClass={selectedClass}
                   setSelectedClass={setSelectedClass}
@@ -659,24 +656,26 @@ export default function AttendanceByRole() {
               {/* Date Navigation */}
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center w-full sm:w-auto">
                 <div className="flex items-center gap-1 sm:gap-2">
-                  <button 
+                  <button
                     onClick={gotoPrev}
                     className="p-1.5 sm:p-2 bg-gray-100 hover:bg-gray-200 rounded-lg sm:rounded-xl transition-colors duration-200"
                   >
                     <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
                   </button>
-                  
-                  <div className="relative">
-                    <Calendar className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
-                    <input
-                      type="date"
-                      value={dateStr}
-                      onChange={(e) => setDateStr(e.target.value)}
-                      className="pl-7 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all duration-200 text-xs sm:text-sm w-full sm:w-auto"
-                    />
-                  </div>
-                  
-                  <button 
+
+                  <button
+                    onClick={() => setShowCalendarModal(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-all duration-200 text-xs sm:text-sm font-medium text-gray-700 shadow-sm"
+                  >
+                    <LucideCalendar className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+                    {selectedDate.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </button>
+
+                  <button
                     onClick={gotoNext}
                     className="p-1.5 sm:p-2 bg-gray-100 hover:bg-gray-200 rounded-lg sm:rounded-xl transition-colors duration-200"
                   >
@@ -690,7 +689,7 @@ export default function AttendanceByRole() {
                     <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs">
                       <Filter className="h-3 w-3" />
                       <span>Filters Active</span>
-                      <button 
+                      <button
                         onClick={() => setShowFilters(true)}
                         className="text-blue-700 hover:text-blue-900"
                       >
@@ -722,7 +721,7 @@ export default function AttendanceByRole() {
                 <div className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs sm:text-sm">
                   <Book className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Class: {availableClasses.find(c => c.id === parseInt(selectedClass))?.name}</span>
-                  <button 
+                  <button
                     onClick={() => setSelectedClass("all")}
                     className="ml-1 text-blue-700 hover:text-blue-900"
                   >
@@ -734,7 +733,7 @@ export default function AttendanceByRole() {
                 <div className="flex items-center gap-1 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-xs sm:text-sm">
                   <Layers className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Section: {selectedSection}</span>
-                  <button 
+                  <button
                     onClick={() => setSelectedSection("all")}
                     className="ml-1 text-indigo-700 hover:text-indigo-900"
                   >
@@ -746,7 +745,7 @@ export default function AttendanceByRole() {
                 <div className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs sm:text-sm">
                   <Building className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Dept: {selectedDepartment}</span>
-                  <button 
+                  <button
                     onClick={() => setSelectedDepartment("all")}
                     className="ml-1 text-green-700 hover:text-green-900"
                   >
@@ -755,7 +754,7 @@ export default function AttendanceByRole() {
                 </div>
               )}
               {(selectedClass !== "all" || selectedSection !== "all" || selectedDepartment !== "all") && (
-                <button 
+                <button
                   onClick={clearFilters}
                   className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-xs sm:text-sm transition-colors"
                 >
@@ -772,13 +771,13 @@ export default function AttendanceByRole() {
               <h3 className="font-semibold text-gray-900 text-lg">Attendance Records</h3>
               <span className="text-sm text-gray-600">{filteredBySearch.length} records</span>
             </div>
-            
+
             {filteredBySearch.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200/60 p-6 text-center">
                 <UserX className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <h3 className="text-base font-semibold text-gray-900 mb-1">No Records Found</h3>
                 <p className="text-gray-600 text-sm">
-                  {searchTerm 
+                  {searchTerm
                     ? `No ${modeConfig[mode].label.toLowerCase()} found matching "${searchTerm}"`
                     : `No attendance records found for ${modeConfig[mode].label.toLowerCase()}`
                   }
@@ -791,7 +790,7 @@ export default function AttendanceByRole() {
                   const role = normalizeRole(row.role);
                   const isStudent = role === "student";
                   const isTeacher = role === "teacher";
-                  
+
                   const displayName = getDisplayName(row);
                   let className = "-";
                   let section = "-";
@@ -799,7 +798,7 @@ export default function AttendanceByRole() {
 
                   if (isStudent) {
                     const resolved = resolveClassForEmail(row.user_email);
-                    
+
                     if (resolved && resolved.classObj) {
                       className = resolved.classObj.class_name || "-";
                       // Check both 'sec' and 'section' properties for section data
@@ -822,13 +821,12 @@ export default function AttendanceByRole() {
                             <p className="text-gray-500 text-sm">{row.user_email}</p>
                           </div>
                         </div>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                          row.status === "Present" 
-                            ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
-                            : row.status === "Absent"
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${row.status === "Present"
+                          ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          : row.status === "Absent"
                             ? "bg-red-100 text-red-700 border border-red-200"
                             : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                        }`}>
+                          }`}>
                           {row.status === "Present" ? (
                             <CheckCircle className="h-3 w-3 mr-1" />
                           ) : row.status === "Absent" ? (
@@ -839,13 +837,13 @@ export default function AttendanceByRole() {
                           {row.status}
                         </span>
                       </div>
-                      
+
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-xs text-gray-500">Role</p>
                           <p className="text-sm font-medium capitalize">{row.role}</p>
                         </div>
-                        
+
                         {mode === "students" && (
                           <>
                             <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
@@ -857,19 +855,19 @@ export default function AttendanceByRole() {
                               <p className="text-sm font-semibold text-gray-900">{section}</p>
                             </div>
                           </>
-                        )}                        
+                        )}
                         {mode === "teachers" && (
                           <div className="bg-green-50 rounded-lg p-3 border border-green-100">
                             <p className="text-xs text-green-600 font-medium">Department</p>
                             <p className="text-sm font-semibold text-gray-900">{department}</p>
                           </div>
                         )}
-                        
+
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-xs text-gray-500">Check In</p>
                           <p className="text-sm font-medium">{row.check_in || "-"}</p>
                         </div>
-                        
+
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-xs text-gray-500">Status</p>
                           <p className="text-sm font-medium">{row.status}</p>
@@ -899,7 +897,7 @@ export default function AttendanceByRole() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600">
                   <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                   <span>{stats.presentPercentage}% Overall Attendance</span>
@@ -953,7 +951,7 @@ export default function AttendanceByRole() {
                           <UserX className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mb-3 sm:mb-4" />
                           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">No Records Found</h3>
                           <p className="text-gray-600 text-xs sm:text-sm max-w-md px-2">
-                            {searchTerm 
+                            {searchTerm
                               ? `No ${modeConfig[mode].label.toLowerCase()} found matching "${searchTerm}" for ${dateStr}`
                               : `No attendance records found for ${modeConfig[mode].label.toLowerCase()} on ${dateStr}`
                             }
@@ -967,7 +965,7 @@ export default function AttendanceByRole() {
                       const role = normalizeRole(row.role);
                       const isStudent = role === "student";
                       const isTeacher = role === "teacher";
-                      
+
                       const displayName = getDisplayName(row);
                       let className = "-";
                       let section = "-";
@@ -1005,7 +1003,7 @@ export default function AttendanceByRole() {
                               {row.role}
                             </span>
                           </td>
-                          
+
                           {mode === "students" && (
                             <>
                               <td className="px-3 sm:px-4 py-3 sm:py-4 hidden sm:table-cell">
@@ -1018,46 +1016,45 @@ export default function AttendanceByRole() {
                               </td>
                             </>
                           )}
-                          
+
                           {mode === "teachers" && (
                             <td className="px-3 sm:px-4 py-3 sm:py-4 hidden sm:table-cell">
                               <div className="text-gray-900 text-xs sm:text-sm">{department}</div>
                             </td>
                           )}
-                          
+
                           <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-                            <span className={`inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-semibold ${
-                              row.status === "Present" 
-                                ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
-                                : row.status === "Absent"
+                            <span className={`inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-semibold ${row.status === "Present"
+                              ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                              : row.status === "Absent"
                                 ? "bg-red-100 text-red-700 border border-red-200"
                                 : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                            }`}>
+                              }`}>
                               {row.status === "Present" ? (
                                 <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                               ) : row.status === "Absent" ? (
                                 <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                               ) : (
                                 <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                              )}
+                              )} <br />
                               {row.status}
                             </span>
                           </td>
-                          
+
                           <td className="px-3 sm:px-4 py-3 sm:py-4 hidden sm:table-cell">
                             <div className="flex items-center gap-1 sm:gap-2 text-gray-900 text-xs sm:text-sm">
                               <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
                               {row.check_in || "-"}
                             </div>
                           </td>
-                          
+
                           <td className="px-3 sm:px-4 py-3 sm:py-4 hidden sm:table-cell">
                             <div className="flex items-center gap-1 sm:gap-2 text-gray-900 text-xs sm:text-sm">
                               <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
                               {row.check_out || "-"}
                             </div>
                           </td>
-                          
+
                         </tr>
                       );
                     })
@@ -1084,6 +1081,110 @@ export default function AttendanceByRole() {
           </div>
         </div>
       </div>
+
+      {/* Calendar Modal */}
+      {showCalendarModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowCalendarModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md transform transition-all">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Select Date</h3>
+              <button
+                onClick={() => setShowCalendarModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="attendance-calendar-wrapper">
+              <Calendar
+                onChange={(val) => {
+                  setSelectedDate(val as Date);
+                  setShowCalendarModal(false);
+                }}
+                value={selectedDate}
+                className="w-full border-none shadow-none rounded-2xl"
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                setSelectedDate(new Date());
+                setShowCalendarModal(false);
+              }}
+              className="mt-6 w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/25"
+            >
+              Today
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Global Calendar Styles */}
+      <style jsx global>{`
+        .attendance-calendar-wrapper .react-calendar {
+          width: 100% !important;
+          max-width: 100% !important;
+          background: white;
+          border: none;
+          font-family: inherit;
+        }
+        .attendance-calendar-wrapper .react-calendar__navigation {
+          height: 44px;
+          margin-bottom: 1rem;
+        }
+        .attendance-calendar-wrapper .react-calendar__navigation button {
+          min-width: 44px;
+          background: none;
+          font-size: 16px;
+          font-weight: 600;
+          color: #374151;
+          border-radius: 12px;
+        }
+        .attendance-calendar-wrapper .react-calendar__navigation button:enabled:hover,
+        .attendance-calendar-wrapper .react-calendar__navigation button:enabled:focus {
+          background-color: #f3f4f6;
+        }
+        .attendance-calendar-wrapper .react-calendar__month-view__weekdays {
+          font-weight: 700;
+          text-transform: uppercase;
+          font-size: 0.75rem;
+          color: #9ca3af;
+        }
+        .attendance-calendar-wrapper .react-calendar__month-view__weekdays__weekday {
+          padding: 0.5em;
+        }
+        .attendance-calendar-wrapper .react-calendar__tile {
+          padding: 0.75em 0.5em;
+          border-radius: 12px;
+          transition: all 0.2s;
+          font-weight: 500;
+        }
+        .attendance-calendar-wrapper .react-calendar__tile:enabled:hover,
+        .attendance-calendar-wrapper .react-calendar__tile:enabled:focus {
+          background-color: #f3f4f6;
+          color: #3b82f6;
+        }
+        .attendance-calendar-wrapper .react-calendar__tile--now {
+          background: #eff6ff;
+          color: #3b82f6;
+        }
+        .attendance-calendar-wrapper .react-calendar__tile--active {
+          background: #3b82f6 !important;
+          color: white !important;
+          box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+        }
+        @media (max-width: 640px) {
+          .attendance-calendar-wrapper .react-calendar__tile {
+            padding: 0.5em 0.25em;
+            font-size: 0.875rem;
+          }
+        }
+      `}</style>
     </DashboardLayout>
   );
 }

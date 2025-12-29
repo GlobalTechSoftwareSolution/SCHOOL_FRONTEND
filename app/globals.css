@@ -1,37 +1,54 @@
 @import "tailwindcss";
 
-/* Custom XS Breakpoint for very small devices (320px - 475px) */
-@media (min-width: 375px) {
-  .xs\:p-3 { padding: 0.75rem; }
-  .xs\:p-4 { padding: 1rem; }
-  .xs\:p-6 { padding: 1.5rem; }
-  .xs\:px-4 { padding-left: 1rem; padding-right: 1rem; }
-  .xs\:py-10 { padding-top: 2.5rem; padding-bottom: 2.5rem; }
-  .xs\:py-12 { padding-top: 3rem; padding-bottom: 3rem; }
-  .xs\:mb-3 { margin-bottom: 0.75rem; }
-  .xs\:mb-4 { margin-bottom: 1rem; }
-  .xs\:gap-2 { gap: 0.5rem; }
-  .xs\:gap-3 { gap: 0.75rem; }
-  .xs\:gap-4 { gap: 1rem; }
-  .xs\:text-xs { font-size: 0.75rem; line-height: 1rem; }
-  .xs\:text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-  .xs\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
-  .xs\:rounded-xl { border-radius: 0.75rem; }
-  .xs\:rounded-2xl { border-radius: 1rem; }
-  .xs\:w-5 { width: 1.25rem; }
-  .xs\:h-5 { height: 1.25rem; }
-  .xs\:w-12 { width: 3rem; }
-  .xs\:h-12 { height: 3rem; }
-  .xs\:grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+@theme {
+  --breakpoint-xs: 375px;
 }
+
 
 /* Scrollbar hide utility */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Custom Scrollbar for Sidebar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* For light backgrounds */
+.custom-scrollbar-dark::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 :root {
@@ -64,9 +81,11 @@ body {
   0% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-8px);
   }
+
   100% {
     transform: translateY(0);
   }
@@ -78,13 +97,15 @@ body {
 
 @keyframes glow {
   0% {
-    filter: drop-shadow(0 0 6px rgba(99,102,241,0.25));
+    filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.25));
   }
+
   50% {
-    filter: drop-shadow(0 0 14px rgba(99,102,241,0.45));
+    filter: drop-shadow(0 0 14px rgba(99, 102, 241, 0.45));
   }
+
   100% {
-    filter: drop-shadow(0 0 6px rgba(99,102,241,0.25));
+    filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.25));
   }
 }
 
@@ -93,8 +114,13 @@ body {
 }
 
 @keyframes progress {
-  0% { width: 0%; }
-  100% { width: 100%; }
+  0% {
+    width: 0%;
+  }
+
+  100% {
+    width: 100%;
+  }
 }
 
 .animate-progress {
@@ -108,16 +134,34 @@ body {
 
 /* fade-in helper */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.animate-fade-in { animation: fadeInUp 0.6s ease-out forwards; }
+
+.animate-fade-in {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
 
 /* Add fade-in animation for popup */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out forwards;
 }

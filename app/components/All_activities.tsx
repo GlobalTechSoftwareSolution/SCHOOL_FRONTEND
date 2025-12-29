@@ -12,15 +12,24 @@ import {
 } from "react-icons/fi";
 
 // Type definitions
+interface SchoolClass {
+  id: number;
+  class_name: string;
+  sec: string;
+}
+
 interface Activity {
   id: number;
-  name: string;
+  name?: string;
+  title?: string;
   description?: string;
   type?: string;
+  category?: string;
   date?: string;
   class_name?: string;
+  class_id_name?: string;
   section?: string;
-  conducted_by?: string;
+  conducted_by?: string | null;
   conducted_by_email?: string;
   created_at: string;
   updated_at: string;
@@ -30,6 +39,7 @@ const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/activities/`;
 
 const Activities = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
@@ -41,19 +51,26 @@ const Activities = () => {
 
   const [newActivity, setNewActivity] = useState({
     name: "",
+    title: "",
     description: "",
     type: "",
+    category: "",
     date: "",
     class_name: "",
     section: "",
-    conducted_by: "principal@school.com",
+    conducted_by: "",
   });
 
   // Fetch all activities
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(API_URL);
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const response = await axios.get(API_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setActivities(response.data);
     } catch (error) {
       console.error("Error fetching activities:", error);
@@ -62,8 +79,34 @@ const Activities = () => {
     }
   };
 
+  const fetchClasses = async () => {
+    try {
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/classes/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setClasses(response.data || []);
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+    } finally {
+    }
+  };
+
   useEffect(() => {
+    // Get user info for conducted_by
+    const userInfo = localStorage.getItem("userInfo");
+    if (userInfo) {
+      try {
+        const user = JSON.parse(userInfo);
+        setNewActivity(prev => ({ ...prev, conducted_by: user.email || user.fullname || "principal@school.com" }));
+      } catch {
+        console.error("Error parsing userInfo");
+      }
+    }
     fetchActivities();
+    fetchClasses();
   }, []);
 
   // Show popup message
@@ -82,30 +125,79 @@ const Activities = () => {
   const handleAddActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(API_URL, newActivity);
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+
+      // Find the specific class ID based on selected name and section
+      const selectedClass = classes.find(
+        (c: SchoolClass) => c.class_name === newActivity.class_name && c.sec === newActivity.section
+      );
+
+      // Construct payload according to verified backend schema
+      const payload = {
+        name: newActivity.title || newActivity.name,
+        description: newActivity.description,
+        type: newActivity.category || newActivity.type,
+        date: newActivity.date,
+        conducted_by_email_input: newActivity.conducted_by, // Verfied field: conducted_by_email_input
+        class_id_id: selectedClass ? selectedClass.id : null, // Verified field: class_id_id
+      };
+
+      await axios.post(API_URL, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       showPopup("Activity created successfully!", true);
       setShowAddForm(false);
+
+      // Reset form but keep conducted_by
+      const userInfo = localStorage.getItem("userInfo");
+      let email = "principal@school.com";
+      if (userInfo) {
+        try {
+          const user = JSON.parse(userInfo);
+          email = user.email || user.fullname || email;
+        } catch { /* ignore */ }
+      }
+
       setNewActivity({
         name: "",
+        title: "",
         description: "",
         type: "",
+        category: "",
         date: "",
         class_name: "",
         section: "",
-        conducted_by: "principal@school.com",
+        conducted_by: email,
       });
       fetchActivities();
-    } catch (error) {
-      console.error("Error adding activity:", error);
-      showPopup("Failed to create activity. Please try again.", false);
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: Record<string, unknown> } };
+      console.error("Error adding activity:", axiosError.response?.data || error);
+      let errorDetail = "Failed to create activity. Please try again.";
+      if (axiosError.response?.data) {
+        // Handle specific field errors like {name: ["..."]}
+        const details = axiosError.response.data;
+        if (typeof details === 'object') {
+          errorDetail = Object.entries(details)
+            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+            .join(' | ');
+        } else {
+          errorDetail = details;
+        }
+      }
+      showPopup(errorDetail, false);
     }
   };
 
   // Filter activities
   const filteredActivities = activities.filter((activity: Activity) => {
-    const matchesType = filterType === "all" || activity.type === filterType;
-    const matchesSearch = activity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (activity.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    const activityName = activity.name || activity.title || "";
+    const activityType = activity.type || activity.category || "";
+    const matchesType = filterType === "all" || activityType === filterType;
+    const matchesSearch = activityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (activity.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     return matchesType && matchesSearch;
   });
 
@@ -134,14 +226,24 @@ const Activities = () => {
   // Reset form
   const resetForm = () => {
     setShowAddForm(false);
+    const userInfo = localStorage.getItem("userInfo");
+    let email = "principal@school.com";
+    if (userInfo) {
+      try {
+        const user = JSON.parse(userInfo);
+        email = user.email || user.fullname || email;
+      } catch { /* ignore */ }
+    }
     setNewActivity({
       name: "",
+      title: "",
       description: "",
       type: "",
+      category: "",
       date: "",
       class_name: "",
       section: "",
-      conducted_by: "principal@school.com",
+      conducted_by: email,
     });
   };
 
@@ -251,9 +353,9 @@ const Activities = () => {
                         type="text"
                         required
                         className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
-                        value={newActivity.name}
-                        onChange={(e) => setNewActivity({ ...newActivity, name: e.target.value })}
-                        placeholder="Enter activity name"
+                        value={newActivity.title}
+                        onChange={(e) => setNewActivity({ ...newActivity, title: e.target.value })}
+                        placeholder="Enter activity title"
                       />
                     </div>
 
@@ -264,8 +366,8 @@ const Activities = () => {
                       <select
                         required
                         className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
-                        value={newActivity.type}
-                        onChange={(e) => setNewActivity({ ...newActivity, type: e.target.value })}
+                        value={newActivity.category}
+                        onChange={(e) => setNewActivity({ ...newActivity, category: e.target.value })}
                       >
                         <option value="">Select Activity Type</option>
                         <option value="Cultural">Cultural Event</option>
@@ -297,26 +399,42 @@ const Activities = () => {
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Class Name (Optional)
                       </label>
-                      <input
-                        type="text"
-                        className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
+                      <select
+                        className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base cursor-pointer"
                         value={newActivity.class_name}
-                        onChange={(e) => setNewActivity({ ...newActivity, class_name: e.target.value })}
-                        placeholder="e.g., Class 10"
-                      />
+                        onChange={(e) => {
+                          setNewActivity({
+                            ...newActivity,
+                            class_name: e.target.value,
+                            section: "" // Reset section when class changes
+                          });
+                        }}
+                      >
+                        <option value="">Select Class</option>
+                        {Array.from(new Set(classes.map((c: SchoolClass) => c.class_name).filter(Boolean))).sort().map((className: string) => (
+                          <option key={className} value={className}>Class {className}</option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Section (Optional)
                       </label>
-                      <input
-                        type="text"
-                        className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base"
+                      <select
+                        className="w-full border border-gray-300 p-2 sm:p-3 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm sm:text-base cursor-pointer"
                         value={newActivity.section}
                         onChange={(e) => setNewActivity({ ...newActivity, section: e.target.value })}
-                        placeholder="e.g., A, B, C"
-                      />
+                        disabled={!newActivity.class_name}
+                      >
+                        <option value="">Select Section</option>
+                        {classes
+                          .filter((c: SchoolClass) => c.class_name === newActivity.class_name && c.sec)
+                          .map((c: SchoolClass) => (
+                            <option key={c.id} value={c.sec}>Section {c.sec}</option>
+                          ))
+                        }
+                      </select>
                     </div>
                   </div>
 
@@ -373,14 +491,14 @@ const Activities = () => {
                         <div className="flex justify-between items-start mb-3 sm:mb-4">
                           <div className="flex items-center gap-2 sm:gap-3">
                             <div className="text-xl sm:text-2xl">
-                              {getActivityTypeIcon(activity.type)}
+                              {getActivityTypeIcon(activity.type || activity.category)}
                             </div>
                             <div className="min-w-0 flex-1">
                               <h3 className="font-bold text-gray-800 text-base sm:text-lg line-clamp-1">
-                                {activity.name}
+                                {activity.title || activity.name}
                               </h3>
-                              <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium border ${getActivityTypeColor(activity.type)} mt-1`}>
-                                {activity.type || "General"}
+                              <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium border ${getActivityTypeColor(activity.type || activity.category)} mt-1`}>
+                                {activity.category || activity.type || "General"}
                               </span>
                             </div>
                           </div>
@@ -396,12 +514,12 @@ const Activities = () => {
                           <div className="flex justify-between">
                             <span className="font-medium">Date:</span>
                             <span>
-                              {activity.date 
+                              {activity.date
                                 ? new Date(activity.date).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })
                                 : "Not scheduled"}
                             </span>
                           </div>
@@ -409,14 +527,14 @@ const Activities = () => {
                             <div className="flex justify-between">
                               <span className="font-medium">Class:</span>
                               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                                {activity.class_name} {activity.section ? `- ${activity.section}` : ''}
+                                {activity.class_id_name || (activity.class_name ? `${activity.class_name} ${activity.section ? `- ${activity.section}` : ''}` : 'General')}
                               </span>
                             </div>
                           )}
                           <div className="flex justify-between">
                             <span className="font-medium">Conducted By:</span>
                             <span className="text-purple-600 font-medium truncate ml-2 max-w-[120px] sm:max-w-none">
-                              {activity.conducted_by || activity.conducted_by_email}
+                              {activity.conducted_by_email || (typeof activity.conducted_by === 'string' ? activity.conducted_by : 'Principal')}
                             </span>
                           </div>
                         </div>
@@ -432,8 +550,8 @@ const Activities = () => {
                       {searchTerm || filterType !== "all" ? "No Activities Found" : "No Activities Planned"}
                     </h3>
                     <p className="text-gray-500 mb-4 text-sm sm:text-base">
-                      {searchTerm || filterType !== "all" 
-                        ? "Try adjusting your search or filter criteria." 
+                      {searchTerm || filterType !== "all"
+                        ? "Try adjusting your search or filter criteria."
                         : "Get started by creating your first school activity."}
                     </p>
                     {searchTerm || filterType !== "all" ? (
@@ -472,16 +590,16 @@ const Activities = () => {
                   <FiArrowLeft className="group-hover:-translate-x-1 transition-transform w-4 h-4 sm:w-5 sm:h-5" />
                   <span>Back to Activities</span>
                 </button>
-                
+
                 <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-start">
                   <div className="text-4xl sm:text-5xl md:text-6xl">
-                    {getActivityTypeIcon(selectedActivity.type)}
+                    {getActivityTypeIcon(selectedActivity.type || selectedActivity.category)}
                   </div>
                   <div className="flex-1">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">{selectedActivity.name}</h1>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">{selectedActivity.title || selectedActivity.name}</h1>
                     <div className="flex flex-wrap gap-2">
-                      <span className={`inline-flex items-center px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium border ${getActivityTypeColor(selectedActivity.type)} bg-white/20 backdrop-blur-sm`}>
-                        {selectedActivity.type || "General Activity"}
+                      <span className={`inline-flex items-center px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium border ${getActivityTypeColor(selectedActivity.type || selectedActivity.category)} bg-white/20 backdrop-blur-sm`}>
+                        {selectedActivity.category || selectedActivity.type || "General Activity"}
                       </span>
                       {selectedActivity.class_name && (
                         <span className="inline-flex items-center px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium bg-white/20 backdrop-blur-sm">
@@ -508,13 +626,13 @@ const Activities = () => {
                           <div>
                             <div className="text-xs sm:text-sm text-gray-500">Scheduled Date</div>
                             <div className="font-semibold text-sm sm:text-base">
-                              {selectedActivity.date 
+                              {selectedActivity.date
                                 ? new Date(selectedActivity.date).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                    weekday: 'long'
-                                  })
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  weekday: 'long'
+                                })
                                 : "Not scheduled"}
                             </div>
                           </div>
@@ -525,18 +643,18 @@ const Activities = () => {
                           <div>
                             <div className="text-xs sm:text-sm text-gray-500">Organized By</div>
                             <div className="font-semibold text-sm sm:text-base">
-                              {selectedActivity.conducted_by || selectedActivity.conducted_by_email}
+                              {selectedActivity.conducted_by_email || (typeof selectedActivity.conducted_by === 'string' ? selectedActivity.conducted_by : "Principal")}
                             </div>
                           </div>
                         </div>
 
-                        {selectedActivity.class_name && (
+                        {(selectedActivity.class_id_name || selectedActivity.class_name) && (
                           <div className="flex items-center gap-2 sm:gap-3">
                             <FiBook className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                             <div>
                               <div className="text-xs sm:text-sm text-gray-500">Assigned Class</div>
                               <div className="font-semibold text-sm sm:text-base">
-                                Class {selectedActivity.class_name} {selectedActivity.section ? `- Section ${selectedActivity.section}` : ''}
+                                {selectedActivity.class_id_name || `${selectedActivity.class_name} ${selectedActivity.section ? `- Section ${selectedActivity.section}` : ''}`}
                               </div>
                             </div>
                           </div>

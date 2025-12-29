@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { Plus, X, Edit, Trash2, Search, Filter, Calendar, Users, Clock, CheckCircle, PlayCircle, MoreVertical } from "lucide-react";
+import { Plus, X, Trash2, Search, Filter, Calendar, Users, Clock, CheckCircle, PlayCircle, Eye } from "lucide-react";
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
@@ -27,7 +27,7 @@ const ProjectsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [classFilter, setClassFilter] = useState<string>("all");
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [viewingProject, setViewingProject] = useState<Project | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [stats, setStats] = useState({
     total: 0,
@@ -51,11 +51,11 @@ const ProjectsPage = () => {
   const calculateStatus = (endDate: string): "In Progress" | "Completed" => {
     const today = new Date();
     const end = new Date(endDate);
-    
+
     // Reset time parts to compare only dates
     today.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
-    
+
     return today <= end ? "In Progress" : "Completed";
   };
 
@@ -126,7 +126,7 @@ const ProjectsPage = () => {
         ...newProject,
         status: calculateStatus(newProject.end_date)
       };
-      
+
       await axios.post(`${API_URL}projects/`, projectToAdd);
       alert("✅ Project added successfully!");
       setShowAddForm(false);
@@ -135,27 +135,6 @@ const ProjectsPage = () => {
     } catch (err: unknown) {
       console.error("Error adding project:", err);
       alert("❌ Failed to add project. Check console for details.");
-    }
-  };
-
-  // ✅ Update project
-  const handleUpdateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProject) return;
-
-    try {
-      const projectToUpdate = {
-        ...editingProject,
-        status: calculateStatus(editingProject.end_date)
-      };
-      
-      await axios.put(`${API_URL}projects/${editingProject.id}/`, projectToUpdate);
-      alert("✅ Project updated successfully!");
-      setEditingProject(null);
-      fetchProjects();
-    } catch (err: unknown) {
-      console.error("Error updating project:", err);
-      alert("❌ Failed to update project. Check console for details.");
     }
   };
 
@@ -208,217 +187,208 @@ const ProjectsPage = () => {
 
   if (loading) {
     return (
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
     );
   }
 
   return (
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">School Projects</h1>
-            <p className="text-gray-600 mt-1">
-              Manage and track academic projects and competitions
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">School Projects</h1>
+          <p className="text-gray-600 mt-1">
+            Manage and track academic projects and competitions
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+        >
+          <Plus className="h-5 w-5" /> Add New Project
+        </button>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Projects</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+            </div>
+            <div className="p-3 bg-blue-50 rounded-xl">
+              <Users className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">In Progress</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.inProgress}</p>
+            </div>
+            <div className="p-3 bg-yellow-50 rounded-xl">
+              <PlayCircle className="h-6 w-6 text-yellow-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Completed</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.completed}</p>
+            </div>
+            <div className="p-3 bg-green-50 rounded-xl">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search projects by title, description, owner, or class..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3 w-full lg:w-auto">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            >
+              <option value="all">All Status</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+            </select>
+
+            <select
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            >
+              <option value="all">All Classes</option>
+              {getClasses().map(className => (
+                <option key={className} value={className}>{className}</option>
+              ))}
+            </select>
+
+            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition">
+              <Filter className="h-4 w-4" />
+              More Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Projects Grid */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">
+            All Projects ({filteredProjects.length})
+          </h2>
+          <div className="text-sm text-gray-500">
+            Showing {filteredProjects.length} of {projects.length} projects
+          </div>
+        </div>
+
+        {filteredProjects.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <Users className="h-16 w-16 mx-auto" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
+            <p className="text-gray-500 mb-6">
+              {searchTerm || statusFilter !== "all" || classFilter !== "all"
+                ? "Try adjusting your filters or search terms"
+                : "Get started by creating your first project"}
             </p>
-          </div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl"
-          >
-            <Plus className="h-5 w-5" /> Add New Project
-          </button>
-        </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Projects</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">In Progress</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.inProgress}</p>
-              </div>
-              <div className="p-3 bg-yellow-50 rounded-xl">
-                <PlayCircle className="h-6 w-6 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.completed}</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search projects by title, description, owner, or class..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-3 w-full lg:w-auto">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            {!searchTerm && statusFilter === "all" && classFilter === "all" && (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition"
               >
-                <option value="all">All Status</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
-
-              <select
-                value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              >
-                <option value="all">All Classes</option>
-                {getClasses().map(className => (
-                  <option key={className} value={className}>{className}</option>
-                ))}
-              </select>
-
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition">
-                <Filter className="h-4 w-4" />
-                More Filters
+                Create Project
               </button>
-            </div>
+            )}
           </div>
-        </div>
-
-        {/* Projects Grid */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              All Projects ({filteredProjects.length})
-            </h2>
-            <div className="text-sm text-gray-500">
-              Showing {filteredProjects.length} of {projects.length} projects
-            </div>
-          </div>
-
-          {filteredProjects.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <Users className="h-16 w-16 mx-auto" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
-              <p className="text-gray-500 mb-6">
-                {searchTerm || statusFilter !== "all" || classFilter !== "all" 
-                  ? "Try adjusting your filters or search terms"
-                  : "Get started by creating your first project"}
-              </p>
-              {!searchTerm && statusFilter === "all" && classFilter === "all" && (
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition"
-                >
-                  Create Project
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredProjects.map((project) => (
-                <div key={project.id} className="border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-shadow duration-200">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                        {project.title}
-                      </h3>
-                      <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
-                        {getStatusIcon(project.status)}
-                        {project.status}
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <button className="p-1 hover:bg-gray-100 rounded-lg transition">
-                        <MoreVertical className="h-4 w-4 text-gray-400" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {project.description}
-                  </p>
-
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Users className="h-4 w-4" />
-                      <span>{project.owner}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>{new Date(project.start_date).toLocaleDateString()} - {new Date(project.end_date).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">ID: #{project.id}</span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setEditingProject(project)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(project.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <div key={project.id} className="border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-shadow duration-200">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-lg mb-1">
+                      {project.title}
+                    </h3>
+                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
+                      {getStatusIcon(project.status)}
+                      {project.status}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Add/Edit Project Modal */}
-        {(showAddForm || editingProject) && (
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  {project.description}
+                </p>
+
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Users className="h-4 w-4" />
+                    <span>{project.owner}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar className="h-4 w-4" />
+                    <span>{new Date(project.start_date).toLocaleDateString()} - {new Date(project.end_date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                  <span className="text-xs text-gray-500">ID: #{project.id}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setViewingProject(project)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(project.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Add Project Modal */}
+      {
+        showAddForm && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold">
-                    {editingProject ? "Edit Project" : "Add New Project"}
-                  </h2>
+                  <h2 className="text-xl font-bold">Add New Project</h2>
                   <button
-                    onClick={() => {
-                      setShowAddForm(false);
-                      setEditingProject(null);
-                    }}
+                    onClick={() => setShowAddForm(false)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition"
                   >
                     <X className="h-5 w-5" />
@@ -426,10 +396,7 @@ const ProjectsPage = () => {
                 </div>
               </div>
 
-              <form 
-                onSubmit={editingProject ? handleUpdateProject : handleAddProject}
-                className="p-6 space-y-6"
-              >
+              <form onSubmit={handleAddProject} className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Title */}
                   <div className="md:col-span-2">
@@ -439,12 +406,8 @@ const ProjectsPage = () => {
                     <input
                       type="text"
                       required
-                      value={editingProject ? (editingProject.title ?? "") : newProject.title}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, title: e.target.value })
-                          : setNewProject({ ...newProject, title: e.target.value })
-                      }
+                      value={newProject.title}
+                      onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       placeholder="Enter project title"
                     />
@@ -456,12 +419,8 @@ const ProjectsPage = () => {
                       Description
                     </label>
                     <textarea
-                      value={editingProject ? (editingProject.description ?? "") : newProject.description}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, description: e.target.value })
-                          : setNewProject({ ...newProject, description: e.target.value })
-                      }
+                      value={newProject.description}
+                      onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       rows={3}
                       placeholder="Enter project description"
@@ -476,12 +435,8 @@ const ProjectsPage = () => {
                     <input
                       type="date"
                       required
-                      value={editingProject ? (editingProject.start_date ?? "") : newProject.start_date}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, start_date: e.target.value })
-                          : setNewProject({ ...newProject, start_date: e.target.value })
-                      }
+                      value={newProject.start_date}
+                      onChange={(e) => setNewProject({ ...newProject, start_date: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     />
                   </div>
@@ -493,12 +448,8 @@ const ProjectsPage = () => {
                     <input
                       type="date"
                       required
-                      value={editingProject ? (editingProject.end_date ?? "") : newProject.end_date}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, end_date: e.target.value })
-                          : setNewProject({ ...newProject, end_date: e.target.value })
-                      }
+                      value={newProject.end_date}
+                      onChange={(e) => setNewProject({ ...newProject, end_date: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     />
                   </div>
@@ -509,11 +460,9 @@ const ProjectsPage = () => {
                       Current Status
                     </label>
                     <div className="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-700">
-                      {editingProject 
-                        ? calculateStatus(editingProject.end_date)
-                        : newProject.end_date 
-                          ? calculateStatus(newProject.end_date)
-                          : "In Progress (default)"}
+                      {newProject.end_date
+                        ? calculateStatus(newProject.end_date)
+                        : "In Progress (default)"}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       Status is automatically calculated based on end date
@@ -527,14 +476,10 @@ const ProjectsPage = () => {
                     </label>
                     <input
                       type="text"
-                      value={editingProject ? (editingProject.class_name ?? "") : newProject.class_name}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, class_name: e.target.value })
-                          : setNewProject({ ...newProject, class_name: e.target.value })
-                      }
+                      value={newProject.class_name}
+                      onChange={(e) => setNewProject({ ...newProject, class_name: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      placeholder="e.g. Grade 10"
+                      placeholder="e.g. Turnitin"
                     />
                   </div>
 
@@ -545,12 +490,8 @@ const ProjectsPage = () => {
                     </label>
                     <input
                       type="text"
-                      value={editingProject ? (editingProject.section ?? "") : newProject.section}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, section: e.target.value })
-                          : setNewProject({ ...newProject, section: e.target.value })
-                      }
+                      value={newProject.section}
+                      onChange={(e) => setNewProject({ ...newProject, section: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       placeholder="e.g. A"
                     />
@@ -564,12 +505,8 @@ const ProjectsPage = () => {
                     <input
                       type="email"
                       required
-                      value={editingProject ? (editingProject.owner_email ?? "") : newProject.owner_email}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, owner_email: e.target.value })
-                          : setNewProject({ ...newProject, owner_email: e.target.value })
-                      }
+                      value={newProject.owner_email}
+                      onChange={(e) => setNewProject({ ...newProject, owner_email: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       placeholder="Enter owner email"
                     />
@@ -582,12 +519,8 @@ const ProjectsPage = () => {
                     </label>
                     <input
                       type="text"
-                      value={editingProject ? (editingProject.owner ?? "") : newProject.owner}
-                      onChange={(e) =>
-                        editingProject
-                          ? setEditingProject({ ...editingProject, owner: e.target.value })
-                          : setNewProject({ ...newProject, owner: e.target.value })
-                      }
+                      value={newProject.owner}
+                      onChange={(e) => setNewProject({ ...newProject, owner: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                       placeholder="Enter owner name"
                     />
@@ -599,13 +532,13 @@ const ProjectsPage = () => {
                     type="submit"
                     className="flex-1 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition font-medium"
                   >
-                    {editingProject ? "Update Project" : "Create Project"}
+                    Create Project
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setShowAddForm(false);
-                      setEditingProject(null);
+                      resetForm();
                     }}
                     className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition font-medium"
                   >
@@ -615,10 +548,22 @@ const ProjectsPage = () => {
               </form>
             </div>
           </div>
-        )}
+        )
+      }
 
-        {/* Delete Confirmation Modal */}
-        {deleteConfirm && (
+      {/* View Project Modal */}
+      {
+        viewingProject && (
+          <ViewProjectModal
+            project={viewingProject}
+            onClose={() => setViewingProject(null)}
+          />
+        )
+      }
+
+      {/* Delete Confirmation Modal */}
+      {
+        deleteConfirm && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
               <div className="text-center">
@@ -648,8 +593,85 @@ const ProjectsPage = () => {
               </div>
             </div>
           </div>
-        )}
+        )
+      }
+    </div >
+  );
+};
+
+// ViewProjectModal Component
+const ViewProjectModal = ({ project, onClose }: { project: Project; onClose: () => void }) => {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 rounded-t-2xl">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-gray-900">Project Details</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition">
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Project Title</h3>
+              <p className="text-xl font-semibold text-gray-900 mt-1">{project.title}</p>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Description</h3>
+              <p className="text-gray-700 mt-1 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                {project.description || "No description provided."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Status</h3>
+                <div className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100">
+                  <span className={`h-2.5 w-2.5 rounded-full ${project.status === "In Progress" ? "bg-yellow-500" : "bg-green-500"}`}></span>
+                  {project.status}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Duration</h3>
+                <p className="text-gray-900 mt-1 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  {new Date(project.start_date).toLocaleDateString()} - {new Date(project.end_date).toLocaleDateString()}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Class Info</h3>
+                <p className="text-gray-900 mt-1">
+                  {project.class_name} {project.section ? `- ${project.section}` : ""}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Owner</h3>
+                <div className="mt-1">
+                  <p className="text-gray-900 font-medium">{project.owner}</p>
+                  <p className="text-gray-500 text-sm">{project.owner_email}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-200 px-6 py-4 rounded-b-2xl bg-gray-50 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 transition font-medium text-gray-700"
+          >
+            Close
+          </button>
+        </div>
       </div>
+    </div>
   );
 };
 

@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import DashboardLayout from '../../components/DashboardLayout';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  X, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  X,
   IndianRupee,
   BookOpen,
   Search,
@@ -78,9 +79,11 @@ const ManagementFeeStructure = () => {
   // ================= FETCH CLASSES =================
   const fetchClasses = async () => {
     try {
-      const res = await fetch(CLASSES_API_URL);
-      const data: SchoolClass[] = await res.json();
-      setClasses(data);
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const res = await axios.get(CLASSES_API_URL, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setClasses(res.data);
     } catch (err) {
       console.error("❌ [FETCH] Error fetching classes:", err);
     }
@@ -90,9 +93,11 @@ const ManagementFeeStructure = () => {
   const fetchFees = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      setFees(data);
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      const res = await axios.get(API_URL, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setFees(res.data);
     } catch (err) {
       console.error("Error fetching fees:", err);
     } finally {
@@ -134,38 +139,52 @@ const ManagementFeeStructure = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const payload = {
-      fee_type: formData.fee_type,
-      amount: formData.amount,
-      frequency: formData.frequency,
-      description: formData.description,
-      class_id: Number(formData.class_id),
-    };
+    try {
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
 
-    let response;
+      const payload = {
+        fee_type: formData.fee_type,
+        amount: formData.amount,
+        frequency: formData.frequency,
+        description: formData.description,
+        class_id: Number(formData.class_id),
+      };
 
-    if (isEditing && formData.id) {
-      response = await fetch(`${API_URL}${formData.id}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      if (isEditing && formData.id) {
+        await axios.patch(`${API_URL}${formData.id}/`, payload, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } else {
+        await axios.post(API_URL, payload, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+
+      showPopup(`Successfully ${isEditing ? 'updated' : 'created'} fee structure`, 'success');
+      resetForm();
+      fetchFees();
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: Record<string, unknown> } };
+      console.error("Error saving fee structure:", axiosError.response?.data || error);
+      let errorDetail = "Failed to save fee structure. Please try again.";
+      if (axiosError.response?.data) {
+        const details = axiosError.response.data;
+        if (typeof details === 'object') {
+          errorDetail = Object.entries(details)
+            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+            .join(' | ');
+        } else {
+          errorDetail = JSON.stringify(details);
+        }
+      }
+      showPopup(errorDetail, 'error');
     }
-
-    if (!response.ok) {
-      showPopup('Failed to save fee structure', 'error');
-      return;
-    }
-
-    showPopup(`Successfully ${isEditing ? 'updated' : 'created'} fee structure`, 'success');
-    resetForm();
-    fetchFees();
   };
 
   const resetForm = () => {
@@ -191,17 +210,18 @@ const ManagementFeeStructure = () => {
   // ================= DELETE =================
   const handleDelete = async (id: number) => {
     showPopup(
-      "Are you sure you want to delete this fee structure? This action cannot be undone.", 
-      "warning", 
+      "Are you sure you want to delete this fee structure? This action cannot be undone.",
+      "warning",
       async () => {
         try {
-          const response = await fetch(`${API_URL}${id}/`, { method: 'DELETE' });
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          showPopup("Successfully deleted fee structure", "success");
+          const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+          await axios.delete(`${API_URL}${id}/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          setPopup({ ...popup, isOpen: false });
           fetchFees();
-        } catch {
+        } catch (err: unknown) {
+          console.error("Delete failed:", (err as { response?: { data?: Record<string, unknown> } }).response?.data || err);
           showPopup("Delete failed. Please try again.", "error");
         } finally {
           closePopup();
@@ -213,10 +233,10 @@ const ManagementFeeStructure = () => {
   // ================= FILTERED FEES =================
   const filteredFees = fees.filter(fee => {
     const matchesSearch = fee.fee_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         fee.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      fee.description.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesType = feeTypeFilter === 'all' || fee.fee_type === feeTypeFilter;
-    
+
     return matchesSearch && matchesType;
   });
 
@@ -249,36 +269,36 @@ const ManagementFeeStructure = () => {
               Manage and organize fee structures across all classes and sections
             </p>
           </div>
-{/* Stats Cards */}
-<div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6 sm:mb-8">
-  
-  {/* Total Fees */}
-  <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200 text-center hover:shadow-xl transition-all min-w-[150px]">
-    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-      <BookOpen className="w-6 h-6 text-blue-600" />
-    </div>
-    <div className="text-base sm:text-lg md:text-2xl font-bold text-blue-600 leading-tight">
-      {stats.totalFees}
-    </div>
-    <div className="text-xs sm:text-sm md:text-base text-gray-600 font-medium whitespace-nowrap">
-      Total Fees
-    </div>
-  </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6 sm:mb-8">
 
-  {/* Total Amount */}
-  <div className="bg-white rounded-2xl sm:ml-4 p-4 sm:p-6 shadow-lg border border-gray-200 text-center hover:shadow-xl transition-all min-w-[150px]">
-    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-      <IndianRupee className="w-6 h-6 text-emerald-600" />
-    </div>
-    <div className="text-base sm:text-lg md:text-2xl font-bold text-emerald-600 leading-tight">
-      ₹{stats.totalAmount.toLocaleString()}
-    </div>
-    <div className="text-xs sm:text-sm md:text-base text-gray-600 font-medium whitespace-nowrap">
-      Total Amount
-    </div>
-  </div>
+            {/* Total Fees */}
+            <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200 text-center hover:shadow-xl transition-all min-w-[150px]">
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <BookOpen className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-base sm:text-lg md:text-2xl font-bold text-blue-600 leading-tight">
+                {stats.totalFees}
+              </div>
+              <div className="text-xs sm:text-sm md:text-base text-gray-600 font-medium whitespace-nowrap">
+                Total Fees
+              </div>
+            </div>
 
-</div>
+            {/* Total Amount */}
+            <div className="bg-white rounded-2xl sm:ml-4 p-4 sm:p-6 shadow-lg border border-gray-200 text-center hover:shadow-xl transition-all min-w-[150px]">
+              <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <IndianRupee className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div className="text-base sm:text-lg md:text-2xl font-bold text-emerald-600 leading-tight">
+                ₹{stats.totalAmount.toLocaleString()}
+              </div>
+              <div className="text-xs sm:text-sm md:text-base text-gray-600 font-medium whitespace-nowrap">
+                Total Amount
+              </div>
+            </div>
+
+          </div>
 
 
           {/* Action Bar */}
@@ -296,7 +316,7 @@ const ManagementFeeStructure = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 w-full lg:w-auto">
                 <select
                   value={feeTypeFilter}
@@ -350,12 +370,11 @@ const ManagementFeeStructure = () => {
                             {cls ? `${cls.class_name} - ${cls.sec}` : `Class ${fee.class_id}`}
                           </p>
                         </div>
-                        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${
-                          fee.frequency === 'Monthly' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                        <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${fee.frequency === 'Monthly' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
                           fee.frequency === 'Annually' ? 'bg-green-100 text-green-800 border border-green-200' :
-                          fee.frequency === 'Quarterly' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
-                          'bg-orange-100 text-orange-800 border border-orange-200'
-                        }`}>
+                            fee.frequency === 'Quarterly' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                              'bg-orange-100 text-orange-800 border border-orange-200'
+                          }`}>
                           {fee.frequency}
                         </span>
                       </div>
@@ -448,11 +467,11 @@ const ManagementFeeStructure = () => {
                     {/* Fee Type */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Fee Type *</label>
-                      <select 
-                        name="fee_type" 
-                        value={formData.fee_type} 
-                        onChange={handleChange} 
-                        required 
+                      <select
+                        name="fee_type"
+                        value={formData.fee_type}
+                        onChange={handleChange}
+                        required
                         className="w-full border border-gray-300 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                       >
                         <option value="">Select Fee Type</option>
@@ -472,15 +491,15 @@ const ManagementFeeStructure = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Amount (₹) *</label>
                       <div className="relative">
                         <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-                        <input 
-                          type="number" 
-                          name="amount" 
-                          value={formData.amount} 
-                          onChange={handleChange} 
-                          placeholder="0.00" 
-                          min="1" 
-                          step="0.01" 
-                          required 
+                        <input
+                          type="number"
+                          name="amount"
+                          value={formData.amount}
+                          onChange={handleChange}
+                          placeholder="0.00"
+                          min="1"
+                          step="0.01"
+                          required
                           className="w-full border border-gray-300 rounded-lg sm:rounded-xl pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                         />
                       </div>
@@ -489,11 +508,11 @@ const ManagementFeeStructure = () => {
                     {/* Frequency */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Frequency *</label>
-                      <select 
-                        name="frequency" 
-                        value={formData.frequency} 
-                        onChange={handleChange} 
-                        required 
+                      <select
+                        name="frequency"
+                        value={formData.frequency}
+                        onChange={handleChange}
+                        required
                         className="w-full border border-gray-300 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                       >
                         <option value="">Select Frequency</option>
@@ -507,16 +526,20 @@ const ManagementFeeStructure = () => {
                     {/* Class */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Class *</label>
-                      <select 
-                        name="class_id" 
-                        value={formData.class_id} 
-                        onChange={handleChange} 
-                        required 
+                      <select
+                        name="class_id"
+                        value={formData.class_id}
+                        onChange={handleChange}
+                        required
                         className="w-full border border-gray-300 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                       >
                         <option value="">Select Class</option>
-                        {[1,2,3,4,5,6,7,8,9,10].map(cls => (
-                          <option key={cls} value={cls}>Class {cls}</option>
+                        {classes.sort((a, b) => {
+                          const nameA = a.class_name || "";
+                          const nameB = b.class_name || "";
+                          return nameA.localeCompare(nameB, undefined, { numeric: true });
+                        }).map(cls => (
+                          <option key={cls.id} value={cls.id}>Class {cls.class_name} - {cls.sec}</option>
                         ))}
                       </select>
                     </div>
@@ -525,11 +548,11 @@ const ManagementFeeStructure = () => {
                   {/* Description */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea 
-                      name="description" 
-                      value={formData.description} 
-                      onChange={handleChange} 
-                      placeholder="Enter fee description (optional)" 
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      placeholder="Enter fee description (optional)"
                       rows={3}
                       className="w-full border border-gray-300 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all resize-none"
                     />
@@ -537,15 +560,15 @@ const ManagementFeeStructure = () => {
 
                   {/* Actions */}
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 border-t border-gray-200">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowForm(false)}
                       className="flex-1 sm:flex-none bg-gray-100 text-gray-700 hover:bg-gray-200 px-6 py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-colors"
                     >
                       Cancel
                     </button>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="flex-1 sm:flex-none bg-emerald-500 text-white hover:bg-emerald-600 px-6 py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-colors"
                     >
                       {isEditing ? 'Update Fee Structure' : 'Create Fee Structure'}
@@ -561,30 +584,27 @@ const ManagementFeeStructure = () => {
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
               <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl w-full max-w-md">
                 {/* Header */}
-                <div className={`p-4 sm:p-6 border-b ${
-                  popup.type === 'error' ? 'border-red-200 bg-red-50' : 
-                  popup.type === 'success' ? 'border-green-200 bg-green-50' : 
-                  popup.type === 'warning' ? 'border-yellow-200 bg-yellow-50' : 'border-blue-200 bg-blue-50'
-                } rounded-t-xl sm:rounded-t-2xl`}>
+                <div className={`p-4 sm:p-6 border-b ${popup.type === 'error' ? 'border-red-200 bg-red-50' :
+                  popup.type === 'success' ? 'border-green-200 bg-green-50' :
+                    popup.type === 'warning' ? 'border-yellow-200 bg-yellow-50' : 'border-blue-200 bg-blue-50'
+                  } rounded-t-xl sm:rounded-t-2xl`}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      popup.type === 'error' ? 'bg-red-100 text-red-600' : 
-                      popup.type === 'success' ? 'bg-green-100 text-green-600' : 
-                      popup.type === 'warning' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'
-                    }`}>
+                    <div className={`p-2 rounded-lg ${popup.type === 'error' ? 'bg-red-100 text-red-600' :
+                      popup.type === 'success' ? 'bg-green-100 text-green-600' :
+                        popup.type === 'warning' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'
+                      }`}>
                       {popup.type === 'error' ? <X className="w-5 h-5" /> :
-                       popup.type === 'success' ? <CheckCircle className="w-5 h-5" /> :
-                       popup.type === 'warning' ? <AlertTriangle className="w-5 h-5" /> :
-                       <Info className="w-5 h-5" />}
+                        popup.type === 'success' ? <CheckCircle className="w-5 h-5" /> :
+                          popup.type === 'warning' ? <AlertTriangle className="w-5 h-5" /> :
+                            <Info className="w-5 h-5" />}
                     </div>
-                    <h3 className={`text-lg font-semibold ${
-                      popup.type === 'error' ? 'text-red-800' : 
-                      popup.type === 'success' ? 'text-green-800' : 
-                      popup.type === 'warning' ? 'text-yellow-800' : 'text-blue-800'
-                    }`}>
-                      {popup.type === 'error' ? 'Error' : 
-                       popup.type === 'success' ? 'Success' : 
-                       popup.type === 'warning' ? 'Warning' : 'Information'}
+                    <h3 className={`text-lg font-semibold ${popup.type === 'error' ? 'text-red-800' :
+                      popup.type === 'success' ? 'text-green-800' :
+                        popup.type === 'warning' ? 'text-yellow-800' : 'text-blue-800'
+                      }`}>
+                      {popup.type === 'error' ? 'Error' :
+                        popup.type === 'success' ? 'Success' :
+                          popup.type === 'warning' ? 'Warning' : 'Information'}
                     </h3>
                   </div>
                 </div>
@@ -618,11 +638,10 @@ const ManagementFeeStructure = () => {
                   ) : (
                     <button
                       onClick={closePopup}
-                      className={`flex-1 text-white px-4 py-3 rounded-lg text-sm sm:text-base font-medium transition-colors ${
-                        popup.type === 'error' ? 'bg-red-500 hover:bg-red-600' : 
-                        popup.type === 'success' ? 'bg-emerald-500 hover:bg-emerald-600' : 
-                        'bg-blue-500 hover:bg-blue-600'
-                      }`}
+                      className={`flex-1 text-white px-4 py-3 rounded-lg text-sm sm:text-base font-medium transition-colors ${popup.type === 'error' ? 'bg-red-500 hover:bg-red-600' :
+                        popup.type === 'success' ? 'bg-emerald-500 hover:bg-emerald-600' :
+                          'bg-blue-500 hover:bg-blue-600'
+                        }`}
                     >
                       OK
                     </button>

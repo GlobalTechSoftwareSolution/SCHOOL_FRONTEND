@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 
@@ -138,12 +139,18 @@ const Faculty = () => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.8, duration: 0.6 }}
             >
+              <Link href="/signup">
               <button className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-xl">
                 Access Faculty Hub
               </button>
+              </Link>
+
+              <Link href="/signup">
               <button className="px-8 py-4 bg-white/20 backdrop-blur hover:bg-white/30 rounded-full font-semibold text-lg transition-all border border-white/30">
                 Explore Features
               </button>
+              </Link>
+
             </motion.div>
           </motion.div>
         </motion.div>

@@ -42,17 +42,22 @@ const AttendanceSystem = () => {
   const [scannedEmail, setScannedEmail] = useState<string | null>(null); // show scanned email before sending
   const [checkinTime, setCheckinTime] = useState<string | null>(null); // Store check-in time
   const [checkoutTime, setCheckoutTime] = useState<string | null>(null); // Store check-out time
-  
+
   // Add state to manually track check-in status
   const [userCheckedIn, setUserCheckedIn] = useState<boolean>(false);
   const [lastUserEmail, setLastUserEmail] = useState<string | null>(null);
+
+  // New state for barcode scanner mode
+  const [barcodeScanMode, setBarcodeScanMode] = useState<'camera' | 'upload'>('upload');
+  const [isScanning, setIsScanning] = useState(false);
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const webcamRef = useRef<Webcam | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const faceModelRef = useRef<blazeface.BlazeFaceModel | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get current location
+  // Get current location with retry and fallback
   const getCurrentLocation = useCallback((): Promise<{ latitude: number; longitude: number }> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -60,6 +65,19 @@ const AttendanceSystem = () => {
         return;
       }
 
+      const optionsHighAccuracy = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      };
+
+      const optionsLowAccuracy = {
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 0
+      };
+
+      // First try high accuracy
       navigator.geolocation.getCurrentPosition(
         (position) => {
           resolve({
@@ -68,13 +86,22 @@ const AttendanceSystem = () => {
           });
         },
         (error) => {
-          reject(error);
+          console.warn("High accuracy location failed, trying low accuracy...", error);
+          // If high accuracy fails, try low accuracy
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              });
+            },
+            (errorLow) => {
+              reject(errorLow);
+            },
+            optionsLowAccuracy
+          );
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
+        optionsHighAccuracy
       );
     });
   }, []);
@@ -122,7 +149,7 @@ const AttendanceSystem = () => {
   // Start camera for face recognition
   const startFaceRecognition = async () => {
     resetUserTracking(); // Reset tracking for new session
-    
+
     try {
       setIsLoading(true);
       setMessage('');
@@ -148,7 +175,7 @@ const AttendanceSystem = () => {
   // Start barcode scanner (file upload mode)
   const startBarcodeScanner = async () => {
     resetUserTracking(); // Reset tracking for new session
-    
+
     try {
       setIsLoading(true);
       setMessage('');
@@ -162,7 +189,8 @@ const AttendanceSystem = () => {
       setCurrentLocation(location);
 
       setAttendanceMode('barcode');
-      setIsCameraActive(false); // No camera needed for file upload
+      setBarcodeScanMode('upload'); // Default to upload, but user can switch
+      setIsCameraActive(false);
     } catch {
       setMessage('Error preparing barcode scanner');
     } finally {
@@ -231,7 +259,7 @@ const AttendanceSystem = () => {
           const normal = await reader.decodeFromImageElement(img);
           const decodedText = normal.getText();
           setScannedEmail(decodedText);
-          
+
           // Process attendance
           setTimeout(async () => {
             let loc = currentLocation;
@@ -255,7 +283,7 @@ const AttendanceSystem = () => {
         const strong = await decodeImageHard(img);
         if (strong) {
           setScannedEmail(strong);
-          
+
           // Process attendance
           setTimeout(async () => {
             let loc = currentLocation;
@@ -297,7 +325,13 @@ const AttendanceSystem = () => {
 
     setIsCameraActive(false);
     setAttendanceMode(null);
+    setIsScanning(false);
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
   }, []);
+
 
   // Format time for display
   const formatTime = useCallback((timeString: string | null) => {
@@ -520,7 +554,7 @@ const AttendanceSystem = () => {
   };
 
   // Mark attendance with barcode (send 'barcode' field — backend treats barcode as email)
-  const markAttendanceWithBarcode = async (barcodeData: string, location: { latitude: number; longitude: number }) => {
+  const markAttendanceWithBarcode = useCallback(async (barcodeData: string, location: { latitude: number; longitude: number }) => {
     try {
       setIsLoading(true);
       setMessage('Processing barcode...');
@@ -538,7 +572,7 @@ const AttendanceSystem = () => {
       formData.append('timestamp', new Date().toISOString());
       // Add action type to help backend understand intent
       formData.append('action', 'attendance');
-      
+
       // Add explicit check-in/check-out indicator based on local state
       if (lastUserEmail && userCheckedIn) {
         formData.append('attendance_action', 'checkout');
@@ -549,7 +583,7 @@ const AttendanceSystem = () => {
         // For checkin, also send the current time
         formData.append('check_in_time', new Date().toISOString());
       }
-      
+
       // Also send the last user email to help backend identify the user
       // For barcode scans, the barcodeData is the email
       if (lastUserEmail) {
@@ -583,7 +617,68 @@ const AttendanceSystem = () => {
       setIsLoading(false);
       stopCamera();
     }
-  };
+  }, [lastUserEmail, userCheckedIn, handleBackendResult, stopCamera]);
+
+
+  // Scan barcode from webcam
+  const scanBarcodeFromWebcam = useCallback(async () => {
+    if (!webcamRef.current || !isScanning) return;
+
+    const imageSrc = webcamRef.current.getScreenshot();
+    if (!imageSrc) return;
+
+    const img = new Image();
+    img.src = imageSrc;
+    await new Promise(resolve => { img.onload = resolve; });
+
+    const reader = new BrowserMultiFormatReader();
+    try {
+      // Try normal decode first
+      const result = await reader.decodeFromImageElement(img);
+      const text = result.getText();
+
+      if (text) {
+        // Stop scanning immediately
+        setIsScanning(false);
+        if (scanIntervalRef.current) {
+          clearInterval(scanIntervalRef.current);
+          scanIntervalRef.current = null;
+        }
+
+        setScannedEmail(text);
+
+        // Mark attendance
+        setTimeout(async () => {
+          let loc = currentLocation;
+          if (!loc) {
+            try {
+              loc = await getCurrentLocation();
+              setCurrentLocation(loc);
+            } catch {
+              setMessage('Location required to mark attendance');
+              setIsLoading(false);
+              return;
+            }
+          }
+          await markAttendanceWithBarcode(text, loc!);
+        }, 500);
+      }
+    } catch {
+      // No barcode found in this frame, continue scanning
+    }
+  }, [isScanning, currentLocation, getCurrentLocation, markAttendanceWithBarcode]);
+
+  // Start continuous scanning
+  useEffect(() => {
+    if (isScanning && isCameraActive && attendanceMode === 'barcode' && barcodeScanMode === 'camera') {
+      scanIntervalRef.current = setInterval(scanBarcodeFromWebcam, 500); // Scan every 500ms
+    }
+    return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+      }
+    };
+  }, [isScanning, isCameraActive, attendanceMode, barcodeScanMode, scanBarcodeFromWebcam]);
 
   return (
     <>
@@ -721,13 +816,42 @@ const AttendanceSystem = () => {
               </div>
             )}
 
-            {/* Barcode Upload View */}
-            {attendanceMode === 'barcode' && !isCameraActive && (
+            {/* Barcode Mode: Selection (Camera vs Upload) */}
+            {attendanceMode === 'barcode' && !isCameraActive && barcodeScanMode === 'upload' && (
               <div className="text-center">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Upload Barcode Image</h2>
-                
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Barcode Attendance</h2>
+
+                <div className="flex justify-center gap-4 mb-6">
+                  <button
+                    onClick={() => {
+                      setBarcodeScanMode('camera');
+                      setIsCameraActive(true);
+                      setIsScanning(true);
+                    }}
+                    className="flex flex-col items-center p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all"
+                  >
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      </svg>
+                    </div>
+                    <span className="font-medium">Use Camera</span>
+                  </button>
+
+                  <button
+                    className="flex flex-col items-center p-4 border-2 border-green-500 bg-green-50 rounded-lg cursor-default"
+                  >
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
+                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    </div>
+                    <span className="font-medium">Upload Image</span>
+                  </button>
+                </div>
+
                 <div className="mb-6">
-                  <div 
+                  <div
                     onClick={triggerFileUpload}
                     className="border-2 border-dashed border-gray-300 rounded-lg p-8 cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors"
                   >
@@ -739,12 +863,12 @@ const AttendanceSystem = () => {
                       <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB</p>
                     </div>
                   </div>
-                  
-                  <input 
-                    type="file" 
+
+                  <input
+                    type="file"
                     ref={fileInputRef}
-                    className="hidden" 
-                    accept="image/*" 
+                    className="hidden"
+                    accept="image/*"
                     onChange={handleFileUpload}
                   />
                 </div>
@@ -757,7 +881,7 @@ const AttendanceSystem = () => {
                     </div>
                   </div>
                 )}
-  
+
                 <button
                   onClick={stopCamera}
                   className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold"
@@ -767,15 +891,69 @@ const AttendanceSystem = () => {
               </div>
             )}
 
+            {/* Live Barcode Camera View */}
+            {attendanceMode === 'barcode' && isCameraActive && barcodeScanMode === 'camera' && (
+              <div className="text-center">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Scan Barcode</h2>
+
+                <div className="relative bg-black rounded-lg overflow-hidden mb-4 mx-auto max-w-md">
+                  <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{
+                      width: 640,
+                      height: 480,
+                      facingMode: 'environment' // Use back camera if available
+                    }}
+                    className="w-full h-auto"
+                    onUserMedia={() => setIsScanning(true)}
+                    onUserMediaError={(error) => {
+                      console.error('[Attendance] Webcam access error:', error);
+                      setMessage('Webcam access error');
+                    }}
+                  />
+                  <div className="absolute inset-0 border-2 border-green-500 rounded-lg pointer-events-none">
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-48 border-2 border-green-400 bg-green-400/10 rounded-lg flex items-center justify-center">
+                      <p className="text-white text-xs font-semibold bg-black/50 px-2 py-1 rounded">Align Barcode Here</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 justify-center flex-col sm:flex-row">
+                  <div className="text-sm text-gray-500 animate-pulse mb-2 sm:mb-0 sm:mr-4 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Scanning...
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setIsScanning(false);
+                      setIsCameraActive(false);
+                      setBarcodeScanMode('upload');
+                    }}
+                    className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-semibold"
+                  >
+                    Switch to Upload
+                  </button>
+                  <button
+                    onClick={stopCamera}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Messages */}
             {(message || userName) && (
-              <div className={`mt-6 p-4 rounded-lg text-center ${
-                message.includes('✅')
-                  ? 'bg-green-50 text-green-800 border border-green-200'
-                  : message.includes('❌')
-                    ? 'bg-red-50 text-red-800 border border-red-200'
-                    : 'bg-blue-50 text-blue-800 border border-blue-200'
-              }`}>
+              <div className={`mt-6 p-4 rounded-lg text-center ${message.includes('✅')
+                ? 'bg-green-50 text-green-800 border border-green-200'
+                : message.includes('❌')
+                  ? 'bg-red-50 text-red-800 border border-red-200'
+                  : 'bg-blue-50 text-blue-800 border border-blue-200'
+                }`}>
                 <div className="font-semibold text-lg">{message}</div>
                 {userName && (
                   <div className="mt-2 text-sm">
@@ -783,7 +961,7 @@ const AttendanceSystem = () => {
                     {userRole && <span className="ml-2 text-sm opacity-80">({userRole})</span>}
                   </div>
                 )}
-                
+
                 {/* Display check-in and check-out times */}
                 {(checkinTime || checkoutTime) && (
                   <div className="mt-3 text-sm">

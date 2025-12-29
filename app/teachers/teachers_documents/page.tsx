@@ -2,11 +2,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
-import { 
-  FileText, 
-  BookOpen, 
-  AlertCircle, 
-  Loader2, 
+import {
+  FileText,
+  BookOpen,
+  AlertCircle,
+  Loader2,
   Download,
   Eye,
   User,
@@ -44,12 +44,12 @@ interface Document {
 }
 
 // Popup Modal Component
-const PopupModal = ({ isOpen, onClose, title, message, type }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  title: string; 
-  message: string; 
-  type: 'success' | 'error' | 'info' 
+const PopupModal = ({ isOpen, onClose, title, message, type }: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  message: string;
+  type: 'success' | 'error' | 'info'
 }) => {
   if (!isOpen) return null;
 
@@ -83,16 +83,16 @@ const PopupModal = ({ isOpen, onClose, title, message, type }: {
               {getIcon()}
               <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
             </div>
-            <button 
+            <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-          
+
           <p className="text-gray-700 mb-6">{message}</p>
-          
+
           <div className="flex justify-end">
             <button
               onClick={onClose}
@@ -115,7 +115,7 @@ const TeacherDocumentsPage = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [teacherDocument, setTeacherDocument] = useState<Document | null>(null);
-  
+
   // Popup modal state
   const [popup, setPopup] = useState({
     isOpen: false,
@@ -179,7 +179,7 @@ const TeacherDocumentsPage = () => {
   // ✅ Step 3: Get teacher's document
   useEffect(() => {
     if (teacherEmail && documents.length > 0) {
-      const teacherDoc = documents.find(d => 
+      const teacherDoc = documents.find(d =>
         d.email &&
         typeof d.email === "string" &&
         d.email.toLowerCase() === teacherEmail.toLowerCase()
@@ -221,13 +221,13 @@ const TeacherDocumentsPage = () => {
         },
       });
 
-      
+
       // Refresh documents after upload
       await fetchDocuments();
-      
+
       // Show success message
       showPopup("Success", `${documentType.replace(/_/g, ' ')} uploaded successfully!`, "success");
-      
+
     } catch (error: unknown) {
       console.error(`❌ Error uploading ${documentType}:`, error);
       showPopup("Upload Failed", `Failed to upload ${documentType.replace(/_/g, ' ')}. ${(error as { response?: { data?: { error?: string } } })?.response?.data?.error || "Please try again."}`, "error");
@@ -269,8 +269,8 @@ const TeacherDocumentsPage = () => {
         value.startsWith("http") &&
         key !== "email"
       ) {
-        types.push({ 
-          label: key.replace(/_/g, " "), 
+        types.push({
+          label: key.replace(/_/g, " "),
           link: value,
           type: key
         });
@@ -298,16 +298,16 @@ const TeacherDocumentsPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Popup Modal */}
-          <PopupModal 
-            isOpen={popup.isOpen} 
-            onClose={closePopup} 
-            title={popup.title} 
-            message={popup.message} 
-            type={popup.type} 
+          <PopupModal
+            isOpen={popup.isOpen}
+            onClose={closePopup}
+            title={popup.title}
+            message={popup.message}
+            type={popup.type}
           />
-          
+
           {/* Header Section */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
@@ -328,7 +328,7 @@ const TeacherDocumentsPage = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-xl">
                   <User className="h-4 w-4 text-blue-600" />
                   <span className="text-blue-700 font-medium">{teacherEmail}</span>
@@ -338,13 +338,13 @@ const TeacherDocumentsPage = () => {
           </motion.div>
 
           {/* Stats Overview */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
           >
-             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-2xl font-bold text-gray-900">
@@ -369,7 +369,7 @@ const TeacherDocumentsPage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
               <div className="flex items-center justify-between">
                 <div>
@@ -397,7 +397,7 @@ const TeacherDocumentsPage = () => {
 
           {/* Content Area */}
           {!loading && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -429,71 +429,71 @@ const TeacherDocumentsPage = () => {
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {teacherDocumentTypes
-                      .filter(docType => 
+                      .filter(docType =>
                         docType.label.toLowerCase().includes(searchTerm.toLowerCase())
                       )
                       .map((docType) => (
-                      <motion.div
-                        key={docType.key}
-                        whileHover={{ scale: 1.02 }}
-                        className="border-2 border-dashed border-gray-300 rounded-2xl p-6 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300"
-                      >
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Upload className="h-8 w-8 text-blue-600" />
-                          </div>
-                          <h3 className="font-semibold text-gray-900 mb-2">
-                            {docType.label}
-                            {docType.required && <span className="text-red-500 ml-1">*</span>}
-                          </h3>
-                          
-                          {/* Check if document already exists */}
-                          {teacherDocument && teacherDocument[docType.key as keyof Document] ? (
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-center gap-2 text-green-600">
-                                <CheckCircle className="h-4 w-4" />
-                                <span className="text-sm font-medium">Uploaded</span>
-                              </div>
-                              <button
-                                onClick={() => window.open(teacherDocument[docType.key as keyof Document] as string, '_blank')}
-                                className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                              >
-                                <Eye className="h-4 w-4" />
-                                View Document
-                              </button>
+                        <motion.div
+                          key={docType.key}
+                          whileHover={{ scale: 1.02 }}
+                          className="border-2 border-dashed border-gray-300 rounded-2xl p-6 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300"
+                        >
+                          <div className="text-center">
+                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <Upload className="h-8 w-8 text-blue-600" />
                             </div>
-                          ) : (
-                            <div className="space-y-3">
-                              <p className="text-sm text-gray-500">No document uploaded</p>
-                              <label className="block">
-                                <input
-                                  type="file"
-                                  accept=".pdf,.jpg,.jpeg,.png"
-                                  onChange={(e) => handleFileUpload(docType.key, e)}
-                                  className="hidden"
-                                  disabled={uploading}
-                                />
-                                <div className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                  {uploading && uploadProgress[docType.key] !== undefined ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                      {uploadProgress[docType.key]}%
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Upload className="h-4 w-4" />
-                                      Upload
-                                    </>
-                                  )}
+                            <h3 className="font-semibold text-gray-900 mb-2">
+                              {docType.label}
+                              {docType.required && <span className="text-red-500 ml-1">*</span>}
+                            </h3>
+
+                            {/* Check if document already exists */}
+                            {teacherDocument && teacherDocument[docType.key as keyof Document] ? (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-center gap-2 text-green-600">
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span className="text-sm font-medium">Uploaded</span>
                                 </div>
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
+                                <button
+                                  onClick={() => window.open(teacherDocument[docType.key as keyof Document] as string, '_blank')}
+                                  className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  View Document
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                <p className="text-sm text-gray-500">No document uploaded</p>
+                                <label className="block">
+                                  <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    onChange={(e) => handleFileUpload(docType.key, e)}
+                                    className="hidden"
+                                    disabled={uploading}
+                                  />
+                                  <div className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {uploading && uploadProgress[docType.key] !== undefined ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        {uploadProgress[docType.key]}%
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Upload className="h-4 w-4" />
+                                        Upload
+                                      </>
+                                    )}
+                                  </div>
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
                   </div>
-                  
+
                   <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
                     <p className="text-sm text-blue-800">
                       <strong>Note:</strong> Accepted formats are PDF, JPG, and PNG. Maximum file size is 5MB.
@@ -516,48 +516,48 @@ const TeacherDocumentsPage = () => {
                     {getDocTypes(teacherDocument).length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {getDocTypes(teacherDocument)
-                          .filter(doc => 
+                          .filter(doc =>
                             doc.label.toLowerCase().includes(searchTerm.toLowerCase())
                           )
                           .map((doc, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-300"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 capitalize mb-2">
-                                  {doc.label}
-                                </h4>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => window.open(doc.link, '_blank')}
-                                    className="flex items-center gap-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors"
-                                  >
-                                    <Eye className="h-3 w-3" />
-                                    View
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      const link = document.createElement('a');
-                                      link.href = doc.link;
-                                      link.download = `${doc.label}.pdf`;
-                                      link.click();
-                                    }}
-                                    className="flex items-center gap-1 px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium transition-colors"
-                                  >
-                                    <Download className="h-3 w-3" />
-                                    Download
-                                  </button>
+                            <motion.div
+                              key={index}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-300"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-gray-900 capitalize mb-2">
+                                    {doc.label}
+                                  </h4>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => window.open(doc.link, '_blank')}
+                                      className="flex items-center gap-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                      <Eye className="h-3 w-3" />
+                                      View
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = doc.link;
+                                        link.download = `${doc.label}.pdf`;
+                                        link.click();
+                                      }}
+                                      className="flex items-center gap-1 px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                      <Download className="h-3 w-3" />
+                                      Download
+                                    </button>
+                                  </div>
                                 </div>
+                                <FileText className="h-8 w-8 text-blue-500 ml-3" />
                               </div>
-                              <FileText className="h-8 w-8 text-blue-500 ml-3" />
-                            </div>
-                          </motion.div>
-                        ))}
+                            </motion.div>
+                          ))}
                       </div>
                     ) : (
                       <div className="text-center py-12">

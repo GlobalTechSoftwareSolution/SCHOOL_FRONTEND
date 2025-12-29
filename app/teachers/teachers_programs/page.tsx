@@ -16,7 +16,10 @@ import {
   FileText,
   XCircle,
   Mail,
-  Phone
+  Phone,
+  Sparkles,
+  Zap,
+  User
 } from "lucide-react";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
@@ -30,6 +33,7 @@ interface Program {
   start_date: string;
   end_date: string | null;
   status: string;
+  calculated_status?: string;
   created_at: string;
   updated_at: string;
 }
@@ -56,17 +60,17 @@ const TeachersProgramsPage = () => {
     if (endDate && endDate < today) {
       return "completed";
     }
-    
+
     // If program is currently running
     if (startDate <= today && (!endDate || endDate >= today)) {
       return "active";
     }
-    
+
     // If program is in the future
     if (startDate > today) {
       return "upcoming";
     }
-    
+
     return "active"; // fallback
   };
 
@@ -78,17 +82,16 @@ const TeachersProgramsPage = () => {
         setError("");
 
         const response = await axios.get(`${API_BASE}programs/`);
-        
+
         // Add calculated status to each program
         const programsWithCalculatedStatus = response.data.map((program: Program) => ({
           ...program,
           calculated_status: calculateProgramStatus(program)
         }));
-        
+
         setPrograms(programsWithCalculatedStatus);
         setFilteredPrograms(programsWithCalculatedStatus);
-      } catch (err) {
-        console.error('❌ [TEACHER_PROGRAMS] Error fetching programs:', err);
+      } catch {
         setError("Failed to load programs. Please try again later.");
       } finally {
         setLoading(false);
@@ -113,7 +116,7 @@ const TeachersProgramsPage = () => {
 
     // Status filter
     if (selectedStatus !== "all") {
-      filtered = filtered.filter(program => program.status === selectedStatus);
+      filtered = filtered.filter(program => (program.calculated_status || program.status) === selectedStatus);
     }
 
     setFilteredPrograms(filtered);
@@ -125,7 +128,7 @@ const TeachersProgramsPage = () => {
       setLoadingDetails(true);
 
       const program = programs.find(p => p.id === programId);
-      
+
       if (program) {
         setSelectedProgram(program);
       } else {
@@ -137,8 +140,7 @@ const TeachersProgramsPage = () => {
           setSelectedProgram(programs.find(p => p.id === programId) || null);
         }
       }
-    } catch (err) {
-      console.error('❌ [TEACHER_PROGRAMS] Error fetching program details:', err);
+    } catch {
       setError("Failed to load program details.");
     } finally {
       setLoadingDetails(false);
@@ -147,13 +149,13 @@ const TeachersProgramsPage = () => {
 
   // Get status color based on calculated status
   const getStatusColor = (program: Program) => {
-    const status = program.status || calculateProgramStatus(program);
+    const status = program.calculated_status || program.status || calculateProgramStatus(program);
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'upcoming': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'completed': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'active': return 'bg-emerald-100 text-emerald-800 border-emerald-200 shadow-sm';
+      case 'upcoming': return 'bg-violet-100 text-violet-800 border-violet-200 shadow-sm';
+      case 'completed': return 'bg-rose-100 text-rose-800 border-rose-200 shadow-sm';
+      case 'cancelled': return 'bg-amber-100 text-amber-800 border-amber-200 shadow-sm';
+      default: return 'bg-slate-100 text-slate-800 border-slate-200 shadow-sm';
     }
   };
 
@@ -216,12 +218,12 @@ const TeachersProgramsPage = () => {
     if (!program.end_date) {
       return "Ongoing";
     }
-    
+
     const start = new Date(program.start_date);
     const end = new Date(program.end_date);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return "1 day";
     if (diffDays < 30) return `${diffDays} days`;
     if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months`;
@@ -255,7 +257,7 @@ const TeachersProgramsPage = () => {
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-3">Error Loading Programs</h3>
             <p className="text-gray-600 mb-6 text-lg">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-medium text-lg shadow-lg hover:shadow-xl transition-all duration-200"
             >
@@ -269,73 +271,23 @@ const TeachersProgramsPage = () => {
 
   return (
     <DashboardLayout role="teachers">
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-2 sm:p-4 md:p-6">
-        <style jsx>{`
-          @media (max-width: 640px) {
-            .mobile-card, .card-mobile {
-              padding: 1rem !important;
-              border-radius: 0.75rem !important;
-              margin-bottom: 1rem !important;
-              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-            }
-            
-            .mobile-grid, .grid-mobile {
-              grid-template-columns: 1fr !important;
-              gap: 1rem !important;
-            }
-            
-            .mobile-header, .header-mobile {
-              flex-direction: column !important;
-              text-align: center !important;
-              gap: 1rem !important;
-            }
-            
-            .mobile-filters, .filters-mobile {
-              flex-direction: column !important;
-              gap: 1rem !important;
-            }
-            
-            .mobile-stats, .stats-mobile {
-              grid-template-columns: 1fr 1fr !important;
-              gap: 0.75rem !important;
-            }
-            
-            .mobile-tabs, .tabs-mobile {
-              padding: 1rem !important;
-            }
-            
-            .mobile-tab-button, .tab-button-mobile {
-              padding: 0.75rem !important;
-              font-size: 0.875rem !important;
-            }
-            
-            .mobile-list-item, .list-item-mobile {
-              padding: 1rem !important;
-            }
-            
-            .mobile-search, .search-mobile {
-              padding: 0.75rem !important;
-              font-size: 0.875rem !important;
-            }
-            
-            .mobile-select, .select-mobile {
-              padding: 0.75rem !important;
-              font-size: 0.875rem !important;
-            }
-          }
-        `}</style>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-3 sm:p-6 md:p-8">
         {/* Header */}
         {!selectedProgram ? (
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <BookOpen className="h-8 w-8 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  Programs & Activities
-                </h1>
-                <p className="text-gray-600 mt-2 text-lg">Manage and participate in school programs and activities</p>
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2.5 sm:p-3.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl sm:rounded-2xl shadow-lg shadow-blue-500/20">
+                  <BookOpen className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold bg-gradient-to-br from-gray-900 to-blue-800 bg-clip-text text-transparent tracking-tight">
+                    Programs & Activities
+                  </h1>
+                  <p className="text-gray-500 text-sm sm:text-base md:text-lg font-medium mt-1">
+                    Manage and participate in school programs and activities
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -343,10 +295,10 @@ const TeachersProgramsPage = () => {
           <div className="mb-6">
             <button
               onClick={() => setSelectedProgram(null)}
-              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mb-4 transition-colors duration-200"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200/60 transition-all duration-200 hover:shadow-md"
             >
-              <ArrowLeft className="h-5 w-5" />
-              Back to Programs
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Programs</span>
             </button>
           </div>
         )}
@@ -355,183 +307,172 @@ const TeachersProgramsPage = () => {
         {!selectedProgram && (
           <>
             {/* Filters and Search */}
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 p-4 sm:p-6 mb-6 sm:mb-8">
-              <div className="mobile-filters filters-mobile flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/60 p-4 sm:p-6 mb-6 sm:mb-8">
+              <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
                 <div className="flex flex-col sm:flex-row gap-4 flex-1">
                   {/* Search */}
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <input
                       type="text"
                       placeholder="Search programs..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="mobile-search search-mobile pl-12 pr-6 py-3 w-full border border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg shadow-sm transition-all duration-200"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm sm:text-base shadow-sm"
                     />
                   </div>
-                  
+
                   {/* Status Filter */}
-                  <div className="relative">
+                  <div className="relative sm:w-48">
                     <select
                       value={selectedStatus}
                       onChange={(e) => setSelectedStatus(e.target.value)}
-                      className="mobile-select select-mobile pl-4 pr-10 py-3 border border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 text-lg shadow-sm transition-all duration-200 bg-white appearance-none w-full sm:w-48"
+                      className="w-full pl-4 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm cursor-pointer appearance-none shadow-sm"
                     >
-                      <option value="all">All Statuses</option>
+                      <option value="all">Any Status</option>
                       <option value="active">Active</option>
                       <option value="upcoming">Upcoming</option>
                       <option value="completed">Completed</option>
                     </select>
+                    <ChevronRight className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 pointer-events-none rotate-90" />
                   </div>
                 </div>
 
-                {/* View Toggle */}
-                <div className="view-toggle flex items-center gap-2 bg-gray-100 rounded-2xl p-1">
+                {/* View Toggle - Hidden on very small screens for better spacing if needed, but here handled with flex wrapping */}
+                <div className="flex items-center gap-2 bg-slate-100/50 p-1 rounded-xl w-fit sm:ml-auto lg:ml-0">
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`view-toggle-button p-2 rounded-xl transition-all duration-200 ${
-                      viewMode === "grid" ? "bg-white shadow-sm" : "text-gray-500"
-                    }`}
+                    className={`p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${viewMode === "grid" ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5" : "text-gray-500 hover:text-gray-900"
+                      }`}
                   >
-                    <div className="w-4 h-4 grid grid-cols-2 gap-0.5">
-                      <div className="bg-current rounded-sm"></div>
-                      <div className="bg-current rounded-sm"></div>
-                      <div className="bg-current rounded-sm"></div>
-                      <div className="bg-current rounded-sm"></div>
-                    </div>
+                    <BarChart3 className="h-5 w-5 rotate-90" />
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`view-toggle-button p-2 rounded-xl transition-all duration-200 ${
-                      viewMode === "list" ? "bg-white shadow-sm" : "text-gray-500"
-                    }`}
+                    className={`p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${viewMode === "list" ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5" : "text-gray-500 hover:text-gray-900"
+                      }`}
                   >
-                    <div className="w-4 h-4 flex flex-col justify-between">
-                      <div className="w-full h-0.5 bg-current rounded"></div>
-                      <div className="w-full h-0.5 bg-current rounded"></div>
-                      <div className="w-full h-0.5 bg-current rounded"></div>
-                    </div>
+                    <FileText className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
               {/* Results Count */}
-              <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-                <p className="text-gray-600">
-                  Showing <span className="font-semibold text-gray-900">{filteredPrograms.length}</span> of <span className="font-semibold text-gray-900">{programs.length}</span> programs
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
+                <p className="text-gray-500 text-sm font-medium">
+                  Showing <span className="text-slate-900 font-bold">{filteredPrograms.length}</span> programs
                 </p>
               </div>
             </div>
 
             {/* Programs Grid/List */}
             {filteredPrograms.length === 0 ? (
-              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-16 text-center">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <BookOpen className="h-12 w-12 text-gray-400" />
+              <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="h-10 w-10 text-gray-400" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">No Programs Found</h3>
-                <p className="text-gray-600 max-w-md mx-auto mb-8">
-                  {programs.length === 0 
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Programs Found</h3>
+                <p className="text-gray-500 max-w-sm mx-auto mb-6 text-sm">
+                  {programs.length === 0
                     ? "No programs are currently available. Please check back later."
                     : "No programs match your search criteria. Try adjusting your filters."
                   }
                 </p>
                 {programs.length === 0 && (
-                  <button 
+                  <button
                     onClick={() => window.location.reload()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-sm transition-all duration-200"
                   >
-                    Refresh Programs
+                    Refresh
                   </button>
                 )}
               </div>
             ) : viewMode === "grid" ? (
               // Grid View
-              <div className="mobile-grid grid-mobile grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6">
                 {filteredPrograms.map((program) => (
                   <div
                     key={program.id}
                     onClick={() => fetchProgramDetails(program.id)}
-                    className="mobile-card card-mobile bg-white rounded-2xl sm:rounded-3xl shadow-lg border-2 border-gray-100 p-4 sm:p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-blue-300 group"
+                    className="bg-white rounded-2xl border border-gray-200/60 p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-blue-300 flex flex-col h-full"
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-xl ${
-                          getProgramTypeColor(program).split(' ')[0]
-                        }`}>
-                          {getProgramTypeIcon(program)}
-                        </div>
-                        <div>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                            getStatusColor(program)
+                        <div className={`p-2.5 rounded-xl shadow-sm ${getProgramTypeColor(program).split(' ')[0]
                           }`}>
-                            {program.status?.charAt(0).toUpperCase() + program.status?.slice(1)}
-                          </span>
+                          {React.cloneElement(getProgramTypeIcon(program) as React.ReactElement, { className: "h-5 w-5" })}
                         </div>
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border whitespace-nowrap ${getStatusColor(program)
+                          }`}>
+                          {(program.calculated_status || program.status)?.charAt(0).toUpperCase() + (program.calculated_status || program.status)?.slice(1)}
+                        </span>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-200" />
+                      <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-blue-600 transition-colors" />
                     </div>
 
                     {/* Title and Description */}
-                    <h3 className="font-bold text-gray-900 text-xl mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors duration-200">
-                      {program.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                      {program.description}
-                    </p>
-
-                    {/* Program Type */}
-                    <div className="mb-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
-                        getProgramTypeColor(program)
-                      }`}>
-                        {program.name.split(' ')[0]}
-                      </span>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-900 text-lg mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+                        {program.name}
+                      </h3>
+                      <p className="text-gray-500 text-sm mb-4 line-clamp-3 leading-relaxed">
+                        {program.description}
+                      </p>
                     </div>
 
-                    {/* Details */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="h-4 w-4" />
-                        <span>{formatDate(program.start_date)}</span>
+                    {/* Details Grid */}
+                    <div className="space-y-3 pt-4 border-t border-slate-50 mt-auto">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500 flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5" />
+                          Starts:
+                        </span>
+                        <span className="font-semibold text-slate-900">{formatDate(program.start_date)}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Clock className="h-4 w-4" />
-                        <span>{getDurationText(program)}</span>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500 flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          Duration:
+                        </span>
+                        <span className="font-semibold text-slate-900">{getDurationText(program)}</span>
                       </div>
                       {program.coordinator_name && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Users className="h-4 w-4" />
-                          <span className="truncate">Coordinator: {program.coordinator_name}</span>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500 flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5" />
+                            Coordinator:
+                          </span>
+                          <span className="font-semibold text-slate-900 truncate max-w-[120px]">{program.coordinator_name}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Days Remaining/Progress */}
-                    <div className="mt-4">
-                      {program.status === 'upcoming' && (
-                        <>
-                          <div className="flex justify-between text-sm text-gray-600 mb-1">
-                            <span>Starts in</span>
-                            <span className="font-semibold text-blue-600">{getDaysRemaining(program.start_date)} days</span>
+                    {/* Status Footer */}
+                    <div className="mt-4 pt-4">
+                      {(program.calculated_status || program.status) === 'upcoming' && (
+                        <div className="bg-violet-50/50 rounded-xl p-3 border border-violet-100/50">
+                          <div className="flex justify-between text-xs text-violet-700 font-bold mb-1.5">
+                            <span>Status</span>
+                            <span>Starts in {getDaysRemaining(program.start_date)} days</span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                              style={{ width: `${Math.min((getDaysRemaining(program.start_date) / 30) * 100, 100)}%` }}
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-violet-600 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min((Math.max(0, 30 - getDaysRemaining(program.start_date)) / 30) * 100, 100)}%` }}
                             ></div>
                           </div>
-                        </>
-                      )}
-                      {program.status === 'active' && (
-                        <div className="text-center py-2 bg-green-50 rounded-lg border border-green-200">
-                          <span className="text-sm font-medium text-green-700">Currently Active</span>
                         </div>
                       )}
-                      {program.status === 'completed' && (
-                        <div className="text-center py-2 bg-gray-50 rounded-lg border border-gray-200">
-                          <span className="text-sm font-medium text-gray-700">Program Completed</span>
+                      {(program.calculated_status || program.status) === 'active' && (
+                        <div className="flex items-center gap-2 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100 text-emerald-700 text-xs font-bold">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          Currently Active
+                        </div>
+                      )}
+                      {(program.calculated_status || program.status) === 'completed' && (
+                        <div className="bg-rose-50 px-3 py-2 rounded-xl border border-rose-100 text-rose-700 text-xs font-bold text-center">
+                          Program Completed
                         </div>
                       )}
                     </div>
@@ -539,60 +480,58 @@ const TeachersProgramsPage = () => {
                 ))}
               </div>
             ) : (
-              // List View
-              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-                {filteredPrograms.map((program, index) => (
+              // List View - Enhanced with Card styling
+              <div className="space-y-4">
+                {filteredPrograms.map((program) => (
                   <div
                     key={program.id}
                     onClick={() => fetchProgramDetails(program.id)}
-                    className={`mobile-list-item list-item-mobile p-4 sm:p-6 cursor-pointer transition-all duration-200 hover:bg-blue-50 group ${
-                      index !== filteredPrograms.length - 1 ? 'border-b border-gray-200' : ''
-                    }`}
+                    className="bg-white rounded-2xl border border-gray-200/60 p-4 sm:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-blue-300"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className={`p-3 rounded-xl ${
-                          getProgramTypeColor(program).split(' ')[0]
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className={`p-3 rounded-xl shadow-sm w-fit ${getProgramTypeColor(program).split(' ')[0]
                         }`}>
-                          {getProgramTypeIcon(program)}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors duration-200">
-                              {program.name}
-                            </h3>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                              getStatusColor(program)
+                        {React.cloneElement(getProgramTypeIcon(program) as React.ReactElement, { className: "h-6 w-6" })}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                          <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors truncate">
+                            {program.name}
+                          </h3>
+                          <span className={`w-fit px-2.5 py-1 rounded-lg text-[10px] font-bold border uppercase tracking-wider ${getStatusColor(program)
                             }`}>
-                              {program.status?.charAt(0).toUpperCase() + program.status?.slice(1)}
-                            </span>
+                            {program.calculated_status || program.status}
+                          </span>
+                        </div>
+
+                        <p className="text-gray-500 text-sm mb-3 line-clamp-1">
+                          {program.description}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 font-medium tracking-tight">
+                          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
+                            <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                            <span>{formatDate(program.start_date)}</span>
                           </div>
-                          
-                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                            {program.description}
-                          </p>
-                          
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>{formatDate(program.start_date)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              <span>{getDurationText(program)}</span>
-                            </div>
-                            {program.coordinator_name && (
-                              <div className="flex items-center gap-1">
-                                <Users className="h-4 w-4" />
-                                <span>{program.coordinator_name}</span>
-                              </div>
-                            )}
+                          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
+                            <Clock className="h-3.5 w-3.5 text-purple-500" />
+                            <span>{getDurationText(program)}</span>
                           </div>
+                          {program.coordinator_name && (
+                            <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
+                              <Users className="h-3.5 w-3.5 text-orange-500" />
+                              <span className="truncate max-w-[150px]">{program.coordinator_name}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-200" />
+
+                      <div className="hidden sm:block ml-4">
+                        <div className="p-2 rounded-full bg-slate-50 group-hover:bg-blue-50 transition-colors">
+                          <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-blue-600" />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -614,113 +553,114 @@ const TeachersProgramsPage = () => {
               </div>
             ) : (
               <>
-                {/* Program Header */}
-                <div className="mobile-card card-mobile bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 p-4 sm:p-8">
-                  <div className="mobile-header header-mobile flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 sm:gap-6">
+                {/* Program Header Card */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-5 sm:p-8">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className={`p-3 rounded-2xl ${
-                          getProgramTypeColor(selectedProgram).split(' ')[0]
-                        }`}>
-                          {getProgramTypeIcon(selectedProgram)}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+                        <div className={`p-3.5 rounded-2xl shadow-sm w-fit ${getProgramTypeColor(selectedProgram).split(' ')[0]
+                          }`}>
+                          {React.cloneElement(getProgramTypeIcon(selectedProgram) as React.ReactElement, { className: "h-8 w-8" })}
                         </div>
                         <div>
-                          <h1 className="text-3xl font-bold text-gray-900">{selectedProgram.name}</h1>
+                          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{selectedProgram.name}</h1>
                           <div className="flex items-center gap-3 mt-2">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
-                              getStatusColor(selectedProgram)
-                            }`}>
-                              {selectedProgram.status?.charAt(0).toUpperCase() + selectedProgram.status?.slice(1)}
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border uppercase tracking-wider ${getStatusColor(selectedProgram)
+                              }`}>
+                              {selectedProgram.calculated_status || selectedProgram.status}
                             </span>
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
-                              getProgramTypeColor(selectedProgram)
-                            }`}>
-                              Program
+                            <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 uppercase tracking-wider">
+                              Program Details
                             </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <p className="text-gray-600 text-lg mb-6 leading-relaxed">{selectedProgram.description}</p>
-                      
-                      {/* Enhanced Stats Grid */}
-                      <div className="mobile-stats stats-mobile grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                        <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                          <Calendar className="h-5 w-5 text-blue-600" />
-                          <div>
-                            <p className="text-sm text-gray-600">Start Date</p>
-                            <p className="font-semibold text-gray-900">{formatDate(selectedProgram.start_date)}</p>
-                            <p className="text-xs text-blue-600 mt-1">
-                              {getDaysRemaining(selectedProgram.start_date) > 0 
-                                ? `${getDaysRemaining(selectedProgram.start_date)} days remaining`
-                                : getDaysRemaining(selectedProgram.start_date) === 0
-                                ? 'Starting today'
-                                : 'Started'
-                              }
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-100">
-                          <Clock className="h-5 w-5 text-green-600" />
-                          <div>
-                            <p className="text-sm text-gray-600">Duration</p>
-                            <p className="font-semibold text-gray-900">{getDurationText(selectedProgram)}</p>
-                            <p className="text-xs text-green-600 mt-1">
-                              {selectedProgram.end_date ? `Ends: ${formatDate(selectedProgram.end_date)}` : 'Ongoing'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-xl border border-purple-100">
-                          <Users className="h-5 w-5 text-purple-600" />
-                          <div>
-                            <p className="text-sm text-gray-600">Coordinator</p>
-                            <p className="font-semibold text-gray-900">
-                              {selectedProgram.coordinator_name || 'Not Assigned'}
-                            </p>
-                            <p className="text-xs text-purple-600 mt-1">
-                              {selectedProgram.coordinator_email || 'No contact'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-xl border border-orange-100">
-                          <Target className="h-5 w-5 text-orange-600" />
-                          <div>
-                            <p className="text-sm text-gray-600">Program Status</p>
-                            <p className="font-semibold text-gray-900 capitalize">{calculateProgramStatus(selectedProgram)}</p>
-                            <p className="text-xs text-orange-600 mt-1">
-                              Based on current date
-                            </p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Additional Program Info */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600 mb-1">Program Code</p>
-                          <p className="font-mono font-semibold text-gray-900">PRG-{selectedProgram.id.toString().padStart(4, '0')}</p>
+                      <p className="text-gray-500 text-sm sm:text-base mb-8 leading-relaxed max-w-4xl font-medium">
+                        {selectedProgram.description}
+                      </p>
+
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 group hover:shadow-md transition-all">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <Calendar className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Start Date</span>
+                          </div>
+                          <p className="text-gray-900 font-bold">{formatDate(selectedProgram.start_date)}</p>
+                          <p className="text-[10px] text-blue-600 font-medium mt-1">
+                            {getDaysRemaining(selectedProgram.start_date) > 0
+                              ? `${getDaysRemaining(selectedProgram.start_date)} days remaining`
+                              : 'Started'
+                            }
+                          </p>
                         </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600 mb-1">Created Date</p>
-                          <p className="font-semibold text-gray-900">{formatDate(selectedProgram.created_at)}</p>
+
+                        <div className="p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50 group hover:shadow-md transition-all">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-purple-100 rounded-lg">
+                              <Clock className="h-4 w-4 text-purple-600" />
+                            </div>
+                            <span className="text-xs font-bold text-purple-700 uppercase tracking-wider">Duration</span>
+                          </div>
+                          <p className="text-gray-900 font-bold">{getDurationText(selectedProgram)}</p>
+                          <p className="text-[10px] text-purple-600 font-medium mt-1">
+                            {selectedProgram.end_date ? `Ends: ${formatDate(selectedProgram.end_date)}` : 'Ongoing'}
+                          </p>
                         </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600 mb-1">Last Updated</p>
-                          <p className="font-semibold text-gray-900">{formatDate(selectedProgram.updated_at)}</p>
+
+                        <div className="p-4 bg-orange-50/50 rounded-2xl border border-orange-100/50 group hover:shadow-md transition-all">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-orange-100 rounded-lg">
+                              <Users className="h-4 w-4 text-orange-600" />
+                            </div>
+                            <span className="text-xs font-bold text-orange-700 uppercase tracking-wider">Coordinator</span>
+                          </div>
+                          <p className="text-gray-900 font-bold truncate">{selectedProgram.coordinator_name || 'Not assigned'}</p>
+                          <p className="text-[10px] text-orange-600 font-medium mt-1 truncate">
+                            {selectedProgram.coordinator_email || 'No email available'}
+                          </p>
+                        </div>
+
+                        <div className="p-4 bg-green-50/50 rounded-2xl border border-green-100/50 group hover:shadow-md transition-all">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-green-100 rounded-lg">
+                              <Target className="h-4 w-4 text-green-600" />
+                            </div>
+                            <span className="text-xs font-bold text-green-700 uppercase tracking-wider">Status</span>
+                          </div>
+                          <p className="text-gray-900 font-bold capitalize">{calculateProgramStatus(selectedProgram)}</p>
+                          <p className="text-[10px] text-green-600 font-medium mt-1">Current phase</p>
+                        </div>
+                      </div>
+
+                      {/* Additional Metadata */}
+                      <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Code:</span>
+                          <span className="text-xs font-mono font-bold text-slate-700">PRG-{selectedProgram.id.toString().padStart(4, '0')}</span>
+                        </div>
+                        <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Created:</span>
+                          <span className="text-xs font-bold text-slate-700">{formatDate(selectedProgram.created_at)}</span>
+                        </div>
+                        <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Updated:</span>
+                          <span className="text-xs font-bold text-slate-700">{formatDate(selectedProgram.updated_at)}</span>
                         </div>
                       </div>
                     </div>
-                    
                   </div>
                 </div>
 
-                {/* Program Details Tabs */}
-                <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-                  <div className="border-b border-gray-200">
-                    <div className="mobile-tabs tabs-mobile flex space-x-1 px-2 sm:px-8 pt-4 sm:pt-6 overflow-x-auto">
+                {/* Content Tabs Section */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+                  <div className="bg-slate-50 p-1.5 sm:p-2 border-b border-slate-200">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
                       {[
                         { id: "overview", label: "Overview", icon: FileText },
                         { id: "coordinator", label: "Coordinator", icon: Users },
@@ -728,73 +668,72 @@ const TeachersProgramsPage = () => {
                       ].map(({ id, label, icon: Icon }) => (
                         <button
                           key={id}
-                          className={`mobile-tab-button tab-button-mobile flex items-center gap-2 sm:gap-3 py-3 px-3 sm:px-6 rounded-t-xl sm:rounded-t-2xl text-sm sm:text-lg font-semibold transition-all duration-200 border-b-2 whitespace-nowrap ${
-                            activeTab === id
-                              ? "text-blue-600 border-blue-600 bg-blue-50"
-                              : "text-gray-600 border-transparent hover:text-gray-900 hover:bg-gray-50"
-                          }`}
+                          className={`flex-1 min-w-[120px] sm:min-w-0 py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === id
+                            ? "bg-white text-blue-600 shadow-sm ring-1 ring-black/5"
+                            : "text-gray-500 hover:text-gray-900 hover:bg-white/50"
+                            }`}
                           onClick={() => setActiveTab(id)}
                         >
-                          <Icon className="h-5 w-5" />
-                          {label}
+                          <Icon className="h-4 w-4" />
+                          <span>{label}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className="p-8">
+                  <div className="p-6 sm:p-8">
                     {/* Overview Tab */}
                     {activeTab === "overview" && (
-                      <div className="space-y-8">
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <div className="space-y-8 max-w-4xl">
+                        <div className="bg-white rounded-2xl">
+                          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <FileText className="h-5 w-5 text-blue-600" />
-                            Program Overview
+                            Detailed Description
                           </h3>
-                          <div className="prose max-w-none text-gray-600 bg-gray-50 rounded-xl p-6">
-                            <p className="leading-relaxed text-lg">{selectedProgram.description}</p>
+                          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-gray-600 leading-relaxed font-medium">
+                            {selectedProgram.description}
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border border-blue-200">
-                            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                              <Target className="h-5 w-5 text-blue-600" />
-                              Program Details
+                          <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 rounded-2xl p-6 border border-blue-100/50">
+                            <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                              <Sparkles className="h-5 w-5 text-blue-500" />
+                              Program Info
                             </h4>
-                            <div className="space-y-3">
-                              <div>
-                                <p className="text-sm text-gray-600">Program Name</p>
-                                <p className="font-semibold text-gray-900 text-lg">{selectedProgram.name}</p>
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-500">Program Name</span>
+                                <span className="font-bold text-slate-900">{selectedProgram.name}</span>
                               </div>
-                              <div>
-                                <p className="text-sm text-gray-600">Status</p>
-                                <p className="font-medium text-gray-900 capitalize">{calculateProgramStatus(selectedProgram)}</p>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-500">Calculated Status</span>
+                                <span className="font-bold text-blue-600 capitalize">{calculateProgramStatus(selectedProgram)}</span>
                               </div>
-                              <div>
-                                <p className="text-sm text-gray-600">Database Status</p>
-                                <p className="font-medium text-gray-900">{selectedProgram.status}</p>
+                              <div className="flex justify-between items-center text-sm pt-2 border-t border-blue-100/50">
+                                <span className="text-slate-500 font-bold text-[10px] uppercase">Database Sync</span>
+                                <span className="text-slate-400 font-bold text-[10px] uppercase">{selectedProgram.status}</span>
                               </div>
                             </div>
                           </div>
-                          
-                          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border border-green-200">
-                            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                              <Calendar className="h-5 w-5 text-green-600" />
-                              Timeline Information
+
+                          <div className="bg-gradient-to-br from-green-50/50 to-emerald-50/50 rounded-2xl p-6 border border-green-100/50">
+                            <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                              <Zap className="h-5 w-5 text-green-500" />
+                              System Status
                             </h4>
-                            <div className="space-y-3">
-                              <div>
-                                <p className="text-sm text-gray-600">Start Date</p>
-                                <p className="font-semibold text-gray-900">{formatDate(selectedProgram.start_date)}</p>
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-500">Timeline</span>
+                                <span className="font-bold text-green-600">{getDurationText(selectedProgram)}</span>
                               </div>
-                              <div>
-                                <p className="text-sm text-gray-600">End Date</p>
-                                <p className="font-medium text-gray-900">{selectedProgram.end_date ? formatDate(selectedProgram.end_date) : 'Not specified'}</p>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-500">Availability</span>
+                                <span className="font-bold text-slate-900">Open Participation</span>
                               </div>
-                              <div>
-                                <p className="text-sm text-gray-600">Duration</p>
-                                <p className="font-medium text-gray-900">{getDurationText(selectedProgram)}</p>
+                              <div className="flex justify-between items-center text-sm pt-2 border-t border-green-100/50">
+                                <span className="text-slate-500 font-bold text-[10px] uppercase">Last Updated</span>
+                                <span className="text-slate-400 font-bold text-[10px] uppercase">{new Date(selectedProgram.updated_at).toLocaleDateString()}</span>
                               </div>
                             </div>
                           </div>
@@ -804,47 +743,49 @@ const TeachersProgramsPage = () => {
 
                     {/* Coordinator Tab */}
                     {activeTab === "coordinator" && (
-                      <div className="space-y-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <div className="space-y-6 max-w-2xl">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                           <Users className="h-5 w-5 text-blue-600" />
-                          Program Coordinator
+                          Faculty Contact
                         </h3>
-                        
+
                         {selectedProgram.coordinator_name ? (
-                          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-200">
-                            <div className="flex items-center gap-6">
-                              <div className="w-20 h-20 bg-purple-100 rounded-2xl flex items-center justify-center">
-                                <Users className="h-10 w-10 text-purple-600" />
+                          <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 sm:p-8 border border-slate-200/60 shadow-sm">
+                            <div className="flex flex-col sm:flex-row items-center gap-6">
+                              <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-3xl flex items-center justify-center shadow-inner">
+                                <User className="h-10 w-10 text-purple-600" />
                               </div>
-                              <div className="flex-1">
-                                <h4 className="text-2xl font-bold text-gray-900 mb-2">{selectedProgram.coordinator_name}</h4>
-                                <p className="text-gray-600 text-lg mb-4">Program Coordinator</p>
-                                <div className="flex items-center gap-4">
+                              <div className="text-center sm:text-left flex-1">
+                                <h4 className="text-2xl font-extrabold text-gray-900 mb-1">{selectedProgram.coordinator_name}</h4>
+                                <p className="text-purple-600 font-bold text-sm uppercase tracking-wider mb-4">Official Coordinator</p>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                                   {selectedProgram.coordinator_email && (
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                      <Mail className="h-4 w-4" />
-                                      <span>{selectedProgram.coordinator_email}</span>
+                                    <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-600 bg-white px-3 py-2 rounded-xl border border-slate-100">
+                                      <Mail className="h-4 w-4 text-slate-400" />
+                                      <span className="text-sm font-bold">{selectedProgram.coordinator_email}</span>
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-2 text-gray-600">
-                                    <Phone className="h-4 w-4" />
-                                    <span>Contact School Office</span>
+                                  <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-600 bg-white px-3 py-2 rounded-xl border border-slate-100">
+                                    <Phone className="h-4 w-4 text-slate-400" />
+                                    <span className="text-sm font-bold">Contact Admin</span>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div className="mt-6 p-4 bg-white rounded-xl border border-purple-200">
-                              <p className="text-gray-700">
-                                For any questions regarding the {selectedProgram.name} program, please contact the coordinator directly.
+                            <div className="mt-8 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                              <p className="text-slate-600 text-sm font-medium leading-relaxed italic">
+                                &ldquo;The program coordinator is responsible for managing all aspects of the {selectedProgram.name}. For specific participant inquiries, please reach out via the provided channels.&rdquo;
                               </p>
                             </div>
                           </div>
                         ) : (
-                          <div className="bg-yellow-50 rounded-2xl p-8 border border-yellow-200 text-center">
-                            <Users className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-                            <h4 className="text-xl font-semibold text-gray-900 mb-2">No Coordinator Assigned</h4>
-                            <p className="text-gray-600">
-                              This program currently doesn&apos;t have an assigned coordinator. Please contact the administration for assistance.
+                          <div className="bg-slate-50 rounded-2xl p-12 border border-dashed border-slate-300 text-center">
+                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+                              <XCircle className="h-8 w-8 text-slate-300" />
+                            </div>
+                            <h4 className="text-lg font-bold text-slate-900 mb-2">No Coordinator Assigned</h4>
+                            <p className="text-slate-500 text-sm font-medium">
+                              An administrative coordinator has not yet been assigned to this program.
                             </p>
                           </div>
                         )}
@@ -853,87 +794,92 @@ const TeachersProgramsPage = () => {
 
                     {/* Schedule Tab */}
                     {activeTab === "schedule" && (
-                      <div className="space-y-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <div className="space-y-6 max-w-4xl">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                           <Calendar className="h-5 w-5 text-blue-600" />
-                          Program Schedule
+                          Timeline & Status
                         </h3>
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <div className="bg-blue-50 rounded-xl p-6">
-                            <h4 className="font-semibold text-gray-900 mb-4">Program Timeline</h4>
-                            <div className="space-y-4">
-                              <div className="flex items-start gap-3">
-                                <div className="w-3 h-3 bg-blue-600 rounded-full mt-1"></div>
-                                <div>
-                                  <p className="font-medium text-gray-900">Program Created</p>
-                                  <p className="text-sm text-gray-600">{formatDate(selectedProgram.created_at)}</p>
-                                </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                            <div className="relative">
+                              <div className="absolute -left-[27px] top-1.5 w-[22px] h-[22px] bg-white border-2 border-slate-200 rounded-full flex items-center justify-center">
+                                <div className="w-2.5 h-2.5 bg-slate-400 rounded-full" />
                               </div>
-                              <div className="flex items-start gap-3">
-                                <div className="w-3 h-3 bg-green-600 rounded-full mt-1"></div>
-                                <div>
-                                  <p className="font-medium text-gray-900">Program Starts</p>
-                                  <p className="text-sm text-gray-600">{formatDate(selectedProgram.start_date)}</p>
-                                  <p className="text-xs text-green-600 mt-1">
-                                    {getDaysRemaining(selectedProgram.start_date) > 0 
-                                      ? `${getDaysRemaining(selectedProgram.start_date)} days from now`
-                                      : getDaysRemaining(selectedProgram.start_date) === 0
-                                      ? 'Starts today'
-                                      : 'Already started'
-                                    }
-                                  </p>
-                                </div>
-                              </div>
-                              {selectedProgram.end_date && (
-                                <div className="flex items-start gap-3">
-                                  <div className="w-3 h-3 bg-orange-600 rounded-full mt-1"></div>
-                                  <div>
-                                    <p className="font-medium text-gray-900">Program Ends</p>
-                                    <p className="text-sm text-gray-600">{formatDate(selectedProgram.end_date)}</p>
-                                  </div>
-                                </div>
-                              )}
+                              <h4 className="font-bold text-slate-900 text-sm mb-1 uppercase tracking-tight">System Initialization</h4>
+                              <p className="text-slate-500 text-xs font-medium">Program registered: {formatDate(selectedProgram.created_at)}</p>
                             </div>
+
+                            <div className="relative">
+                              <div className="absolute -left-[27px] top-1.5 w-[22px] h-[22px] bg-white border-2 border-blue-500 rounded-full flex items-center justify-center">
+                                <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                              </div>
+                              <h4 className="font-bold text-blue-600 text-sm mb-1 uppercase tracking-tight">Active Start Date</h4>
+                              <p className="text-slate-500 text-xs font-medium">Kick-off: {formatDate(selectedProgram.start_date)}</p>
+                              <div className="mt-2 inline-flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-lg text-blue-600 text-[10px] font-bold">
+                                <Sparkles className="h-3 w-3" />
+                                {getDaysRemaining(selectedProgram.start_date) > 0
+                                  ? `Starting in ${getDaysRemaining(selectedProgram.start_date)} days`
+                                  : 'Operational phase'
+                                }
+                              </div>
+                            </div>
+
+                            {selectedProgram.end_date && (
+                              <div className="relative">
+                                <div className="absolute -left-[27px] top-1.5 w-[22px] h-[22px] bg-white border-2 border-slate-800 rounded-full flex items-center justify-center">
+                                  <div className="w-2.5 h-2.5 bg-slate-800 rounded-full" />
+                                </div>
+                                <h4 className="font-bold text-slate-800 text-sm mb-1 uppercase tracking-tight">Project Conclusion</h4>
+                                <p className="text-slate-500 text-xs font-medium">Expected completion: {formatDate(selectedProgram.end_date)}</p>
+                              </div>
+                            )}
                           </div>
 
-                          <div className="bg-green-50 rounded-xl p-6">
-                            <h4 className="font-semibold text-gray-900 mb-4">Current Status</h4>
-                            <div className="space-y-4">
-                              <div className="p-4 bg-white rounded-lg border border-green-200">
-                                <p className="font-medium text-gray-900 mb-2">Program Status</p>
-                                <p className="text-sm text-gray-600">
-                                  {(() => {
-                                    const status = calculateProgramStatus(selectedProgram);
-                                    return (
-                                      <>
-                                        This program is currently <span className="font-semibold text-green-600 capitalize">{status}</span>.
-                                        {status === 'upcoming' && ' Registration is open for interested participants.'}
-                                        {status === 'active' && ' The program is currently running and accepting participants.'}
-                                        {status === 'completed' && ' This program has concluded. View certificates if available.'}
-                                      </>
-                                    );
-                                  })()}
-                                </p>
+                          <div className="space-y-6">
+                            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-lg">
+                              <h4 className="font-bold text-xs uppercase tracking-[0.2em] text-slate-400 mb-4">Program Status Card</h4>
+                              <p className="text-sm font-medium leading-relaxed mb-6 italic text-slate-300">
+                                {(() => {
+                                  const status = calculateProgramStatus(selectedProgram);
+                                  return (
+                                    <>
+                                      Currently in the <span className="text-white font-extrabold">{status}</span> phase.
+                                      {status === 'upcoming' && ' Final preparations and logistical planning are underway.'}
+                                      {status === 'active' && ' Program execution is currently in full progress.'}
+                                      {status === 'completed' && ' All objectives have been met and the program is finalized.'}
+                                    </>
+                                  );
+                                })()}
+                              </p>
+                              <div className="flex items-center justify-between pt-6 border-t border-slate-700/50">
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold text-slate-500">Duration</span>
+                                  <span className="text-sm font-bold">{getDurationText(selectedProgram)}</span>
+                                </div>
+                                <div className="flex flex-col text-right">
+                                  <span className="text-[10px] uppercase font-bold text-slate-500">Phase</span>
+                                  <span className="text-sm font-bold text-blue-400 capitalize">{calculateProgramStatus(selectedProgram)}</span>
+                                </div>
                               </div>
-                              <div className="p-4 bg-white rounded-lg border border-blue-200">
-                                <p className="font-medium text-gray-900 mb-2">Next Steps</p>
-                                <p className="text-sm text-gray-600">
-                                  {(() => {
-                                    const status = calculateProgramStatus(selectedProgram);
-                                    if (status === 'upcoming') {
-                                      return 'Prepare for the program start date and ensure all requirements are met.';
-                                    }
-                                    if (status === 'active') {
-                                      return 'Continue participating in program activities and complete all assignments.';
-                                    }
-                                    if (status === 'completed') {
-                                      return 'Program has ended. Thank you for your participation.';
-                                    }
-                                    return null;
-                                  })()}
-                                </p>
-                              </div>
+                            </div>
+
+                            <div className="bg-blue-50/50 border border-blue-100/50 rounded-2xl p-6">
+                              <h4 className="font-bold text-slate-900 text-sm mb-3">Guidelines</h4>
+                              <ul className="space-y-3">
+                                <li className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                  <div className="w-1 h-1 bg-blue-500 rounded-full" />
+                                  Check schedule regularly for updates
+                                </li>
+                                <li className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                  <div className="w-1 h-1 bg-blue-500 rounded-full" />
+                                  Contact coordinator for logistical help
+                                </li>
+                                <li className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                  <div className="w-1 h-1 bg-blue-500 rounded-full" />
+                                  Ensure all prerequisites are completed
+                                </li>
+                              </ul>
                             </div>
                           </div>
                         </div>
