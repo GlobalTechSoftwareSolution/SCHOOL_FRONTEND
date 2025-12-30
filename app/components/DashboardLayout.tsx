@@ -35,6 +35,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Calender", path: "/management/management_calender" },
     { name: "Notice", path: "/management/management_notice" },
     { name: "Programs", path: "/management/management_programs" },
+    { name: "Raise Issues", path: "/management/management_issues" },
     { name: "Projects", path: "/management/management_projects" },
     { name: "Monthly Report", path: "/management/management_monthly_report" },
     { name: "Pending Fees", path: "/management/management_pending_fees" },
@@ -52,6 +53,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Attendence", path: "/principal/principal_attendance" },
     { name: "Calender", path: "/principal/principal_calender" },
     { name: "Notice", path: "/principal/principal_notice" },
+    { name: "Raise Issues", path: "/principal/principal_raise_issues" },
     { name: "Programs", path: "/principal/principal_programs" },
     { name: "Projects", path: "/principal/principal_projects" },
     { name: "Monthly Report", path: "/principal/principal_monthly_report" },
@@ -72,6 +74,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Projects", path: "/teachers/teachers_projects" },
     { name: " Monthly Report", path: "/teachers/teachers_monthly_report" },
     { name: "Leaves", path: "/teachers/teachers_leaves" },
+    { name: "Raise Issues", path: "/teachers/teachers_raise_issues" },
     { name: "Student Leaves", path: "/teachers/teachers_student_leaves" },
     { name: "Documents", path: "/teachers/teachers_documents" },
     { name: "ID card", path: "/teachers/teachers_id_card" },
@@ -91,6 +94,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Programs", path: "/students/students_programs" },
     { name: "Reports", path: "/students/students_reports" },
     { name: "Leaves", path: "/students/students_leaves" },
+    { name: "Raise Issues", path: "/students/students_raise_issues" },
     { name: "TimeTable", path: "/students/students_timetable" },
     { name: "Documents", path: "/students/students_docs" },
     { name: "Fees", path: "/students/students_fees" },
@@ -205,8 +209,8 @@ export default function DashboardLayout({ children, role }: Props) {
                 const roleForApi = Object.keys(roleLinksMap).includes(effectiveRole) ? effectiveRole : role.toLowerCase();
 
                 // Use environment variable for API base or fallback
-                const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "https://school.globaltechsoftwaresolutions.cloud";
-                const endpoint = `${apiBase}/${roleForApi}/${email}/`;
+                const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://school.globaltechsoftwaresolutions.cloud/api").replace(/\/$/, "");
+                const endpoint = `${apiBase}/${roleForApi}/${email}`;
 
                 console.log("[DASHBOARD LAYOUT] Fetching user from:", endpoint);
 

@@ -448,47 +448,46 @@ const TeacherDocumentsPage = () => {
                             </h3>
 
                             {/* Check if document already exists */}
-                            {teacherDocument && teacherDocument[docType.key as keyof Document] ? (
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-center gap-2 text-green-600">
+                            {teacherDocument && teacherDocument[docType.key as keyof Document] && (
+                              <div className="mb-3">
+                                <div className="flex items-center justify-center gap-2 text-green-600 mb-2">
                                   <CheckCircle className="h-4 w-4" />
                                   <span className="text-sm font-medium">Uploaded</span>
                                 </div>
                                 <button
                                   onClick={() => window.open(teacherDocument[docType.key as keyof Document] as string, '_blank')}
-                                  className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                  className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 mb-2"
                                 >
                                   <Eye className="h-4 w-4" />
-                                  View Document
+                                  View Current
                                 </button>
                               </div>
-                            ) : (
-                              <div className="space-y-3">
-                                <p className="text-sm text-gray-500">No document uploaded</p>
-                                <label className="block">
-                                  <input
-                                    type="file"
-                                    accept=".pdf,.jpg,.jpeg,.png"
-                                    onChange={(e) => handleFileUpload(docType.key, e)}
-                                    className="hidden"
-                                    disabled={uploading}
-                                  />
-                                  <div className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    {uploading && uploadProgress[docType.key] !== undefined ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        {uploadProgress[docType.key]}%
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Upload className="h-4 w-4" />
-                                        Upload
-                                      </>
-                                    )}
-                                  </div>
-                                </label>
-                              </div>
                             )}
+
+                            <div className="space-y-3">
+                              <label className="block">
+                                <input
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  onChange={(e) => handleFileUpload(docType.key, e)}
+                                  className="hidden"
+                                  disabled={uploading}
+                                />
+                                <div className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
+                                  {uploading && uploadProgress[docType.key] !== undefined ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      {uploadProgress[docType.key]}%
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Upload className="h-4 w-4" />
+                                      {teacherDocument?.[docType.key as keyof Document] ? "Upload New / Update" : "Upload Document"}
+                                    </>
+                                  )}
+                                </div>
+                              </label>
+                            </div>
                           </div>
                         </motion.div>
                       ))}

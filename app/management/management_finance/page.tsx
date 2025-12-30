@@ -11,6 +11,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
+  Cell,
 } from "recharts";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
@@ -162,13 +164,16 @@ const ManagementFinance = () => {
         });
 
         // Calculate totals
-        const paidTotal = mergedData
-          .filter((p: FeePayment) => p.status === "Paid")
-          .reduce((sum: number, p: FeePayment) => sum + parseFloat(p.amount_paid || "0"), 0);
+        // Calculate totals accurately across all statuses
+        const paidTotal = mergedData.reduce(
+          (sum: number, p: FeePayment) => sum + parseFloat(p.amount_paid || "0"),
+          0
+        );
 
-        const pendingTotal = mergedData
-          .filter((p: FeePayment) => p.remaining_amount && parseFloat(p.remaining_amount.toString()) > 0)
-          .reduce((sum: number, p: FeePayment) => sum + (p.remaining_amount ? parseFloat(p.remaining_amount.toString()) : 0), 0);
+        const pendingTotal = mergedData.reduce(
+          (sum: number, p: FeePayment) => sum + parseFloat(p.remaining_amount || "0"),
+          0
+        );
 
         const transport = mergedData
           .filter((p: FeePayment) => p.fee_type === "Transport")
@@ -177,9 +182,41 @@ const ManagementFinance = () => {
         setPayments(mergedData);
         setPaidFees(mergedData.filter((p: FeePayment) => p.status === "Paid"));
         setPendingFees(mergedData.filter((p: FeePayment) => p.remaining_amount && parseFloat(p.remaining_amount.toString()) > 0));
-        setTotalPaid(paidTotal);
-        setTotalPending(pendingTotal);
-        setTransportIncome(transport);
+
+        // Use a precise grouping strategy to calculate global totals accurately
+        // This avoids double-counting the 'total_amount' of a fee structure when multiple payments exist for it
+        const studentFeeTotals = new Map<string, { total: number; paid: number; transport: number }>();
+
+        mergedData.forEach(p => {
+          const key = `${p.student}-${p.fee_structure}`;
+          if (!studentFeeTotals.has(key)) {
+            studentFeeTotals.set(key, {
+              total: parseFloat(p.total_amount || "0"),
+              paid: 0,
+              transport: 0
+            });
+          }
+          const entry = studentFeeTotals.get(key)!;
+          const paid = parseFloat(p.amount_paid || "0");
+          entry.paid += paid;
+          if (p.fee_type === "Transport") {
+            entry.transport += paid;
+          }
+        });
+
+        let finalPaid = 0;
+        let finalPending = 0;
+        let finalTransport = 0;
+
+        studentFeeTotals.forEach(data => {
+          finalPaid += data.paid;
+          finalPending += Math.max(data.total - data.paid, 0);
+          finalTransport += data.transport;
+        });
+
+        setTotalPaid(finalPaid);
+        setTotalPending(finalPending);
+        setTransportIncome(finalTransport);
       } catch (err) {
         console.error("Error fetching finance data:", err);
       } finally {
@@ -215,20 +252,37 @@ const ManagementFinance = () => {
     setSelectedStudent(null);
   };
 
-  // Monthly Chart Data
-  const monthlyData: Record<string, number> = payments.reduce((acc: Record<string, number>, payment: FeePayment) => {
-    const month = new Date(payment.payment_date).toLocaleString("default", {
-      month: "short",
-    });
-    const paid = parseFloat(payment.amount_paid || "0");
-    acc[month] = (acc[month] || 0) + paid;
-    return acc;
-  }, {});
+  // Enhanced Chart Data Processing
+  const monthsOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const chartData = Object.keys(monthlyData).map((month) => ({
-    month,
-    amount: monthlyData[month],
-  }));
+  const chartData = React.useMemo(() => {
+    const dataByMonth: Record<string, { month: string; collected: number; pending: number }> = {};
+
+    // Initialize all months
+    monthsOrder.forEach(m => {
+      dataByMonth[m] = { month: m, collected: 0, pending: 0 };
+    });
+
+    payments.forEach((payment) => {
+      if (!payment.payment_date) return;
+
+      // Robust month extraction from YYYY-MM-DD
+      const parts = payment.payment_date.split('-');
+      if (parts.length < 2) return;
+      const monthIndex = parseInt(parts[1]) - 1;
+      const monthName = monthsOrder[monthIndex];
+
+      if (!monthName) return;
+
+      const paid = parseFloat(payment.amount_paid || "0");
+      const pending = parseFloat(payment.remaining_amount || "0");
+
+      dataByMonth[monthName].collected += paid;
+      dataByMonth[monthName].pending += pending;
+    });
+
+    return monthsOrder.map(m => dataByMonth[m]);
+  }, [payments]);
 
   if (loading)
     return (
@@ -315,24 +369,93 @@ const ManagementFinance = () => {
               </span>
               Monthly Fee Collection Trend
             </h2>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#888" />
-                <YAxis stroke="#888" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px' }}
-                  labelStyle={{ color: '#111827', fontWeight: 'bold' }}
-                />
-                <Bar dataKey="amount" fill="url(#colorGradient)" radius={[12, 12, 0, 0]} />
-                <defs>
-                  <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" stopOpacity={1} />
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={1} />
-                  </linearGradient>
-                </defs>
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-[300px] sm:h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                  barGap={8}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    tickFormatter={(value) => `₹${value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value}`}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#f9fafb' }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const collected = payload.find(p => p.dataKey === 'collected')?.value as number || 0;
+                        const pending = payload.find(p => p.dataKey === 'pending')?.value as number || 0;
+                        const total = collected + pending;
+
+                        return (
+                          <div className="bg-white p-4 rounded-2xl shadow-xl border-none">
+                            <p className="text-gray-900 font-bold mb-2 border-b pb-1">{label}</p>
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between gap-8">
+                                <span className="text-gray-500 text-sm">Total Amount:</span>
+                                <span className="text-gray-900 font-bold text-sm">₹{total.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between gap-8">
+                                <span className="text-emerald-500 text-sm font-medium">Paid Amount:</span>
+                                <span className="text-emerald-600 font-bold text-sm">₹{collected.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between gap-8">
+                                <span className="text-rose-500 text-sm font-medium">Remaining Amount:</span>
+                                <span className="text-rose-600 font-bold text-sm">₹{pending.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    align="right"
+                    iconType="circle"
+                    wrapperStyle={{ paddingBottom: '20px' }}
+                  />
+                  <Bar
+                    name="Collected Fees"
+                    dataKey="collected"
+                    fill="url(#collectedGradient)"
+                    radius={[6, 6, 0, 0]}
+                    barSize={20}
+                    animationDuration={1500}
+                  />
+                  <Bar
+                    name="Pending Fees"
+                    dataKey="pending"
+                    fill="url(#pendingGradient)"
+                    radius={[6, 6, 0, 0]}
+                    barSize={20}
+                    animationDuration={1500}
+                  />
+                  <defs>
+                    <linearGradient id="collectedGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#059669" stopOpacity={1} />
+                    </linearGradient>
+                    <linearGradient id="pendingGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#dc2626" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Controls */}

@@ -133,9 +133,9 @@ const ParentProgramsPage = () => {
       case "active":
         return "bg-green-50 text-green-700 border-green-200";
       case "upcoming":
-        return "bg-blue-50 text-blue-700 border-blue-200";
+        return "bg-blue-100 text-blue-700 border-blue-200";
       case "completed":
-        return "bg-gray-50 text-gray-700 border-gray-200";
+        return "bg-red-100 text-red-700 border-red-200";
       default:
         return "bg-gray-50 text-gray-700 border-gray-200";
     }
@@ -244,17 +244,6 @@ const ParentProgramsPage = () => {
             </div>
 
             <div className="flex flex-wrap gap-4 w-full lg:w-auto">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Categories</option>
-                {uniqueCategories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}

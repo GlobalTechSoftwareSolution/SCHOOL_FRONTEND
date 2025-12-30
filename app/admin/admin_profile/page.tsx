@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Briefcase, 
-  Save, 
-  Edit, 
+import {
+  User,
+  Mail,
+  Phone,
+  Briefcase,
+  Save,
+  Edit,
   Calendar,
   MapPin,
   BookOpen,
@@ -32,7 +32,7 @@ export default function Admin_ProfilePage() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab ] = useState("profile");
+  const [activeTab] = useState("profile");
   const [isLoading, setIsLoading] = useState(true);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
@@ -102,26 +102,26 @@ export default function Admin_ProfilePage() {
   const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
       alert('Please select a valid image file (JPG, PNG, etc.)');
       return;
     }
-    
+
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('Image size should be less than 5MB');
       return;
     }
-    
+
     // Show instant local preview
     const previewUrl = URL.createObjectURL(file);
     setFormData((prev) => ({ ...prev, profile_picture: previewUrl }));
 
     try {
       setIsLoading(true);
-      
+
       // Get email from localStorage like in useEffect
       let email = "";
       try {
@@ -133,22 +133,22 @@ export default function Admin_ProfilePage() {
       } catch {
         // Ignore parse error
       }
-      
+
       if (!email) {
         throw new Error("No admin email found. Please refresh the page.");
       }
-      
+
       const formDataPatch = new FormData();
       formDataPatch.append("profile_picture", file);
-      
+
       console.log("Sending PATCH request with FormData to:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`);
-      
+
       // ✅ CRITICAL FIX: Use axios and DO NOT SET Content-Type manually
       const res = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`,
         formDataPatch
       );
-      
+
       const updatedData = res.data;
       setFormData((prev) => ({
         ...prev,
@@ -205,11 +205,11 @@ export default function Admin_ProfilePage() {
       } catch {
         // Ignore parse error
       }
-      
+
       if (!email) {
         throw new Error("No admin email found. Please refresh the page.");
       }
-      
+
       const formDataToSend = new FormData();
       formDataToSend.append("fullname", formData.name);
       formDataToSend.append("phone", formData.phone);
@@ -224,23 +224,23 @@ export default function Admin_ProfilePage() {
         if (!file.type.startsWith('image/')) {
           throw new Error('Please select a valid image file (JPG, PNG, etc.)');
         }
-        
+
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
           throw new Error('Image size should be less than 5MB');
         }
-        
+
         formDataToSend.append("profile_picture", file);
       }
 
       console.log("Sending PATCH request with FormData to:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`);
-      
+
       // ✅ CRITICAL FIX: Use axios and DO NOT SET Content-Type manually
       const res = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/admins/${email}/`,
         formDataToSend
       );
-      
+
       const updatedData = res.data;
       setFormData((prev) => ({
         ...prev,
@@ -252,7 +252,7 @@ export default function Admin_ProfilePage() {
       }));
       setIsEditing(false);
       setShowSuccessPopup(true);
-      
+
       // Auto-close popup after 3 seconds
       setTimeout(() => setShowSuccessPopup(false), 3000);
     } catch (error: unknown) {
@@ -288,7 +288,7 @@ export default function Admin_ProfilePage() {
     }
     setIsEditing(false);
   };
-  
+
   if (isLoading) {
     return (
       <DashboardLayout role="admin">
@@ -345,182 +345,182 @@ export default function Admin_ProfilePage() {
             <div className="lg:col-span-3">
               {activeTab === "profile" && (
                 <div className="space-y-6">
-                    {/* Profile Card */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
-                        <div className="flex justify-between items-center">
-                          <h2 className="text-xl font-bold text-white">Profile Information</h2>
-                          <button
-                            onClick={() => setIsEditing(!isEditing)}
-                            className="bg-white text-blue-600 px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-gray-100 transition-colors"
-                          >
-                            <Edit className="w-4 h-4" />
-                            <span>{isEditing ? "Cancel" : "Edit Profile"}</span>
-                          </button>
-                        </div>
+                  {/* Profile Card */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+                      <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-white">Profile Information</h2>
+                        <button
+                          onClick={() => setIsEditing(!isEditing)}
+                          className="bg-white text-blue-600 px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-gray-100 transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                          <span>{isEditing ? "Cancel" : "Edit Profile"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-6 space-y-6">
+                      {/* Profile Picture with clickable overlay and hidden input */}
+                      <div className="flex justify-center mb-6 flex-col items-center">
+                        <label className="relative cursor-pointer group">
+                          <Image
+                            src={formData.profile_picture || "/default-avatar.png"}
+                            alt="Profile Picture"
+                            width={96}
+                            height={96}
+                            className="rounded-full w-24 h-24 object-cover border-2 border-gray-200 group-hover:opacity-80 transition"
+                          />
+                          {isEditing && (
+                            <>
+                              <span className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-md group-hover:bg-blue-600 transition group-hover:text-white">
+                                <Edit className="w-5 h-5 text-blue-600 group-hover:text-white" />
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleProfilePictureChange}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                tabIndex={-1}
+                              />
+                            </>
+                          )}
+                        </label>
                       </div>
 
-                      <div className="p-6 space-y-6">
-                        {/* Profile Picture with clickable overlay and hidden input */}
-                        <div className="flex justify-center mb-6 flex-col items-center">
-                          <label className="relative cursor-pointer group">
-                            <Image
-                              src={formData.profile_picture || "/default-avatar.png"}
-                              alt="Profile Picture"
-                              width={96}
-                              height={96}
-                              className="rounded-full w-24 h-24 object-cover border-2 border-gray-200 group-hover:opacity-80 transition"
-                            />
-                            {isEditing && (
-                              <>
-                                <span className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-md group-hover:bg-blue-600 transition group-hover:text-white">
-                                  <Edit className="w-5 h-5 text-blue-600 group-hover:text-white" />
-                                </span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleProfilePictureChange}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                  tabIndex={-1}
-                                />
-                              </>
-                            )}
-                          </label>
-                        </div>
-
-                        {/* Personal Information */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                              <User className="w-4 h-4" />
-                              <span>Full Name</span>
-                            </label>
-                            <input
-                              type="text"
-                              name="name"
-                              value={formData.name}
-                              onChange={handleChange}
-                              disabled={!isEditing}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                              <Mail className="w-4 h-4" />
-                              <span>Email Address</span>
-                            </label>
-                            <input
-                              type="email"
-                              name="email"
-                              value={formData.email}
-                              disabled
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                              <Phone className="w-4 h-4" />
-                              <span>Phone Number</span>
-                            </label>
-                            <input
-                              type="text"
-                              name="phone"
-                              value={formData.phone}
-                              onChange={handleChange}
-                              disabled={!isEditing}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                              <Briefcase className="w-4 h-4" />
-                              <span>Role</span>
-                            </label>
-                            <select
-                              name="role"
-                              value={formData.role}
-                              onChange={handleChange}
-                              disabled={!isEditing}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
-                            >
-                              <option value="Administrator">Administrator</option>
-                              <option value="Principal">Principal</option>
-                              <option value="Teacher">Teacher</option>
-                              <option value="Staff">Staff</option>
-                              <option value="Management">Management</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                              <BookOpen className="w-4 h-4" />
-                              <span>Department</span>
-                            </label>
-                            <input
-                              type="text"
-                              name="department"
-                              value={formData.department}
-                              onChange={handleChange}
-                              disabled={!isEditing}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                              <Calendar className="w-4 h-4" />
-                              <span>Join Date</span>
-                            </label>
-                            <input
-                              type="date"
-                              name="joinDate"
-                              value={formData.joinDate}
-                              onChange={handleChange}
-                              disabled={!isEditing}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Address */}
+                      {/* Personal Information */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
-                            <MapPin className="w-4 h-4" />
-                            <span>Address</span>
+                            <User className="w-4 h-4" />
+                            <span>Full Name</span>
                           </label>
                           <input
                             type="text"
-                            name="address"
-                            value={formData.address}
+                            name="name"
+                            value={formData.name}
                             onChange={handleChange}
                             disabled={!isEditing}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
                           />
                         </div>
 
-                        {/* Save Button */}
-                        {isEditing && (
-                          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 transition-all duration-200">
-                            <button
-                              onClick={handleCancel}
-                              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleSave}
-                              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                            >
-                              <Save className="w-4 h-4" />
-                              <span>Save Changes</span>
-                            </button>
-                          </div>
-                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
+                            <Mail className="w-4 h-4" />
+                            <span>Email Address</span>
+                          </label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
+                            <Phone className="w-4 h-4" />
+                            <span>Phone Number</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
+                            <Briefcase className="w-4 h-4" />
+                            <span>Role</span>
+                          </label>
+                          <select
+                            name="role"
+                            value={formData.role}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
+                          >
+                            <option value="Administrator">Administrator</option>
+                            <option value="Principal">Principal</option>
+                            <option value="Teacher">Teacher</option>
+                            <option value="Staff">Staff</option>
+                            <option value="Management">Management</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
+                            <BookOpen className="w-4 h-4" />
+                            <span>Department</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="department"
+                            value={formData.department}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
+                            <Calendar className="w-4 h-4" />
+                            <span>Join Date</span>
+                          </label>
+                          <input
+                            type="date"
+                            name="joinDate"
+                            value={formData.joinDate}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
+                          />
+                        </div>
                       </div>
+
+                      {/* Address */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
+                          <MapPin className="w-4 h-4" />
+                          <span>Address</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleChange}
+                          disabled={!isEditing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition-colors"
+                        />
+                      </div>
+
+                      {/* Save Button */}
+                      {isEditing && (
+                        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 transition-all duration-200">
+                          <button
+                            onClick={handleCancel}
+                            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSave}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                          >
+                            <Save className="w-4 h-4" />
+                            <span>Save Changes</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
+                  </div>
                 </div>
               )}
             </div>

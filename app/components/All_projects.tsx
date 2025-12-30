@@ -14,14 +14,27 @@ interface Project {
   start_date: string;
   end_date: string;
   status: "In Progress" | "Completed";
-  class_name: string;
-  section: string;
+  class_id: number;
+  class_name?: string;
+  section?: string;
   created_at?: string;
+  owner_name?: string;
+  attachment?: string;
+  updated_at?: string;
+}
+
+interface ClassInfo {
+  id: number;
+  class_name: string;
+  sec: string;
 }
 
 const ProjectsPage = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,8 +56,7 @@ const ProjectsPage = () => {
     start_date: "",
     end_date: "",
     status: "In Progress" as const,
-    class_name: "",
-    section: "",
+    class_id: 0,
   });
 
   // Function to calculate status based on current date
@@ -58,6 +70,36 @@ const ProjectsPage = () => {
 
     return today <= end ? "In Progress" : "Completed";
   };
+
+  // ✅ Fetch all classes
+  const fetchClasses = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_URL}classes/`);
+      setClasses(res.data);
+    } catch (err: unknown) {
+      console.error("Error fetching classes:", err);
+    }
+  }, []);
+
+  // ✅ Fetch all teachers
+  const fetchTeachers = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_URL}teachers/`);
+      setTeachers(res.data);
+    } catch (err: unknown) {
+      console.error("Error fetching teachers:", err);
+    }
+  }, []);
+
+  // ✅ Fetch all students
+  const fetchStudents = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_URL}students/`);
+      setStudents(res.data);
+    } catch (err: unknown) {
+      console.error("Error fetching students:", err);
+    }
+  }, []);
 
   // ✅ Fetch all projects
   const fetchProjects = useCallback(async () => {
@@ -90,20 +132,51 @@ const ProjectsPage = () => {
     setStats(stats);
   };
 
+  // ✅ Enhanced Projects with resolved class and section details
+  const enhancedProjects = React.useMemo(() => {
+    return projects.map(project => {
+      const classInfo = classes.find(c => c.id === project.class_id);
+
+      // Resolve owner name from teachers or students
+      const teacher = teachers.find(t => t.email?.toLowerCase() === project.owner_email?.toLowerCase());
+      const student = students.find(s => s.email?.toLowerCase() === project.owner_email?.toLowerCase());
+
+      const ownerName = teacher ? (teacher.fullname || teacher.first_name) :
+        student ? (student.first_name + " " + student.last_name) :
+          (project.owner_name || project.owner || "Unknown Owner");
+
+      return {
+        ...project,
+        owner_name: ownerName,
+        class_name: classInfo?.class_name || project.class_name || "Unknown Class",
+        section: classInfo?.sec || project.section || ""
+      };
+    });
+  }, [projects, classes, teachers, students]);
+
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchProjects(), fetchClasses(), fetchTeachers(), fetchStudents()]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchProjects, fetchClasses, fetchTeachers, fetchStudents]);
 
   // ✅ Filter projects
   useEffect(() => {
-    let filtered = projects;
+    let filtered = enhancedProjects;
 
     if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(project =>
-        project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.class_name.toLowerCase().includes(searchTerm.toLowerCase())
+        (project.title || "").toLowerCase().includes(searchLower) ||
+        (project.description || "").toLowerCase().includes(searchLower) ||
+        (project.owner || "").toString().toLowerCase().includes(searchLower) ||
+        (project.owner_name || "").toLowerCase().includes(searchLower) ||
+        (project.class_name || "").toLowerCase().includes(searchLower) ||
+        (project.section || "").toLowerCase().includes(searchLower) ||
+        (project.status || "").toLowerCase().includes(searchLower)
       );
     }
 
@@ -116,12 +189,18 @@ const ProjectsPage = () => {
     }
 
     setFilteredProjects(filtered);
-  }, [searchTerm, statusFilter, classFilter, projects]);
+    calculateStats(enhancedProjects);
+  }, [searchTerm, statusFilter, classFilter, enhancedProjects]);
 
   // ✅ Add new project
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!newProject.class_id) {
+        alert("Please select a class");
+        return;
+      }
+
       const projectToAdd = {
         ...newProject,
         status: calculateStatus(newProject.end_date)
@@ -160,8 +239,7 @@ const ProjectsPage = () => {
       start_date: "",
       end_date: "",
       status: "In Progress",
-      class_name: "",
-      section: "",
+      class_id: 0,
     });
   };
 
@@ -175,14 +253,14 @@ const ProjectsPage = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "In Progress": return "bg-yellow-50 text-yellow-700 border-yellow-200";
-      case "Completed": return "bg-green-50 text-green-700 border-green-200";
+      case "In Progress": return "bg-green-50 text-green-700 border-green-200";
+      case "Completed": return "bg-red-50 text-red-700 border-red-200";
       default: return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
 
   const getClasses = () => {
-    return Array.from(new Set(projects.map(p => p.class_name).filter(Boolean)));
+    return Array.from(new Set(classes.map(c => c.class_name).filter(Boolean)));
   };
 
   if (loading) {
@@ -285,11 +363,6 @@ const ProjectsPage = () => {
                 <option key={className} value={className}>{className}</option>
               ))}
             </select>
-
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition">
-              <Filter className="h-4 w-4" />
-              More Filters
-            </button>
           </div>
         </div>
       </div>
@@ -348,11 +421,15 @@ const ProjectsPage = () => {
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Users className="h-4 w-4" />
-                    <span>{project.owner}</span>
+                    <span>{project.owner_name || project.owner}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Calendar className="h-4 w-4" />
                     <span>{new Date(project.start_date).toLocaleDateString()} - {new Date(project.end_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="font-medium">Class:</span>
+                    <span>{project.class_name} {project.section ? `(${project.section})` : ''}</span>
                   </div>
                 </div>
 
@@ -474,27 +551,37 @@ const ProjectsPage = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Class Name
                     </label>
-                    <input
-                      type="text"
-                      value={newProject.class_name}
-                      onChange={(e) => setNewProject({ ...newProject, class_name: e.target.value })}
+                    <select
+                      value={newProject.class_id}
+                      onChange={(e) => setNewProject({ ...newProject, class_id: Number(e.target.value) })}
                       className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      placeholder="e.g. Turnitin"
-                    />
+                    >
+                      <option value="0">Select a class</option>
+                      {classes.map((classInfo) => (
+                        <option key={classInfo.id} value={classInfo.id}>
+                          {classInfo.class_name} {classInfo.sec ? `(${classInfo.sec})` : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* Section */}
+                  {/* Section (Automatically set based on selected class) */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Section
                     </label>
-                    <input
-                      type="text"
-                      value={newProject.section}
-                      onChange={(e) => setNewProject({ ...newProject, section: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                      placeholder="e.g. A"
-                    />
+                    <select
+                      value={classes.find(c => c.id === newProject.class_id)?.sec || ""}
+                      className="w-full p-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+                      disabled={true}
+                    >
+                      <option value="">Section auto-filled</option>
+                      {classes.find(c => c.id === newProject.class_id) && (
+                        <option value={classes.find(c => c.id === newProject.class_id)?.sec}>
+                          {classes.find(c => c.id === newProject.class_id)?.sec}
+                        </option>
+                      )}
+                    </select>
                   </div>
 
                   {/* Owner Email */}
@@ -645,16 +732,23 @@ const ViewProjectModal = ({ project, onClose }: { project: Project; onClose: () 
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Class Info</h3>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Class</h3>
                 <p className="text-gray-900 mt-1">
-                  {project.class_name} {project.section ? `- ${project.section}` : ""}
+                  {project.class_name || "N/A"}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Section</h3>
+                <p className="text-gray-900 mt-1">
+                  {project.section || "N/A"}
                 </p>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Owner</h3>
                 <div className="mt-1">
-                  <p className="text-gray-900 font-medium">{project.owner}</p>
+                  <p className="text-gray-900 font-medium">{project.owner_name || project.owner}</p>
                   <p className="text-gray-500 text-sm">{project.owner_email}</p>
                 </div>
               </div>

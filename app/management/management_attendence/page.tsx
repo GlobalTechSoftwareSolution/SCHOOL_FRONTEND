@@ -83,7 +83,10 @@ export default function AttendanceByRole() {
   >("students");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const dateStr = useMemo(() => {
-    return selectedDate.toISOString().slice(0, 10);
+    const y = selectedDate.getFullYear();
+    const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const d = String(selectedDate.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   }, [selectedDate]);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -290,6 +293,10 @@ export default function AttendanceByRole() {
   // compute rows based on mode with class/section/department filtering
   const filteredByMode = useMemo(() => {
     let rows = attendanceForDate.filter((a) => {
+      // Ensure the record date matches the selected date (normalized to YYYY-MM-DD)
+      const recordDate = String(a.date || "").slice(0, 10);
+      if (recordDate && recordDate !== dateStr) return false;
+
       const role = normalizeRole(a.role);
 
       if (mode === "students") {
@@ -475,21 +482,6 @@ export default function AttendanceByRole() {
                   </p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 sm:gap-3">
-                <button className="hidden sm:flex items-center gap-1 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 shadow-sm text-xs sm:text-sm">
-                  <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                  Export
-                </button>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-white border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 shadow-sm text-xs sm:text-sm"
-                >
-                  <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Filters</span>
-                  <span className="sm:hidden">Filter</span>
-                </button>
-              </div>
             </div>
           </div>
 
@@ -563,7 +555,7 @@ export default function AttendanceByRole() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 sm:mb-2">Date</p>
-                  <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900">{new Date(dateStr).toLocaleDateString('en-US', {
+                  <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900">{selectedDate.toLocaleDateString('en-US', {
                     weekday: 'short',
                     month: 'short',
                     day: 'numeric'

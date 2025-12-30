@@ -141,6 +141,27 @@ const AllNotice = () => {
     });
   };
 
+  // Delete notice function
+  const handleDeleteNotice = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this notice? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`${API_URL}${id}/`, {
+        method: "DELETE",
+      });
+      
+      if (!res.ok) throw new Error("Failed to delete notice");
+      
+      showPopup("Notice deleted successfully!", true);
+      fetchNotices(); // Refresh the notices list
+    } catch (err) {
+      console.error(err);
+      showPopup("Error deleting notice. Please try again.", false);
+    }
+  };
+
   return (
   <DashboardLayout role="principal">
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4 sm:px-6 lg:px-8">
@@ -405,6 +426,17 @@ const AllNotice = () => {
                         </span>
                       </div>
                     )}
+                    <div className="flex justify-end pt-3">
+                      <button
+                        onClick={() => handleDeleteNotice(notice.id)}
+                        className="bg-red-500 hover:bg-red-600 text-white font-medium text-xs flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

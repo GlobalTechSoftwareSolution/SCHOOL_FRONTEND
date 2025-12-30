@@ -120,100 +120,100 @@ const TeacherProfilePage = () => {
   };
 
   // ✅ Save updates (PATCH)
-const handleSave = async () => {
-  try {
-    const email = formData.email;
+  const handleSave = async () => {
+    try {
+      const email = formData.email;
 
-    if (profileFile) {
-      // If profile picture changed, prepare FormData for upload
-      const uploadData = new FormData();
-      uploadData.append("profile_picture", profileFile);
+      if (profileFile) {
+        // If profile picture changed, prepare FormData for upload
+        const uploadData = new FormData();
+        uploadData.append("profile_picture", profileFile);
 
-      // Add only changed fields, skip undefined values
-      const fieldsToUpdate: (keyof EditableTeacherFields)[] = [
-        "fullname",
-        "department_name",
-        "qualification",
-        "experience_years",
-        "phone",
-        "date_of_birth",
-        "gender",
-        "nationality",
-        "blood_group",
-        "date_joined",
-        "residential_address",
-        "emergency_contact_name",
-        "emergency_contact_relationship",
-        "emergency_contact_no"
-      ];
+        // Add only changed fields, skip undefined values
+        const fieldsToUpdate: (keyof EditableTeacherFields)[] = [
+          "fullname",
+          "department_name",
+          "qualification",
+          "experience_years",
+          "phone",
+          "date_of_birth",
+          "gender",
+          "nationality",
+          "blood_group",
+          "date_joined",
+          "residential_address",
+          "emergency_contact_name",
+          "emergency_contact_relationship",
+          "emergency_contact_no"
+        ];
 
-      fieldsToUpdate.forEach((key) => {
-        const value = formData[key];
-        if (value !== undefined && value !== null && value !== "") {
-          if (typeof value === 'number') {
-            uploadData.append(key, value.toString());
-          } else {
-            uploadData.append(key, String(value));
+        fieldsToUpdate.forEach((key) => {
+          const value = formData[key];
+          if (value !== undefined && value !== null && value !== "") {
+            if (typeof value === 'number') {
+              uploadData.append(key, value.toString());
+            } else {
+              uploadData.append(key, String(value));
+            }
           }
-        }
-      });
+        });
 
-      // ✅ CRITICAL FIX: DO NOT SET Content-Type manually
-      const res = await axios.patch(
-        `${API_BASE_URL}${email}/`,
-        uploadData
-      );
+        // ✅ CRITICAL FIX: DO NOT SET Content-Type manually
+        const res = await axios.patch(
+          `${API_BASE_URL}${email}/`,
+          uploadData
+        );
 
-      setTeacher(res.data);
-      setFormData(res.data);
+        setTeacher(res.data);
+        setFormData(res.data);
 
-    } else {
-      // Just text updates, no file upload - send only changed fields
-      const fieldsToUpdate: (keyof EditableTeacherFields)[] = [
-        "fullname",
-        "department_name",
-        "qualification",
-        "experience_years",
-        "phone",
-        "date_of_birth",
-        "gender",
-        "nationality",
-        "blood_group",
-        "date_joined",
-        "residential_address",
-        "emergency_contact_name",
-        "emergency_contact_relationship",
-        "emergency_contact_no"
-      ];
+      } else {
+        // Just text updates, no file upload - send only changed fields
+        const fieldsToUpdate: (keyof EditableTeacherFields)[] = [
+          "fullname",
+          "department_name",
+          "qualification",
+          "experience_years",
+          "phone",
+          "date_of_birth",
+          "gender",
+          "nationality",
+          "blood_group",
+          "date_joined",
+          "residential_address",
+          "emergency_contact_name",
+          "emergency_contact_relationship",
+          "emergency_contact_no"
+        ];
 
-      // Create a clean object with only the fields to update
-      const updateData: Partial<EditableTeacherFields> = {};
-      fieldsToUpdate.forEach((key) => {
-        const value = formData[key];
-        if (value !== undefined && value !== null && value !== "") {
-          // Use proper type assertion
-          (updateData as Record<keyof EditableTeacherFields, unknown>)[key] = value;
-        }
-      });
+        // Create a clean object with only the fields to update
+        const updateData: Partial<EditableTeacherFields> = {};
+        fieldsToUpdate.forEach((key) => {
+          const value = formData[key];
+          if (value !== undefined && value !== null && value !== "") {
+            // Use proper type assertion
+            (updateData as Record<keyof EditableTeacherFields, unknown>)[key] = value;
+          }
+        });
 
-      const res = await axios.patch(`${API_BASE_URL}${email}/`, updateData);
-      setTeacher(res.data);
-      setFormData(res.data);
+        const res = await axios.patch(`${API_BASE_URL}${email}/`, updateData);
+        setTeacher(res.data);
+        setFormData(res.data);
+      }
+
+      setIsEditing(false);
+      setProfileFile(null);
+      showPopup('success', "Profile updated successfully!");
+
+    } catch (error: unknown) {
+      console.error("Error updating profile:", error);
+      const errorMessage =
+        (error as { response?: { data?: { detail?: string; message?: string } } })?.response?.data?.detail ||
+        (error as { response?: { data?: { detail?: string; message?: string } } })?.response?.data?.message ||
+        "Failed to update profile";
+      showPopup('error', errorMessage);
     }
-
-    setIsEditing(false);
-    setProfileFile(null);
-    showPopup('success', "Profile updated successfully!");
-
-  } catch (error: unknown) {
-    console.error("Error updating profile:", error);
-    const errorMessage =
-      (error as { response?: { data?: { detail?: string; message?: string } } })?.response?.data?.detail ||
-      (error as { response?: { data?: { detail?: string; message?: string } } })?.response?.data?.message ||
-      "Failed to update profile";
-    showPopup('error', errorMessage);
-  }
-};
+  };
 
 
   if (loading) {
@@ -298,7 +298,7 @@ const handleSave = async () => {
                 </label>
               )}
             </div>
-            
+
             <div className="text-center md:text-left flex-1">
               <h1 className="text-3xl font-bold mb-2">{teacher.fullname}</h1>
               <p className="text-blue-100 text-lg mb-1">{teacher.department_name}</p>
@@ -375,11 +375,10 @@ const handleSave = async () => {
                   onChange={handleChange}
                   disabled={!isEditing}
                   rows={4}
-                  className={`w-full border rounded-xl p-3 resize-none transition-all ${
-                    isEditing 
-                      ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" 
+                  className={`w-full border rounded-xl p-3 resize-none transition-all ${isEditing
+                      ? "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                       : "bg-gray-50 border-gray-200"
-                  }`}
+                    }`}
                 />
               </div>
 
@@ -467,11 +466,10 @@ const InputField = ({ label, name, value, onChange, disabled = false, type = "te
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className={`w-full border rounded-xl px-4 py-3 transition-all ${
-        disabled 
-          ? "bg-gray-50 border-gray-200 text-gray-500" 
+      className={`w-full border rounded-xl px-4 py-3 transition-all ${disabled
+          ? "bg-gray-50 border-gray-200 text-gray-500"
           : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-400"
-      }`}
+        }`}
     />
   </div>
 );

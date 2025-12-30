@@ -191,6 +191,23 @@ const All_reports = () => {
     return icons[type] || "📋";
   };
 
+  // Delete report function
+  const handleDeleteReport = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API_URL}${id}/`, getAxiosConfig());
+      fetchReports(); // Refresh the reports list
+      setSelectedReport(null); // Close the modal
+      alert("Report deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      alert("Failed to delete report. Please try again.");
+    }
+  };
+
   return (
     <>
       <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 p-6">
@@ -574,7 +591,14 @@ const All_reports = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 text-right">
+                <div className="mt-6 flex justify-between">
+                  <button
+                    onClick={() => handleDeleteReport(selectedReport.id)}
+                    className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <FiX className="w-4 h-4" />
+                    Delete Report
+                  </button>
                   <button
                     onClick={() => setSelectedReport(null)}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"

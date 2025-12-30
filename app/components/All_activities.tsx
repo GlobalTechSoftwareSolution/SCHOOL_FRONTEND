@@ -223,6 +223,51 @@ const Activities = () => {
     return icons[type || "Other"] || "📅";
   };
 
+  // Function to check if activity is upcoming
+  const isUpcomingActivity = (activity: Activity) => {
+    if (!activity.date) return false;
+    const activityDate = new Date(activity.date);
+    const today = new Date();
+    // Reset time to compare only dates
+    activityDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return activityDate >= today;
+  };
+
+  // Get status color based on activity date
+  const getStatusColor = (activity: Activity) => {
+    return isUpcomingActivity(activity) 
+      ? "bg-green-100 text-green-800 border-green-200" 
+      : "bg-red-100 text-red-800 border-red-200";
+  };
+
+  // Get status text based on activity date
+  const getStatusText = (activity: Activity) => {
+    return isUpcomingActivity(activity) ? "Upcoming" : "Past";
+  };
+
+  // Delete activity function
+  const handleDeleteActivity = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this activity? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("authToken");
+      await axios.delete(`${API_URL}${id}/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      fetchActivities(); // Refresh the activities list
+      setSelectedActivity(null); // Close the detail view
+      showPopup("Activity deleted successfully!", true);
+    } catch (error) {
+      console.error("Error deleting activity:", error);
+      showPopup("Failed to delete activity. Please try again.", false);
+    }
+  };
+
   // Reset form
   const resetForm = () => {
     setShowAddForm(false);
@@ -497,9 +542,14 @@ const Activities = () => {
                               <h3 className="font-bold text-gray-800 text-base sm:text-lg line-clamp-1">
                                 {activity.title || activity.name}
                               </h3>
-                              <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium border ${getActivityTypeColor(activity.type || activity.category)} mt-1`}>
-                                {activity.category || activity.type || "General"}
-                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium border ${getActivityTypeColor(activity.type || activity.category)}`}>
+                                  {activity.category || activity.type || "General"}
+                                </span>
+                                <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(activity)}`}>
+                                  {getStatusText(activity)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -705,6 +755,17 @@ const Activities = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Delete Button */}
+                <div className="mt-6 sm:mt-8 flex justify-end gap-3">
+                  <button
+                    onClick={() => handleDeleteActivity(selectedActivity.id)}
+                    className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-medium transition-colors"
+                  >
+                    <FiX className="w-4 h-4" />
+                    Delete Activity
+                  </button>
                 </div>
               </div>
             </div>

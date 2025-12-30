@@ -425,114 +425,248 @@ const ParentFeePayments = () => {
           ))}
         </div>
 
-        {/* Statistics Cards - Enhanced */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6 mb-6 xs:mb-7 sm:mb-8">
-          <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-blue-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs xs:text-sm font-medium text-gray-600">Total Payments</p>
-                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{stats.totalPayments}</p>
+        {/* Conditional rendering based on active view */}
+        {activeView === "overview" && (
+          <>
+            {/* Statistics Cards - Enhanced */}
+            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6 mb-6 xs:mb-7 sm:mb-8">
+              <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-blue-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs xs:text-sm font-medium text-gray-600">Total Payments</p>
+                    <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{stats.totalPayments}</p>
+                  </div>
+                  <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <CreditCard className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+                  <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
+                  <span className="text-xs xs:text-sm text-blue-600 font-medium">All transactions</span>
+                </div>
               </div>
-              <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <CreditCard className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-            </div>
-            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
-              <TrendingUp className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
-              <span className="text-xs xs:text-sm text-blue-600 font-medium">All transactions</span>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-white to-emerald-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-emerald-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-emerald-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs xs:text-sm font-medium text-gray-600">Paid Amount</p>
-                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.amount_paid}</p>
+              <div className="bg-gradient-to-br from-white to-emerald-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-emerald-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-emerald-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs xs:text-sm font-medium text-gray-600">Paid Amount</p>
+                    <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.amount_paid}</p>
+                  </div>
+                  <div className="p-2 xs:p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <CheckCircle className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+                  <Target className="h-3 w-3 xs:h-4 xs:w-4 text-emerald-500" />
+                  <span className="text-xs xs:text-sm text-emerald-600 font-medium">{stats.paidPercentage}% completed</span>
+                </div>
               </div>
-              <div className="p-2 xs:p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <CheckCircle className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-            </div>
-            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
-              <Target className="h-3 w-3 xs:h-4 xs:w-4 text-emerald-500" />
-              <span className="text-xs xs:text-sm text-emerald-600 font-medium">{stats.paidPercentage}% completed</span>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-white to-amber-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-amber-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-amber-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs xs:text-sm font-medium text-gray-600">Remaining</p>
-                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.totalRemaining}</p>
+              <div className="bg-gradient-to-br from-white to-amber-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-amber-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-amber-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs xs:text-sm font-medium text-gray-600">Remaining</p>
+                    <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.totalRemaining}</p>
+                  </div>
+                  <div className="p-2 xs:p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <Clock className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+                  <AlertCircle className="h-3 w-3 xs:h-4 xs:w-4 text-amber-500" />
+                  <span className="text-xs xs:text-sm text-amber-600 font-medium">Pending balance</span>
+                </div>
               </div>
-              <div className="p-2 xs:p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <Clock className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-            </div>
-            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
-              <AlertCircle className="h-3 w-3 xs:h-4 xs:w-4 text-amber-500" />
-              <span className="text-xs xs:text-sm text-amber-600 font-medium">Pending balance</span>
-            </div>
-          </div>
 
-          <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-purple-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-purple-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs xs:text-sm font-medium text-gray-600">Total Fee</p>
-                <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.totalAmount}</p>
-              </div>
-              <div className="p-2 xs:p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <IndianRupee className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-purple-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-purple-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs xs:text-sm font-medium text-gray-600">Total Fee</p>
+                    <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.totalAmount}</p>
+                  </div>
+                  <div className="p-2 xs:p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <IndianRupee className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
+                  <Gem className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
+                  <span className="text-xs xs:text-sm text-purple-600 font-medium">Total due</span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
-              <Gem className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
-              <span className="text-xs xs:text-sm text-purple-600 font-medium">Total due</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Enhanced Progress Bar */}
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
-          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4 mb-3 xs:mb-4">
-            <div className="flex items-center gap-2 xs:gap-3">
-              <div className="p-1.5 xs:p-2 bg-blue-100 rounded-lg">
-                <Rocket className="h-4 w-4 xs:h-5 xs:w-5 text-blue-600" />
+            {/* Enhanced Progress Bar */}
+            <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
+              <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4 mb-3 xs:mb-4">
+                <div className="flex items-center gap-2 xs:gap-3">
+                  <div className="p-1.5 xs:p-2 bg-blue-100 rounded-lg">
+                    <Rocket className="h-4 w-4 xs:h-5 xs:w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-sm xs:text-base">Payment Progress</h3>
+                    <p className="text-xs xs:text-sm text-gray-600">Overall completion status</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl xs:text-2xl font-bold text-gray-900">{stats.paidPercentage}%</span>
+                  <p className="text-xs xs:text-sm text-gray-600">Complete</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 text-sm xs:text-base">Payment Progress</h3>
-                <p className="text-xs xs:text-sm text-gray-600">Overall completion status</p>
+              <div className="w-full bg-gray-200/50 rounded-full h-3 xs:h-4 shadow-inner">
+                <div 
+                  className={`h-3 xs:h-4 rounded-full shadow-lg transition-all duration-1000 ease-out ${getProgressColor(stats.paidPercentage)}`}
+                  style={{ width: `${stats.paidPercentage}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-xs xs:text-sm text-gray-600 mt-2 xs:mt-3">
+                <span className="flex items-center gap-1">
+                  <Wallet className="h-3 w-3 xs:h-4 xs:w-4" />
+                  ₹0
+                </span>
+                <span className="flex items-center gap-1">
+                  <Crown className="h-3 w-3 xs:h-4 xs:w-4" />
+                  ₹{stats.totalAmount}
+                </span>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-xl xs:text-2xl font-bold text-gray-900">{stats.paidPercentage}%</span>
-              <p className="text-xs xs:text-sm text-gray-600">Complete</p>
-            </div>
-          </div>
-          <div className="w-full bg-gray-200/50 rounded-full h-3 xs:h-4 shadow-inner">
-            <div 
-              className={`h-3 xs:h-4 rounded-full shadow-lg transition-all duration-1000 ease-out ${getProgressColor(stats.paidPercentage)}`}
-              style={{ width: `${stats.paidPercentage}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between text-xs xs:text-sm text-gray-600 mt-2 xs:mt-3">
-            <span className="flex items-center gap-1">
-              <Wallet className="h-3 w-3 xs:h-4 xs:w-4" />
-              ₹0
-            </span>
-            <span className="flex items-center gap-1">
-              <Crown className="h-3 w-3 xs:h-4 xs:w-4" />
-              ₹{stats.totalAmount}
-            </span>
-          </div>
-        </div>
+          </>
+        )}
 
-        {/* Children Overview - Enhanced */}
-        {children.length > 0 && (
+        {activeView === "analytics" && (
+          <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4 mb-4 xs:mb-5 sm:mb-6">
+              <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2 xs:gap-3">
+                <div className="p-1.5 xs:p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl">
+                  <BarChart3 className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                </div>
+                Payment Analytics
+              </h2>
+              <span className="bg-blue-100 text-blue-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-1.5 rounded-full font-medium self-start xs:self-auto">
+                📊 Insights
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-6">
+              {/* Payment Status Distribution */}
+              <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5">
+                <h3 className="font-semibold text-gray-900 text-sm xs:text-base mb-3 xs:mb-4">Payment Status Distribution</h3>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-emerald-600 font-medium">Paid</span>
+                      <span className="text-gray-600">{stats.totalPaid} ({stats.totalPayments > 0 ? Math.round((stats.totalPaid / stats.totalPayments) * 100) : 0}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-500"
+                        style={{ width: `${stats.totalPayments > 0 ? (stats.totalPaid / stats.totalPayments) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-amber-600 font-medium">Pending</span>
+                      <span className="text-gray-600">{stats.totalPending} ({stats.totalPayments > 0 ? Math.round((stats.totalPending / stats.totalPayments) * 100) : 0}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
+                        style={{ width: `${stats.totalPayments > 0 ? (stats.totalPending / stats.totalPayments) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-rose-600 font-medium">Failed</span>
+                      <span className="text-gray-600">{stats.totalFailed} ({stats.totalPayments > 0 ? Math.round((stats.totalFailed / stats.totalPayments) * 100) : 0}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full bg-gradient-to-r from-rose-500 to-red-500"
+                        style={{ width: `${stats.totalPayments > 0 ? (stats.totalFailed / stats.totalPayments) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Fee Type Distribution */}
+              <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5">
+                <h3 className="font-semibold text-gray-900 text-sm xs:text-base mb-3 xs:mb-4">Fee Type Distribution</h3>
+                <div className="space-y-3">
+                  {uniqueFeeTypes.map((type, index) => {
+                    const typeCount = feePayments.filter(p => p.fee_type === type).length;
+                    const percentage = feePayments.length > 0 ? Math.round((typeCount / feePayments.length) * 100) : 0;
+                    
+                    // Generate different colors for different fee types
+                    const colors = [
+                      'from-blue-500 to-blue-600',
+                      'from-purple-500 to-purple-600',
+                      'from-emerald-500 to-green-600',
+                      'from-amber-500 to-orange-600',
+                      'from-rose-500 to-red-600',
+                      'from-indigo-500 to-indigo-600'
+                    ];
+                    const colorClass = colors[index % colors.length];
+                    
+                    return (
+                      <div key={type}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="font-medium">{type}</span>
+                          <span className="text-gray-600">{typeCount} ({percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full bg-gradient-to-r ${colorClass}`}
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Payment Trend */}
+              <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 md:col-span-2">
+                <h3 className="font-semibold text-gray-900 text-sm xs:text-base mb-3 xs:mb-4">Payment Trend</h3>
+                <div className="h-48 flex items-end justify-between gap-1 xs:gap-2">
+                  {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => {
+                    // Calculate total payments for this month
+                    const monthPayments = feePayments.filter(p => {
+                      if (!p.payment_date) return false;
+                      const paymentMonth = new Date(p.payment_date).getMonth();
+                      return paymentMonth === index;
+                    });
+                    
+                    const totalAmount = monthPayments.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
+                    const maxValue = Math.max(...feePayments.map(p => Number(p.amount_paid) || 0), 1);
+                    const heightPercentage = (totalAmount / maxValue) * 80;
+                    
+                    return (
+                      <div key={month} className="flex flex-col items-center flex-1">
+                        <div className="text-xs text-gray-600 mb-1">{month}</div>
+                        <div 
+                          className="w-full bg-gradient-to-t from-blue-500 to-purple-500 rounded-t-sm transition-all duration-300 hover:from-blue-600 hover:to-purple-600"
+                          style={{ height: `${heightPercentage || 5}%` }}
+                        ></div>
+                        <div className="text-xs text-gray-500 mt-1">₹{Math.round(totalAmount)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeView === "children" && (
           <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
             <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 xs:gap-4 mb-4 xs:mb-5 sm:mb-6">
               <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2 xs:gap-3">
@@ -624,80 +758,83 @@ const ParentFeePayments = () => {
           </div>
         )}
 
-        {/* Enhanced Filters and Search */}
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 xs:gap-5 items-start lg:items-center justify-between">
-            <div className="relative flex-1 w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 xs:h-5 xs:w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search by student name, fee type, or transaction ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 xs:pl-10 pr-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2 xs:gap-3 w-full lg:w-auto">
-              <div className="relative flex-1 xs:flex-none min-w-[140px]">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full pl-8 xs:pl-10 pr-6 xs:pr-8 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm appearance-none transition-all duration-300 text-sm xs:text-base"
-                >
-                  <option value="all">All Status</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Failed">Failed</option>
-                </select>
-              </div>
-
-              <select
-                value={feeTypeFilter}
-                onChange={(e) => setFeeTypeFilter(e.target.value)}
-                className="flex-1 xs:flex-none px-3 xs:px-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base min-w-[140px]"
-              >
-                <option value="all">All Fee Types</option>
-                {uniqueFeeTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-
-              <div className="relative flex-1 xs:flex-none min-w-[140px]">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
+        {/* Enhanced Filters and Search - Only show for Overview view */}
+        {activeView === "overview" && (
+          <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
+            <div className="flex flex-col lg:flex-row gap-4 xs:gap-5 items-start lg:items-center justify-between">
+              <div className="relative flex-1 w-full">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 xs:h-5 xs:w-5 text-gray-400" />
+                </div>
                 <input
-                  type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-full pl-8 xs:pl-10 pr-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
+                  type="text"
+                  placeholder="Search by student name, fee type, or transaction ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 xs:pl-10 pr-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
                 />
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Enhanced Payments List - CARDS FORMAT */}
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
-          <div className="p-4 xs:p-5 sm:p-6 border-b border-gray-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4 bg-white/80 backdrop-blur-sm">
-            <div className="flex items-center gap-3 xs:gap-4">
-              <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl shadow-lg">
-                <Receipt className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="flex flex-wrap gap-2 xs:gap-3 w-full lg:w-auto">
+                <div className="relative flex-1 xs:flex-none min-w-[140px]">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full pl-8 xs:pl-10 pr-6 xs:pr-8 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm appearance-none transition-all duration-300 text-sm xs:text-base"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Failed">Failed</option>
+                  </select>
+                </div>
+
+                <select
+                  value={feeTypeFilter}
+                  onChange={(e) => setFeeTypeFilter(e.target.value)}
+                  className="flex-1 xs:flex-none px-3 xs:px-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base min-w-[140px]"
+                >
+                  <option value="all">All Fee Types</option>
+                  {uniqueFeeTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+
+                <div className="relative flex-1 xs:flex-none min-w-[140px]">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    className="w-full pl-8 xs:pl-10 pr-4 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm transition-all duration-300 text-sm xs:text-base"
+                  />
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">Payment Records</h2>
-                <p className="text-gray-600 text-xs xs:text-sm">Detailed transaction history</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 xs:gap-3">
-              <span className="bg-blue-100 text-blue-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-2 rounded-full font-medium flex items-center gap-1 xs:gap-2">
-                <Sparkles className="h-3 w-3 xs:h-4 xs:w-4" />
-                {filteredPayments.length} records
-              </span>
             </div>
           </div>
+        )}
+
+        {/* Enhanced Payments List - CARDS FORMAT - Only show for Overview view */}
+        {activeView === "overview" && (
+          <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+            <div className="p-4 xs:p-5 sm:p-6 border-b border-gray-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 xs:gap-4 bg-white/80 backdrop-blur-sm">
+              <div className="flex items-center gap-3 xs:gap-4">
+                <div className="p-2 xs:p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg xs:rounded-xl shadow-lg">
+                  <Receipt className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg xs:text-xl sm:text-2xl font-bold text-gray-900">Payment Records</h2>
+                  <p className="text-gray-600 text-xs xs:text-sm">Detailed transaction history</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 xs:gap-3">
+                <span className="bg-blue-100 text-blue-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-2 rounded-full font-medium flex items-center gap-1 xs:gap-2">
+                  <Sparkles className="h-3 w-3 xs:h-4 xs:w-4" />
+                  {filteredPayments.length} records
+                </span>
+              </div>
+            </div>
 
           {filteredPayments.length === 0 ? (
             <div className="text-center py-12 xs:py-16">
@@ -861,9 +998,10 @@ const ParentFeePayments = () => {
             </div>
           )}
         </div>
+        )}
 
-        {/* Enhanced Summary Footer */}
-        {filteredPayments.length > 0 && (
+        {/* Enhanced Summary Footer - Only show for Overview view */}
+        {activeView === "overview" && filteredPayments.length > 0 && (
           <div className="mt-6 xs:mt-8 bg-gradient-to-br from-white to-emerald-50/30 rounded-xl xs:rounded-2xl shadow-sm border border-emerald-200/30 p-4 xs:p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 xs:gap-4">
               <div className="flex items-center gap-2 xs:gap-3">

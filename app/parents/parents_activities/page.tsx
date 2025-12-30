@@ -139,22 +139,6 @@ const ActivitiesPage = () => {
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category?.toLowerCase()) {
-      case "sports":
-        return "bg-green-50 text-green-700 border-green-200";
-      case "academic":
-        return "bg-blue-50 text-blue-700 border-blue-200";
-      case "art":
-        return "bg-purple-50 text-purple-700 border-purple-200";
-      case "music":
-        return "bg-red-50 text-red-700 border-red-200";
-      case "cultural":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
-    }
-  };
 
   // Handle card click to filter activities
   const handleStatsCardClick = (type: "all" | "upcoming" | "past") => {
@@ -282,7 +266,7 @@ const ActivitiesPage = () => {
                 }`}>
                 <Award className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-            </div>
+            </div>  
             <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
               <Trophy className="h-3 w-3 xs:h-4 xs:w-4 text-orange-500" />
               <span className="text-xs xs:text-sm text-orange-600 font-medium">
@@ -357,20 +341,6 @@ const ActivitiesPage = () => {
 
             <div className="flex flex-wrap gap-2 xs:gap-3 w-full lg:w-auto">
               <div className="relative flex-1 xs:flex-none min-w-[140px]">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full pl-8 xs:pl-10 pr-6 xs:pr-8 py-3 xs:py-4 border border-gray-300/60 rounded-lg xs:rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white/50 backdrop-blur-sm appearance-none transition-all duration-300 text-sm xs:text-base"
-                >
-                  <option value="all">All Categories</option>
-                  {uniqueCategories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="relative flex-1 xs:flex-none min-w-[140px]">
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
                 <input
                   type="date"
@@ -401,16 +371,12 @@ const ActivitiesPage = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 xs:gap-3">
+            <div className="flex items-center gap-2 xs:gap-3 mr-10">
               <span className="bg-blue-100 text-blue-800 text-xs xs:text-sm px-2 xs:px-3 py-1 xs:py-2 rounded-full font-medium flex items-center gap-1 xs:gap-2">
                 <Sparkles className="h-3 w-3 xs:h-4 xs:w-4" />
                 {filteredActivities.length} {viewType === "all" ? "activities" :
                   viewType === "upcoming" ? "upcoming" : "past"}
               </span>
-              <button className="px-3 xs:px-4 py-2 xs:py-2.5 border border-gray-300/60 rounded-lg xs:rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-1 xs:gap-2 text-xs xs:text-sm font-medium">
-                <Download className="h-3 w-3 xs:h-4 xs:w-4" />
-                Export
-              </button>
             </div>
           </div>
 
@@ -467,31 +433,25 @@ const ActivitiesPage = () => {
                           <h3 className="font-bold text-gray-900 text-sm xs:text-base group-hover:text-blue-900 transition-colors line-clamp-1">
                             {activity.title || "Untitled Activity"}
                           </h3>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className={`px-2 xs:px-3 py-1 rounded-full text-xs font-semibold border ${getCategoryColor(activity.category || "other")}`}>
-                              {activity.category || "General"}
-                            </span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${isUpcoming
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-100 text-gray-700"
-                              }`}>
-                              {isUpcoming ? "Upcoming" : "Past"}
-                            </span>
-                          </div>
                         </div>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedActivity(expandedActivity === index ? null : index);
-                        }}
-                        className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300 flex-shrink-0"
-                      >
-                        {expandedActivity === index ?
-                          <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> :
-                          <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-blue-600" />
-                        }
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${isUpcoming ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                          {isUpcoming ? "Upcoming" : "Completed"}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedActivity(expandedActivity === index ? null : index);
+                          }}
+                          className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300 flex-shrink-0"
+                        >
+                          {expandedActivity === index ?
+                            <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> :
+                            <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-blue-600" />
+                          }
+                        </button>
+                      </div>
                     </div>
 
                     {/* Activity Details */}
@@ -597,7 +557,7 @@ const ActivitiesPage = () => {
                                 <span className="text-gray-600">Status:</span>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${isUpcoming
                                     ? "bg-green-100 text-green-700"
-                                    : "bg-gray-100 text-gray-700"
+                                    : "bg-red-100 text-red-700"
                                   }`}>
                                   {isUpcoming ? "Upcoming Event" : "Past Event"}
                                 </span>

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import axios from "axios";
 import {
   FiSearch,
@@ -36,7 +37,8 @@ interface Issue {
 
 
 
-const Issues_Page = () => {
+const Raise_issues = () => {
+  const pathname = usePathname();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -51,6 +53,10 @@ const Issues_Page = () => {
   const [search, setSearch] = useState("");
   const [newComment, setNewComment] = useState("");
   const [activeTab, setActiveTab] = useState("details");
+  const [currentUser, setCurrentUser] = useState({
+    name: "",
+    email: ""
+  });
 
   // Stats calculation
   const stats = {
@@ -76,18 +82,97 @@ const Issues_Page = () => {
 
   useEffect(() => {
     fetchIssues();
+
+    // Fetch current user details for comments
+    const fetchCurrentUserInfo = async () => {
+      if (typeof window !== "undefined") {
+        const email = localStorage.getItem("email");
+        const storedUserInfo = localStorage.getItem("userInfo");
+        const storedUserData = localStorage.getItem("userData");
+
+        let name = "";
+        let emailAddress = email || "";
+
+        try {
+          // Check userInfo first as it usually has more detail
+          if (storedUserInfo) {
+            const parsed = JSON.parse(storedUserInfo);
+            name = parsed.fullname || parsed.name || parsed.first_name || "";
+            if (!emailAddress) emailAddress = parsed.email || "";
+          }
+
+          // Fallback to userData if name still missing
+          if (!name && storedUserData) {
+            const parsed = JSON.parse(storedUserData);
+            name = parsed.fullname || parsed.name || parsed.first_name || "";
+            if (!emailAddress) emailAddress = parsed.email || "";
+          }
+        } catch (e) {
+          console.error("Error parsing user info:", e);
+        }
+
+        // 🔹 Fetch real name from backend if email is available
+        if (emailAddress) {
+          try {
+            const roleFromPath = pathname.split("/")[1];
+            if (roleFromPath) {
+              const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/$/, "");
+              const endpoint = `${apiBase}/${roleFromPath}/${emailAddress}`;
+
+              const res = await axios.get(endpoint);
+              if (res.data) {
+                const fetchedName = res.data.fullname || res.data.name || res.data.first_name || (res.data.user_details && (res.data.user_details.fullname || res.data.user_details.name));
+                if (fetchedName) name = fetchedName;
+              }
+            }
+          } catch (err) {
+            console.warn("Could not fetch real name from backend, using fallback:", err);
+          }
+        }
+
+        // Final fallbacks
+        if (!name && emailAddress) {
+          name = emailAddress.split("@")[0];
+        }
+
+        setCurrentUser({
+          name: name || "User",
+          email: emailAddress
+        });
+      }
+    };
+
+    fetchCurrentUserInfo();
   }, []);
 
   // ✅ Add new issue
   const handleAddIssue = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let userEmail = localStorage.getItem("email");
+
+      if (!userEmail) {
+        const storedUserInfo = localStorage.getItem("userInfo");
+        const storedUserData = localStorage.getItem("userData");
+        try {
+          if (storedUserInfo) userEmail = JSON.parse(storedUserInfo).email;
+          else if (storedUserData) userEmail = JSON.parse(storedUserData).email;
+        } catch (e) {
+          console.error("Error parsing user email from localstorage:", e);
+        }
+      }
+
+      if (!userEmail) {
+        alert("Session expired or email not found. Please log in again.");
+        return;
+      }
+
       const issueData = {
         ...newIssue,
-        raised_by: localStorage.getItem("email") || "admin@school.com",
+        raised_by: userEmail,
         status: "Open"
       };
-      
+
       await axios.post(API_URL, issueData);
       setShowForm(false);
       setNewIssue({
@@ -117,21 +202,16 @@ const Issues_Page = () => {
     }
   };
 
-  // ✅ Add comment/description update with email
+  // ✅ Add comment/description update with name and role
   const handleAddComment = async () => {
     if (!newComment.trim() || !selectedIssue) return;
 
     try {
-      // 🔹 Get commenter email from localStorage
-      const commenterEmail =
-        typeof window !== "undefined"
-          ? localStorage.getItem("email")
-          : "admin@school.com";
+      // 🔹 Format the comment with Name and Email + timestamp
+      const timestamp = new Date().toLocaleString();
+      const commentHeader = `\n\n--- Comment by ${currentUser.name} (${currentUser.email}) on ${timestamp} ---\n`;
 
-      // 🔹 Format the comment with email + timestamp
-      const updatedDescription =
-        selectedIssue.description +
-        `\n\n--- Comment by ${commenterEmail} [${new Date().toLocaleString()}] ---\n${newComment}`;
+      const updatedDescription = selectedIssue.description + commentHeader + newComment;
 
       // 🔹 Update issue in API
       await axios.patch(`${API_URL}${selectedIssue.id}/`, {
@@ -172,7 +252,7 @@ const Issues_Page = () => {
     setSelectedIssue(issue);
     setShowView(true);
     setActiveTab("details");
-    
+
     // Fetch full issue details
     try {
       const res = await axios.get(`${API_URL}${issue.id}/`);
@@ -247,7 +327,7 @@ const Issues_Page = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-l-4 border-l-red-500">
           <div className="flex items-center justify-between">
             <div>
@@ -304,7 +384,7 @@ const Issues_Page = () => {
             <FiPlus className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             Report New Issue
           </h2>
-          
+
           <form onSubmit={handleAddIssue} className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -468,7 +548,7 @@ const Issues_Page = () => {
                     >
                       <FiEye className="w-3 h-3 sm:w-4 sm:h-4" />
                     </button>
-                    
+
                     {issue.status !== "Closed" && (
                       <button
                         onClick={() => handleStatusChange(issue.id, "Closed")}
@@ -478,7 +558,7 @@ const Issues_Page = () => {
                         <FiCheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     )}
-                    
+
                     {issue.status === "Open" && (
                       <button
                         onClick={() => handleStatusChange(issue.id, "In Progress")}
@@ -488,7 +568,7 @@ const Issues_Page = () => {
                         <FiClock className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     )}
-                    
+
                     <button
                       onClick={() => handleDelete(issue.id)}
                       className="bg-red-50 hover:bg-red-100 text-red-700 p-1 sm:p-2 rounded-lg transition-colors"
@@ -550,21 +630,19 @@ const Issues_Page = () => {
               <div className="flex overflow-x-auto">
                 <button
                   onClick={() => setActiveTab("details")}
-                  className={`px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
-                    activeTab === "details" 
-                      ? "border-blue-500 text-blue-600" 
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
+                  className={`px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === "details"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
                 >
                   📋 Issue Details
                 </button>
                 <button
                   onClick={() => setActiveTab("comments")}
-                  className={`px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
-                    activeTab === "comments" 
-                      ? "border-blue-500 text-blue-600" 
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
+                  className={`px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === "comments"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
                 >
                   💬 Add Comment
                 </button>
@@ -685,4 +763,4 @@ const Issues_Page = () => {
   );
 };
 
-export default Issues_Page;
+export default Raise_issues;

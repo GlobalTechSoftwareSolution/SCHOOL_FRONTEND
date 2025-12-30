@@ -45,7 +45,7 @@ const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultEmai
     } catch (err: unknown) {
       console.error('ID card generation failed:', err);
       let errorMessage = 'Unable to generate ID card. The backend service may be experiencing issues. Please contact your administrator or try again later.';
-      
+
       if (axios.isAxiosError(err)) {
         console.error('Axios error details:', {
           status: err.response?.status,
@@ -53,7 +53,7 @@ const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultEmai
           data: err.response?.data,
           headers: err.response?.headers
         });
-        
+
         // Try to get a more specific error message
         if (err.response?.data?.detail) {
           errorMessage = err.response.data.detail;
@@ -75,7 +75,7 @@ const IdCardForm: React.FC<IdCardFormProps> = ({ onSubmit, onCancel, defaultEmai
           errorMessage = err.message;
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -150,16 +150,16 @@ const AllIdCards = () => {
       try {
         setLoading(true);
         setError('');
-        
+
         const cardsRes = await axios.get<IdCardRecord[]>(`${API_BASE}/id_cards/`, {
           headers: {
             'Content-Type': 'application/json',
           },
           timeout: 10000 // 10 second timeout
         });
-        
+
         setIdCards(cardsRes.data || []);
-        
+
         // Only fetch students if needed
         try {
           const studentsRes = await axios.get<StudentRecord[]>(`${API_BASE}/students/`, {
@@ -388,8 +388,8 @@ const AllIdCards = () => {
                       <button
                         onClick={async () => {
                           try {
-                            await axios.post(`${API_BASE}/id_cards/generate/`,{ 
-                              email: card.user_email 
+                            await axios.post(`${API_BASE}/id_cards/generate/`, {
+                              email: card.user_email
                             }, {
                               headers: {
                                 'Content-Type': 'application/json',
@@ -414,7 +414,7 @@ const AllIdCards = () => {
                               status: axios.isAxiosError(err) ? err.response?.status : undefined,
                               statusText: axios.isAxiosError(err) ? err.response?.statusText : undefined
                             });
-                            
+
                             let errorMessage = 'Failed to regenerate ID card. Please try again.';
                             if (axios.isAxiosError(err)) {
                               if (typeof err.response?.data === 'string' && err.response.data.includes('S3Error')) {

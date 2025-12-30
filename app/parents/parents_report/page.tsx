@@ -368,10 +368,6 @@ const ParentReportsPage: React.FC = () => {
                 {filteredReports.length} reports
               </span>
             </h2>
-            <button className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-medium">
-              <Download className="h-4 w-4" />
-              Export
-            </button>
           </div>
 
           {filteredReports.length === 0 ? (

@@ -35,6 +35,7 @@ interface Program {
   participants_count?: number;
   created_at?: string;
   updated_at?: string;
+  display_coordinator?: string;
 }
 
 interface Teacher {
@@ -136,13 +137,27 @@ const ProgramsPage = () => {
     loadData();
   }, [fetchPrograms]);
 
+  // ✅ Enhanced Programs with resolved coordinator names
+  const enhancedPrograms = useMemo(() => {
+    return programs.map(program => {
+      const teacher = teachers.find(t =>
+        (t.email && program.coordinator_email && t.email.toLowerCase() === program.coordinator_email.toLowerCase()) ||
+        (t.id && program.coordinator && t.id.toString() === program.coordinator.toString())
+      );
+      return {
+        ...program,
+        display_coordinator: teacher ? (teacher.fullname || teacher.first_name || "Unknown Teacher") : String(program.coordinator || "Not Assigned")
+      };
+    });
+  }, [programs, teachers]);
+
   // Statistics derived directly from programs
   const stats = useMemo(() => {
-    const total = programs.length;
-    const active = programs.filter(p => p.status === "Active").length;
-    const completed = programs.filter(p => p.status === "Completed").length;
+    const total = enhancedPrograms.length;
+    const active = enhancedPrograms.filter(p => p.status === "Active").length;
+    const completed = enhancedPrograms.filter(p => p.status === "Completed").length;
     return { total, active, completed };
-  }, [programs]);
+  }, [enhancedPrograms]);
 
   // ✅ Add New Program
   const handleAddProgram = async (e: React.FormEvent) => {
@@ -156,7 +171,7 @@ const ProgramsPage = () => {
 
       await axios.post(`${API_URL}programs/`, programToAdd);
       alert("✅ Program added successfully!");
-
+      fetchPrograms(); // Refresh programs to show the new one
       setShowAddForm(false);
       setNewProgram({
         name: "",
@@ -196,10 +211,12 @@ const ProgramsPage = () => {
 
   // Advanced Filtering and Sorting
   const filteredPrograms = useMemo(() => {
-    const filtered = programs.filter((program) => {
+    const filtered = enhancedPrograms.filter((program) => {
       const matchesSearch =
         program.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         program.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (program.display_coordinator || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        program.coordinator_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         program.coordinator?.toString().toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesCategory =
@@ -242,15 +259,15 @@ const ProgramsPage = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "Active": return <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />;
-      case "Completed": return <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />;
+      case "Completed": return <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />;
       default: return <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Active": return "bg-green-50 text-green-700 border-green-200";
-      case "Completed": return "bg-blue-50 text-blue-700 border-blue-200";
+      case "Active": return "bg-green-100 text-green-700 border-green-200";
+      case "Completed": return "bg-red-100 text-red-700 border-red-200";
       default: return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
@@ -505,18 +522,6 @@ const ProgramsPage = () => {
 
           {/* Basic Filters */}
           <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 filters-container">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base w-full xs:w-auto category-filter"
-            >
-              <option value="all">All Categories</option>
-              <option value="Academic">Academic</option>
-              <option value="Sports">Sports</option>
-              <option value="Cultural">Cultural</option>
-              <option value="Technical">Technical</option>
-              <option value="Other">Other</option>
-            </select>
 
             <select
               value={statusFilter}
@@ -622,11 +627,6 @@ const ProgramsPage = () => {
                   {program.status}
                 </span>
               </div>
-              <div className="relative">
-                <button className="p-1 sm:p-2 hover:bg-gray-100 rounded-lg transition">
-                  <MoreVertical className="h-3 w-3 sm:h-4 sm:w-4" />
-                </button>
-              </div>
             </div>
 
             <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-2 line-clamp-2">{program.name}</h3>
@@ -641,23 +641,12 @@ const ProgramsPage = () => {
               </div>
               <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                 <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="coordinator-info truncate">{program.coordinator}</span>
+                <span className="coordinator-info truncate">{program.display_coordinator}</span>
               </div>
               <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                 <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="coordinator-info truncate text-xs">{program.coordinator_email}</span>
               </div>
-            </div>
-
-            <div className="flex justify-between items-center pt-3 sm:pt-4 border-t border-gray-100">
-              <span className="text-xs font-medium px-2 sm:px-3 py-1 bg-gray-100 text-gray-700 rounded-full">
-                {program.category || "Uncategorized"}
-              </span>
-              {program.budget && (
-                <span className="budget-info text-xs sm:text-sm font-semibold text-green-600">
-                  ${(program.budget || 0).toLocaleString()}
-                </span>
-              )}
             </div>
 
             {/* Action Buttons */}
@@ -909,22 +898,6 @@ const ProgramModal = ({
               </select>
             </div>
 
-            {/* Budget */}
-            <div className="modal-field">
-              <label className="block text-sm font-semibold text-gray-700 mb-2 modal-label">
-                Budget ($)
-              </label>
-              <input
-                type="number"
-                value={formData.budget || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, budget: Number(e.target.value) })
-                }
-                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base modal-input"
-                placeholder="Enter budget"
-              />
-            </div>
-
             {/* Coordinator Selection */}
             <div className="md:col-span-2 modal-field">
               <label className="block text-sm font-semibold text-gray-700 mb-2 modal-label">
@@ -1073,24 +1046,6 @@ const ViewProgramModal = ({ program, onClose }: { program: Program; onClose: () 
               </span>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                Category
-              </label>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                {program.category || "Uncategorized"}
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                Budget
-              </label>
-              <p className="text-sm sm:text-base text-gray-900 font-medium">
-                ${(program.budget || 0).toLocaleString()}
-              </p>
-            </div>
-
             <div className="md:col-span-2 pt-4 border-t border-gray-100">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">Coordinator Information</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1100,7 +1055,7 @@ const ViewProgramModal = ({ program, onClose }: { program: Program; onClose: () 
                   </label>
                   <div className="flex items-center gap-2 text-gray-900">
                     <User className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm sm:text-base">{program.coordinator}</span>
+                    <span className="text-sm sm:text-base">{program.display_coordinator || program.coordinator}</span>
                   </div>
                 </div>
                 <div>

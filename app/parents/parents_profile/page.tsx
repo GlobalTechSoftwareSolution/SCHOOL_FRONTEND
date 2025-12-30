@@ -113,12 +113,15 @@ const ParentProfilePage = () => {
 
     setSaving(true);
     try {
-      const updatedData: Record<string, string | undefined> = {
-        fullname: parentData.fullname,
-        phone: parentData.phone,
-        occupation: parentData.occupation,
-        residential_address: parentData.residential_address,
-        relationship_to_student: parentData.relationship_to_student,
+      const sanitizedBase = API_BASE.replace(/\/$/, "");
+      const encodedEmail = encodeURIComponent(parentData.email);
+
+      const updatedData: Record<string, string> = {
+        fullname: parentData.fullname || "",
+        phone: parentData.phone || "",
+        occupation: parentData.occupation || "",
+        residential_address: parentData.residential_address || "",
+        relationship_to_student: parentData.relationship_to_student || "",
       };
 
       // If profile picture changed, prepare FormData for upload
@@ -126,18 +129,15 @@ const ParentProfilePage = () => {
         const uploadData = new FormData();
         uploadData.append("profile_picture", profileFile);
         Object.keys(updatedData).forEach((key) => {
-          const value = updatedData[key];
-          if (value !== undefined) {
-            uploadData.append(key, value);
-          }
+          uploadData.append(key, updatedData[key]);
         });
 
-        const res = await axios.patch(`${API_BASE}/parents/${parentData.email}/`, uploadData, {
+        const res = await axios.patch(`${sanitizedBase}/parents/${encodedEmail}/`, uploadData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         setParentData(res.data);
       } else {
-        const res = await axios.patch(`${API_BASE}/parents/${parentData.email}/`, updatedData);
+        const res = await axios.patch(`${sanitizedBase}/parents/${encodedEmail}/`, updatedData);
         setParentData(res.data);
       }
 
