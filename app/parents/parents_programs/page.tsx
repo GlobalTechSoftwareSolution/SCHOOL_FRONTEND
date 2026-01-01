@@ -41,13 +41,14 @@ const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 const ParentProgramsPage = () => {
   // Commented out unused state
   // const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
-  
+
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedProgram, setExpandedProgram] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  // const [categoryFilter, setCategoryFilter] = useState("all"); // Unused state
+  const categoryFilter = "all";
   const [statusFilter, setStatusFilter] = useState("all");
 
   // ✅ Fetch all school programs
@@ -71,16 +72,16 @@ const ParentProgramsPage = () => {
   // Calculate statistics
   const getProgramStats = () => {
     const totalPrograms = programs.length;
-    const activePrograms = programs.filter(program => 
-      program.status === "Active" || 
-      (program.start_date && new Date(program.start_date) <= new Date() && 
-       program.end_date && new Date(program.end_date) >= new Date())
+    const activePrograms = programs.filter(program =>
+      program.status === "Active" ||
+      (program.start_date && new Date(program.start_date) <= new Date() &&
+        program.end_date && new Date(program.end_date) >= new Date())
     ).length;
-    const upcomingPrograms = programs.filter(program => 
+    const upcomingPrograms = programs.filter(program =>
       program.start_date && new Date(program.start_date) > new Date()
     ).length;
-    
-    const totalEnrollment = programs.reduce((sum, program) => 
+
+    const totalEnrollment = programs.reduce((sum, program) =>
       sum + (parseInt(program.students_enrolled || '0') || 0), 0
     );
 
@@ -95,23 +96,23 @@ const ParentProgramsPage = () => {
   const stats = getProgramStats();
 
   // Get unique categories for filter
-  const uniqueCategories = [...new Set(programs.map(program => program.category || "General"))];
+  // const uniqueCategories = [...new Set(programs.map(program => program.category || "General"))];
 
   // Filter programs
   const filteredPrograms = programs.filter(program => {
-    const matchesSearch = 
+    const matchesSearch =
       program.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       program.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       program.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       program.location?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesCategory = categoryFilter === "all" || program.category === categoryFilter;
-    
+
     let matchesStatus = true;
     if (statusFilter === "active") {
-      matchesStatus = program.status === "Active" || 
-        (!!program.start_date && new Date(program.start_date) <= new Date() && 
-         !!program.end_date && new Date(program.end_date) >= new Date());
+      matchesStatus = program.status === "Active" ||
+        (!!program.start_date && new Date(program.start_date) <= new Date() &&
+          !!program.end_date && new Date(program.end_date) >= new Date());
     } else if (statusFilter === "upcoming") {
       matchesStatus = !!program.start_date && new Date(program.start_date) > new Date();
     } else if (statusFilter === "completed") {
@@ -171,12 +172,12 @@ const ParentProgramsPage = () => {
 
   const getDuration = (startDate: string, endDate: string) => {
     if (!startDate || !endDate) return "Not specified";
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return `${diffDays} days`;
   };
 
@@ -267,7 +268,7 @@ const ParentProgramsPage = () => {
               <span className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
                 {filteredPrograms.length} programs
               </span>
-            </h2> 
+            </h2>
           </div>
 
           {error && (
@@ -283,7 +284,7 @@ const ParentProgramsPage = () => {
                 {programs.length === 0 ? "No Programs Available" : "No Matching Programs"}
               </h3>
               <p className="text-gray-600">
-                {programs.length === 0 
+                {programs.length === 0
                   ? "No programs available right now."
                   : "Try adjusting your search or filters to find what you're looking for."
                 }
@@ -320,7 +321,7 @@ const ParentProgramsPage = () => {
                               )}
                             </div>
                           </div>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-3">
                             {program.start_date && (
                               <div className="flex items-center gap-2">
@@ -371,8 +372,8 @@ const ParentProgramsPage = () => {
                           }}
                           className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                         >
-                          {expandedProgram === index ? 
-                            <ChevronUp className="h-4 w-4 text-gray-600" /> : 
+                          {expandedProgram === index ?
+                            <ChevronUp className="h-4 w-4 text-gray-600" /> :
                             <ChevronDown className="h-4 w-4 text-gray-600" />
                           }
                         </button>
@@ -424,7 +425,7 @@ const ParentProgramsPage = () => {
                               )}
                             </div>
                           </div>
-                          
+
                           <div>
                             <h4 className="font-medium text-gray-900 mb-3">Location & Enrollment</h4>
                             <div className="space-y-3 text-sm">
@@ -451,7 +452,7 @@ const ParentProgramsPage = () => {
                             </div>
                           </div>
 
-                            <div>
+                          <div>
                             <h4 className="font-medium text-gray-900 mb-3">Coordinator Information</h4>
                             <div className="space-y-3 text-sm">
                               {/* <div className="flex justify-between">
@@ -461,7 +462,7 @@ const ParentProgramsPage = () => {
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Coordinator Email:</span>
                                 <span className="text-gray-900 font-medium">{program.coordinator_email || "Not specified"}</span>
-                              </div>  
+                              </div>
                             </div>
                           </div>
 

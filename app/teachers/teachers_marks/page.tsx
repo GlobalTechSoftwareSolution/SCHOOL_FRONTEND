@@ -54,6 +54,7 @@ interface Class {
   sec: string;
   class_teacher?: string;
   class_teacher_email?: string;
+  class_teacher_id?: number | string;
   [key: string]: unknown;
 }
 
@@ -230,6 +231,7 @@ export default function MarksManager() {
   const [selectedStudentsForSend, setSelectedStudentsForSend] = useState<number[]>([]);
   const [parentOverrides, setParentOverrides] = useState<Record<number, string>>({});
   const [sending, setSending] = useState(false);
+  const [sendingIndividual, setSendingIndividual] = useState<Record<number, boolean>>({});
 
   // Notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -418,13 +420,23 @@ export default function MarksManager() {
 
   // -------------------- Get teacher's classes where they are class teacher --------------------
   const teacherClassTeacherClasses = useMemo(() => {
-    if (!teacherRecord?.is_class_teacher) return new Set<number>();
+    // We don't strictly check teacherRecord?.is_class_teacher here because 
+    // we want to rely on the classes API source of truth as requested
+    if (!teacherEmail) return new Set<number>();
 
     const classTeacherClasses = new Set<number>();
+
     classes.forEach((cls) => {
-      // Check if this teacher is the class teacher for this class
+      // Check if this teacher is the class teacher for this class by email
       const classTeacherEmail = cls.class_teacher_email || cls.class_teacher;
-      if (classTeacherEmail && classTeacherEmail.toLowerCase() === teacherEmail?.toLowerCase()) {
+      const isEmailMatch = classTeacherEmail && teacherEmail &&
+        classTeacherEmail.toLowerCase() === teacherEmail.toLowerCase();
+
+      // Also check by ID if provided
+      const isIdMatch = teacherRecord && cls.class_teacher_id &&
+        String(cls.class_teacher_id) === String(teacherRecord.id);
+
+      if (isEmailMatch || isIdMatch) {
         classTeacherClasses.add(cls.id);
       }
     });
@@ -436,19 +448,17 @@ export default function MarksManager() {
   const canEditGrade = useCallback((grade: Grade): boolean => {
     if (!teacherEmail || !grade) return false;
 
-    // 1. If teacher is a class teacher AND this grade is for their class
-    if (teacherRecord?.is_class_teacher) {
-      // Find the student for this grade
-      const student = students.find(s =>
-        s.email?.toLowerCase() === grade.student?.toLowerCase()
-      );
+    // 1. If teacher is a class teacher for this student's class, they can edit all grades
+    // Find the student for this grade
+    const student = students.find(s =>
+      s.email?.toLowerCase() === grade.student?.toLowerCase()
+    );
 
-      if (student) {
-        // Check if this teacher is class teacher for this student's class
-        const isClassTeacherForStudentClass = teacherClassTeacherClasses.has(student.class_id);
-        if (isClassTeacherForStudentClass) {
-          return true; // Class teacher can edit all grades in their class
-        }
+    if (student) {
+      // Check if this teacher is class teacher for this student's class
+      const isClassTeacherForStudentClass = teacherClassTeacherClasses.has(student.class_id);
+      if (isClassTeacherForStudentClass) {
+        return true; // Class teacher can edit all grades in their class
       }
     }
 
@@ -460,7 +470,7 @@ export default function MarksManager() {
 
     // Subject teacher can edit if they teach this subject
     return teachesSubject;
-  }, [teacherEmail, teacherRecord, students, teacherClassTeacherClasses, teacherSubjects]);
+  }, [teacherEmail, students, teacherClassTeacherClasses, teacherSubjects]);
 
   // -------------------- Check if teacher can edit a specific subject --------------------
   // const canEditSubject = useCallback((subjectName: string, classId: number): boolean => {
@@ -477,9 +487,9 @@ export default function MarksManager() {
 
   // -------------------- Check if teacher is class teacher for a specific class --------------------
   const isClassTeacherForClassId = useCallback((classId: number): boolean => {
-    if (!teacherRecord?.is_class_teacher) return false;
+    // Use the calculated set which now handles ID and Email matching
     return teacherClassTeacherClasses.has(classId);
-  }, [teacherRecord, teacherClassTeacherClasses]);
+  }, [teacherClassTeacherClasses]);
 
   // -------------------- Check if teacher is class teacher for a specific class (for display) --------------------
   const isClassTeacherForClass = useCallback((classId: number): boolean => {
@@ -785,12 +795,6 @@ export default function MarksManager() {
     return "";
   }, []);
 
-  // -------------------- Get teacher's subjects list for display --------------------
-  const teacherSubjectsList = useMemo(() => {
-    return Array.from(teacherSubjects).map(subject =>
-      subject.charAt(0).toUpperCase() + subject.slice(1)
-    );
-  }, [teacherSubjects]);
 
   // -------------------- render --------------------
   if (loading) {
@@ -881,18 +885,18 @@ export default function MarksManager() {
             <div
               key={notification.id}
               className={`rounded-xl shadow-2xl p-4 flex items-start gap-3 animate-in slide-in-from-right-8 duration-300 ${notification.type === 'success'
-                  ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-l-4 border-emerald-500'
-                  : notification.type === 'error'
-                    ? 'bg-gradient-to-r from-red-50 to-rose-50 border-l-4 border-red-500'
-                    : notification.type === 'warning'
-                      ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500'
-                      : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-l-4 border-blue-500'
+                ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-l-4 border-emerald-500'
+                : notification.type === 'error'
+                  ? 'bg-gradient-to-r from-red-50 to-rose-50 border-l-4 border-red-500'
+                  : notification.type === 'warning'
+                    ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500'
+                    : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-l-4 border-blue-500'
                 }`}
             >
               <div className={`p-1.5 rounded-full ${notification.type === 'success' ? 'bg-emerald-100' :
-                  notification.type === 'error' ? 'bg-red-100' :
-                    notification.type === 'warning' ? 'bg-amber-100' :
-                      'bg-blue-100'
+                notification.type === 'error' ? 'bg-red-100' :
+                  notification.type === 'warning' ? 'bg-amber-100' :
+                    'bg-blue-100'
                 }`}>
                 {notification.type === 'success' && <CheckCircle className="h-5 w-5 text-emerald-600" />}
                 {notification.type === 'error' && <XCircle className="h-5 w-5 text-red-600" />}
@@ -901,9 +905,9 @@ export default function MarksManager() {
               </div>
               <div className="flex-1">
                 <h4 className={`font-semibold text-sm ${notification.type === 'success' ? 'text-emerald-800' :
-                    notification.type === 'error' ? 'text-red-800' :
-                      notification.type === 'warning' ? 'text-amber-800' :
-                        'text-blue-800'
+                  notification.type === 'error' ? 'text-red-800' :
+                    notification.type === 'warning' ? 'text-amber-800' :
+                      'text-blue-800'
                   }`}>
                   {notification.title}
                 </h4>
@@ -945,13 +949,13 @@ export default function MarksManager() {
                       {teacherRecord?.first_name} {teacherRecord?.last_name}
                     </span>
                   </div>
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg backdrop-blur-sm ${teacherRecord?.is_class_teacher
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500'
-                      : 'bg-gradient-to-r from-green-500 to-emerald-500'
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg backdrop-blur-sm ${teacherClassTeacherClasses.size > 0
+                    ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30'
+                    : 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30'
                     }`}>
                     <ShieldCheck className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      {teacherRecord?.is_class_teacher ? 'Class Teacher (Can edit all subjects)' : 'Subject Teacher (Limited edit access)'}
+                      {teacherClassTeacherClasses.size > 0 ? 'Class Teacher (Can edit all subjects in assigned classes)' : 'Subject Teacher (Limited edit access)'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg backdrop-blur-sm">
@@ -959,26 +963,6 @@ export default function MarksManager() {
                     <span className="text-sm truncate max-w-xs">{teacherEmail}</span>
                   </div>
                 </div>
-
-                {/* Show teacher's subjects if subject teacher */}
-                {!teacherRecord?.is_class_teacher && teacherSubjectsList.length > 0 && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 mt-2">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BookOpen className="h-4 w-4 text-blue-200" />
-                      <span className="text-sm text-blue-200">Subjects You Teach:</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {teacherSubjectsList.map((subject, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-white/20 text-white text-xs rounded-lg backdrop-blur-sm"
-                        >
-                          {subject}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Show class teacher classes if class teacher */}
                 {teacherRecord?.is_class_teacher && teacherClassTeacherClasses.size > 0 && (
@@ -1171,15 +1155,15 @@ export default function MarksManager() {
                 <div key={cid} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                   {/* Class Header */}
                   <div className={`p-6 border-b ${isClassTeacherForThisClass
-                      ? 'bg-gradient-to-r from-purple-50 to-pink-50'
-                      : 'bg-gradient-to-r from-gray-50 to-gray-100'
+                    ? 'bg-gradient-to-r from-purple-50 to-pink-50'
+                    : 'bg-gradient-to-r from-gray-50 to-gray-100'
                     }`}>
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                       <div className="flex items-center gap-4">
                         <div className="relative">
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isClassTeacherForThisClass
-                              ? 'bg-gradient-to-br from-purple-500 to-pink-600'
-                              : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                            ? 'bg-gradient-to-br from-purple-500 to-pink-600'
+                            : 'bg-gradient-to-br from-blue-500 to-indigo-600'
                             }`}>
                             <Book className="h-6 w-6 text-white" />
                           </div>
@@ -1219,8 +1203,8 @@ export default function MarksManager() {
                             </span>
                             {classObj.class_teacher && (
                               <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${teacherEmail && classObj.class_teacher_email?.toLowerCase() === teacherEmail.toLowerCase()
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : 'bg-gray-100 text-gray-700'
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'bg-gray-100 text-gray-700'
                                 }`}>
                                 <User className="h-3 w-3" />
                                 {classObj.class_teacher}
@@ -1235,16 +1219,23 @@ export default function MarksManager() {
 
                       {/* Class Actions */}
                       <div className="flex gap-3">
-                        <button
-                          onClick={() => {
-                            const firstSection = Object.keys(filteredSections)[0] || null;
-                            openSendModal(cid, firstSection);
-                          }}
-                          className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl font-medium flex items-center gap-2 transition-all hover:shadow-lg shadow-green-200"
-                        >
-                          <Send className="h-4 w-4" />
-                          <span className="hidden sm:inline">Send Reports</span>
-                        </button>
+                        {isClassTeacherForThisClass ? (
+                          <button
+                            onClick={() => {
+                              const firstSection = Object.keys(filteredSections)[0] || null;
+                              openSendModal(cid, firstSection);
+                            }}
+                            className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl font-medium flex items-center gap-2 transition-all hover:shadow-lg shadow-green-200"
+                          >
+                            <Send className="h-4 w-4" />
+                            <span className="hidden sm:inline">Send Reports</span>
+                          </button>
+                        ) : (
+                          <div className="px-4 py-2 bg-gray-100 text-gray-500 rounded-xl text-xs flex items-center gap-2 border border-gray-200">
+                            <Shield className="h-3.5 w-3.5" />
+                            <span>Reports restricted to Class Teacher</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1274,13 +1265,15 @@ export default function MarksManager() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                  <button
-                                    onClick={() => openSendModal(cid, sectionName)}
-                                    className="px-4 py-2 border border-emerald-600 text-emerald-600 hover:bg-emerald-50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
-                                  >
-                                    <Send className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Send Section</span>
-                                  </button>
+                                  {isClassTeacherForThisClass && (
+                                    <button
+                                      onClick={() => openSendModal(cid, sectionName)}
+                                      className="px-4 py-2 border border-emerald-600 text-emerald-600 hover:bg-emerald-50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
+                                    >
+                                      <Send className="h-4 w-4" />
+                                      <span className="hidden sm:inline">Send Section</span>
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => toggleSection(cid, sectionName)}
                                     className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
@@ -1387,50 +1380,67 @@ export default function MarksManager() {
                                             }
                                             Details
                                           </button>
-                                          <button
-                                            onClick={async () => {
-                                              const studentName = s.name || s.first_name || s.full_name || s.email;
-                                              const parentEmail = studentParentEmail(s);
+                                          {isClassTeacherForThisClass ? (
+                                            <button
+                                              onClick={async () => {
+                                                if (sendingIndividual[s.id]) return;
+                                                setSendingIndividual(prev => ({ ...prev, [s.id]: true }));
+                                                try {
+                                                  const st = s;
+                                                  let parentEmail = "";
+                                                  const p = st.parent;
+                                                  if (p && typeof p === "object" && 'email' in p) {
+                                                    parentEmail = p.email || "";
+                                                  } else if (typeof p === "string") {
+                                                    parentEmail = p || "";
+                                                  }
 
-                                              if (!parentEmail) {
-                                                addNotification("Parent Email Missing", `Parent email required for ${studentName}`, "warning");
-                                                return;
-                                              }
+                                                  const body = {
+                                                    email: st.email || '',
+                                                    parent_email: parentEmail,
+                                                    report_type: reportType,
+                                                    from_teacher: teacherEmail,
+                                                    student_id: st.student_id || st.id || '',
+                                                    student_name: st.name || st.full_name || st.first_name || ''
+                                                  };
 
-                                              try {
-                                                const body = {
-                                                  email: s.email || '',
-                                                  parent_email: parentEmail,
-                                                  report_type: reportType,
-                                                  from_teacher: teacherEmail,
-                                                  student_id: s.student_id || s.id || '',
-                                                  student_name: s.name || s.full_name || s.first_name || ''
-                                                };
+                                                  const res = await fetch(`${API}/marks_card/`, {
+                                                    method: "POST",
+                                                    headers: {
+                                                      "Content-Type": "application/json",
+                                                      "Accept": "application/json"
+                                                    },
+                                                    body: JSON.stringify(body),
+                                                    credentials: 'include'
+                                                  });
 
-                                                const res = await fetch(`${API}/marks_card/`, {
-                                                  method: "POST",
-                                                  headers: {
-                                                    "Content-Type": "application/json",
-                                                    "Accept": "application/json"
-                                                  },
-                                                  body: JSON.stringify(body),
-                                                  credentials: 'include'
-                                                });
+                                                  if (!res.ok) {
+                                                    throw new Error(`Failed to send: ${res.status}`);
+                                                  }
 
-                                                if (!res.ok) {
-                                                  throw new Error(`Failed to send: ${res.status}`);
+                                                  addNotification("Report Sent", `Report sent to ${parentEmail}`, "success");
+                                                } catch (err: unknown) {
+                                                  addNotification("Send Failed", `Failed to send report: ${(err as Error).message}`, "error");
+                                                } finally {
+                                                  setSendingIndividual(prev => ({ ...prev, [s.id]: false }));
                                                 }
-
-                                                addNotification("Report Sent", `Report sent to ${parentEmail}`, "success");
-                                              } catch (err: unknown) {
-                                                addNotification("Send Failed", `Failed to send report: ${(err as Error).message}`, "error");
-                                              }
-                                            }}
-                                            className="flex-1 px-3 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"
-                                          >
-                                            <Send className="h-4 w-4" />
-                                            Send
-                                          </button>
+                                              }}
+                                              disabled={sendingIndividual[s.id]}
+                                              className="flex-1 px-3 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                            >
+                                              {sendingIndividual[s.id] ? (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                              ) : (
+                                                <Send className="h-4 w-4" />
+                                              )}
+                                              {sendingIndividual[s.id] ? "Sending..." : "Send"}
+                                            </button>
+                                          ) : (
+                                            <div className="flex-1 px-3 py-2 bg-gray-50 text-gray-400 rounded-lg text-xs flex items-center justify-center gap-1 border border-gray-200 cursor-not-allowed italic">
+                                              <Shield className="h-3.5 w-3.5" />
+                                              Class Teacher Only
+                                            </div>
+                                          )}
                                         </div>
 
                                         {/* Student Details Panel */}
@@ -1564,10 +1574,10 @@ export default function MarksManager() {
                                                                   onClick={() => startEdit(g)}
                                                                   disabled={!canEditThisGrade}
                                                                   className={`px-3 py-1 rounded-lg text-sm font-medium ${isClassTeacherForThisClass
-                                                                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                                                                      : isSubjectTeacherGrade
-                                                                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                                                        : 'bg-gray-400 cursor-not-allowed'
+                                                                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                                                    : isSubjectTeacherGrade
+                                                                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                                      : 'bg-gray-400 cursor-not-allowed'
                                                                     }`}
                                                                   title={isClassTeacherForThisClass
                                                                     ? "Class Teacher: Edit all subjects in your class"
@@ -1809,8 +1819,8 @@ export default function MarksManager() {
                       onClick={sendReportToParents}
                       disabled={sending || selectedStudentsForSend.length === 0}
                       className={`px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all ${selectedStudentsForSend.length === 0
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl'
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl'
                         }`}
                     >
                       {sending ? (
@@ -1839,8 +1849,8 @@ export default function MarksManager() {
             <div>
               <h3 className="font-semibold text-blue-900 mb-1">Editing Permissions</h3>
               <p className="text-sm text-blue-800">
-                {teacherRecord?.is_class_teacher
-                  ? 'As a Class Teacher, you can edit marks for all subjects in your assigned classes.'
+                {teacherClassTeacherClasses.size > 0
+                  ? 'As a Class Teacher, you can edit marks for all subjects in your assigned classes (highlighted in purple).'
                   : 'As a Subject Teacher, you can only edit marks for subjects you teach.'}
                 <br />
                 <span className="font-medium">Grayed-out &quot;View only&quot; buttons indicate restricted access.</span>

@@ -38,9 +38,19 @@ interface Program {
   updated_at: string;
 }
 
+interface Teacher {
+  id: number;
+  email: string;
+  fullname?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+}
+
 const TeachersProgramsPage = () => {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -74,31 +84,35 @@ const TeachersProgramsPage = () => {
     return "active"; // fallback
   };
 
-  // Fetch all programs
+  // Fetch all programs and teachers
   useEffect(() => {
-    const fetchPrograms = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const response = await axios.get(`${API_BASE}programs/`);
+        const [programsRes, teachersRes] = await Promise.all([
+          axios.get(`${API_BASE}programs/`),
+          axios.get(`${API_BASE}teachers/`).catch(() => ({ data: [] }))
+        ]);
 
         // Add calculated status to each program
-        const programsWithCalculatedStatus = response.data.map((program: Program) => ({
+        const programsWithCalculatedStatus = programsRes.data.map((program: Program) => ({
           ...program,
           calculated_status: calculateProgramStatus(program)
         }));
 
         setPrograms(programsWithCalculatedStatus);
         setFilteredPrograms(programsWithCalculatedStatus);
+        setTeachers(teachersRes.data);
       } catch {
-        setError("Failed to load programs. Please try again later.");
+        setError("Failed to load data. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPrograms();
+    fetchData();
   }, []);
 
   // Filter programs based on search and filters
@@ -765,10 +779,21 @@ const TeachersProgramsPage = () => {
                                       <span className="text-sm font-bold">{selectedProgram.coordinator_email}</span>
                                     </div>
                                   )}
-                                  <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-600 bg-white px-3 py-2 rounded-xl border border-slate-100">
-                                    <Phone className="h-4 w-4 text-slate-400" />
-                                    <span className="text-sm font-bold">Contact Admin</span>
-                                  </div>
+                                  {(() => {
+                                    const coordinator = teachers.find(t =>
+                                      (t.email && selectedProgram.coordinator_email && t.email.toLowerCase() === selectedProgram.coordinator_email.toLowerCase()) ||
+                                      (selectedProgram.coordinator_name && (t.fullname?.toLowerCase() === selectedProgram.coordinator_name.toLowerCase() ||
+                                        `${t.first_name} ${t.last_name}`.toLowerCase() === selectedProgram.coordinator_name.toLowerCase()))
+                                    );
+                                    return (
+                                      <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-600 bg-white px-3 py-2 rounded-xl border border-slate-100">
+                                        <Phone className="h-4 w-4 text-slate-400" />
+                                        <span className="text-sm font-bold">
+                                          {coordinator?.phone || "Contact Admin"}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             </div>
@@ -837,32 +862,6 @@ const TeachersProgramsPage = () => {
                           </div>
 
                           <div className="space-y-6">
-                            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-lg">
-                              <h4 className="font-bold text-xs uppercase tracking-[0.2em] text-slate-400 mb-4">Program Status Card</h4>
-                              <p className="text-sm font-medium leading-relaxed mb-6 italic text-slate-300">
-                                {(() => {
-                                  const status = calculateProgramStatus(selectedProgram);
-                                  return (
-                                    <>
-                                      Currently in the <span className="text-white font-extrabold">{status}</span> phase.
-                                      {status === 'upcoming' && ' Final preparations and logistical planning are underway.'}
-                                      {status === 'active' && ' Program execution is currently in full progress.'}
-                                      {status === 'completed' && ' All objectives have been met and the program is finalized.'}
-                                    </>
-                                  );
-                                })()}
-                              </p>
-                              <div className="flex items-center justify-between pt-6 border-t border-slate-700/50">
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] uppercase font-bold text-slate-500">Duration</span>
-                                  <span className="text-sm font-bold">{getDurationText(selectedProgram)}</span>
-                                </div>
-                                <div className="flex flex-col text-right">
-                                  <span className="text-[10px] uppercase font-bold text-slate-500">Phase</span>
-                                  <span className="text-sm font-bold text-blue-400 capitalize">{calculateProgramStatus(selectedProgram)}</span>
-                                </div>
-                              </div>
-                            </div>
 
                             <div className="bg-blue-50/50 border border-blue-100/50 rounded-2xl p-6">
                               <h4 className="font-bold text-slate-900 text-sm mb-3">Guidelines</h4>

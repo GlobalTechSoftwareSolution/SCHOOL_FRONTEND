@@ -12,6 +12,11 @@ type Props = {
   role: Role;
 };
 
+interface UserData {
+  email?: string;
+  [key: string]: unknown;
+}
+
 const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
   parents: [
     { name: "Dashboard", path: "/parents/parents_dashboard" },
@@ -94,7 +99,7 @@ const roleLinksMap: Record<Role, { name: string; path: string }[]> = {
     { name: "Programs", path: "/students/students_programs" },
     { name: "Reports", path: "/students/students_reports" },
     { name: "Leaves", path: "/students/students_leaves" },
-    { name: "Raise Issues", path: "/students/students_raise_issues" },
+    { name: "Raise Issues", path: "/students/students_issues" },
     { name: "TimeTable", path: "/students/students_timetable" },
     { name: "Documents", path: "/students/students_docs" },
     { name: "Fees", path: "/students/students_fees" },
@@ -210,7 +215,8 @@ export default function DashboardLayout({ children, role }: Props) {
 
                 // Use environment variable for API base or fallback
                 const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://school.globaltechsoftwaresolutions.cloud/api").replace(/\/$/, "");
-                const endpoint = `${apiBase}/${roleForApi}/${email}`;
+                // Use query parameter for email instead of path parameter to avoid 404
+                const endpoint = `${apiBase}/${roleForApi}/?email=${email}`;
 
                 console.log("[DASHBOARD LAYOUT] Fetching user from:", endpoint);
 
@@ -222,8 +228,24 @@ export default function DashboardLayout({ children, role }: Props) {
                 });
 
                 if (response.ok) {
-                  const data = await response.json();
-                  console.log("[DASHBOARD LAYOUT] User data fetched:", data);
+                  const dataRaw = await response.json();
+                  console.log("[DASHBOARD LAYOUT] User data fetched:", dataRaw);
+
+                  let data = dataRaw;
+                  // Handle pagination or list response
+                  if (dataRaw.results && Array.isArray(dataRaw.results)) {
+                    // Filter for the specific teacher with matching email
+                    const matchingTeacher = dataRaw.results.find((teacher: UserData) =>
+                      teacher.email?.toLowerCase().trim() === email?.toLowerCase().trim()
+                    );
+                    data = matchingTeacher || (dataRaw.results.length > 0 ? dataRaw.results[0] : {});
+                  } else if (Array.isArray(dataRaw)) {
+                    // Filter for the specific teacher with matching email
+                    const matchingTeacher = dataRaw.find((teacher: UserData) =>
+                      teacher.email?.toLowerCase().trim() === email?.toLowerCase().trim()
+                    );
+                    data = matchingTeacher || (dataRaw.length > 0 ? dataRaw[0] : {});
+                  }
 
                   const userDetails = data.user_details || {};
                   // Try to get the full name from various possible fields

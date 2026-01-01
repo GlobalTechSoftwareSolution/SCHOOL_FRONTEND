@@ -198,11 +198,28 @@ const SubmitAssignmentModal: React.FC<{
       formData.append("student", student.email);
       formData.append("assignment", assignment.id.toString());
       formData.append("file", file);
-      formData.append("feedback", comment);
 
-      await axios.post(`${API_BASE}/submitted_assignments/`, formData, {
+      // Try both field names to ensure backend compatibility
+      if (comment && comment.trim()) {
+        formData.append("feedback", comment.trim());
+        formData.append("comments", comment.trim());
+      }
+
+      // Debug logging
+      console.log("📤 Submitting assignment with feedback:", {
+        student: student.email,
+        assignment: assignment.id,
+        file: file.name,
+        feedback: comment,
+        feedbackLength: comment.length,
+        formDataEntries: Array.from(formData.entries())
+      });
+
+      const response = await axios.post(`${API_BASE}/submitted_assignments/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
+      console.log("✅ Backend response:", response.data);
 
       onSuccess();
       onClose();
@@ -308,14 +325,14 @@ const SubmitAssignmentModal: React.FC<{
               </div>
             </div>
 
-            {/* Comments */}
+            {/* Feedback */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">
                 <MessageCircle className="w-4 h-4 inline mr-2" />
-                Comments (Optional)
+                Feedback
               </label>
               <textarea
-                placeholder="Add any comments or notes for your teacher..."
+                placeholder="Add your feedback or notes for your teacher..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 className="w-full border border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none"
@@ -374,7 +391,8 @@ const AssignmentCard: React.FC<{
   student: Student | null;
   submitted?: boolean;
   onSubmitted: () => Promise<void>;
-}> = ({ assignment, student, submitted, onSubmitted }) => {
+  submittedAssignments: SubmittedAssignment[];
+}> = ({ assignment, student, submitted, onSubmitted, submittedAssignments }) => {
   const [open, setOpen] = useState(false);
   const status = AssignmentUtils.getStatus(assignment.due_date, submitted);
   const StatusIcon = status.icon;
@@ -434,18 +452,24 @@ const AssignmentCard: React.FC<{
         {/* Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-4 border-t border-gray-100">
           <div className="flex flex-col sm:flex-row gap-4">
-            {assignment.attachment && (
-              <a
-                href={assignment.attachment}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors self-start"
-              >
-                <Download className="w-4 h-4" />
-                Download Files
-              </a>
-            )}
-            {!assignment.attachment && <div></div>}
+            {/* View Submission Document Button */}
+            {(() => {
+              const sub = submittedAssignments?.find(s => s.assignment === assignment.id);
+              if (sub?.submission_file) {
+                return (
+                  <a
+                    href={sub.submission_file}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors self-start"
+                  >
+                    <Download className="w-4 h-4" />
+                    View Document
+                  </a>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           <div className="flex-1"></div>
@@ -496,6 +520,8 @@ const StudentAssignmentsPage = () => {
     const email = getUserEmail();
     if (!email) throw new Error("No student email found.");
     const res = await axios.get(`${API_BASE}/students/${email}/`);
+    console.log("👤 Student data fetched:", res.data);
+    console.log("📍 Section field:", res.data.section);
     return res.data;
   };
 
@@ -788,6 +814,7 @@ const StudentAssignmentsPage = () => {
                     student={student}
                     submitted={isSubmitted(assignment.id)}
                     onSubmitted={handleSubmissionSuccess}
+                    submittedAssignments={submitted}
                   />
                 ))}
               </div>

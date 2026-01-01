@@ -11,7 +11,7 @@ import {
   Mail,
   User,
   FileText,
-  MoreVertical,
+  // MoreVertical,
   ChevronDown,
   CheckCircle2,
   Clock,
@@ -63,7 +63,7 @@ const ProgramsPage = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [categoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "start_date" | "status">("start_date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -254,7 +254,7 @@ const ProgramsPage = () => {
     });
 
     return filtered;
-  }, [programs, searchTerm, categoryFilter, statusFilter, sortBy, sortOrder, dateRange, budgetRange]);
+  }, [enhancedPrograms, searchTerm, categoryFilter, statusFilter, sortBy, sortOrder, dateRange, budgetRange]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

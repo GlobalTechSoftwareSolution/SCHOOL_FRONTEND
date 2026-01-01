@@ -34,8 +34,7 @@ const StudentLeaves = () => {
   const [loading, setLoading] = useState(true);
   const [studentEmail, setStudentEmail] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<number | "all">("all");
-  const [selectedMonth, setSelectedMonth] = useState<number | "all">("all");
+  const [viewDate, setViewDate] = useState(new Date()); // For Calendar
   const [submitting, setSubmitting] = useState(false);
   const [notification, setNotification] = useState<{
     show: boolean;
@@ -149,7 +148,7 @@ const StudentLeaves = () => {
         showNotification('success', 'Leave application submitted successfully!');
         setShowForm(false);
         setFormData({ leave_type: "Sick", start_date: "", end_date: "", reason: "" });
-        
+
         // Refresh leaves
         const refreshed = await axios.get(API_URL);
         const all = Array.isArray(refreshed.data) ? refreshed.data : [refreshed.data];
@@ -172,15 +171,53 @@ const StudentLeaves = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   };
 
-  // ✅ Filters
-  const filteredLeaves = leaves
-    .filter((leave) => (activeTab === "all" ? true : leave.status.toLowerCase() === activeTab))
-    .filter((leave) => {
-      const date = new Date(leave.start_date);
-      const yearMatch = selectedYear === "all" || date.getFullYear() === selectedYear;
-      const monthMatch = selectedMonth === "all" || date.getMonth() + 1 === selectedMonth;
-      return yearMatch && monthMatch;
+  /* ============================ CALENDAR HELPERS ============================ */
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDay = firstDay.getDay(); // 0 = Sunday
+
+    return { daysInMonth, startingDay };
+  };
+
+  const changeMonth = (increment: number) => {
+    setViewDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(newDate.getMonth() + increment);
+      return newDate;
     });
+  };
+
+  const isDateHasLeave = (day: number) => {
+    const checkDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+    checkDate.setHours(0, 0, 0, 0);
+
+    // Find a leave that covers this date
+    const leave = leaves.find(l => {
+      const start = new Date(l.start_date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(l.end_date);
+      end.setHours(0, 0, 0, 0);
+      return checkDate >= start && checkDate <= end && l.status.toLowerCase() !== 'rejected'; // Don't show rejected on calendar usually, or maybe show as red? User said "leaves", implies active ones. Let's include all but style them.
+    });
+
+    if (!leave) return null;
+
+    // Use specific leave logic for status
+    // If multiple leaves cover the same day (rare), just take the first one found
+    return {
+      status: leave.status,
+      type: leave.leave_type
+    };
+  };
+
+  // ✅ Filters
+  const filteredLeaves = leaves.filter(
+    (leave) => activeTab === "all" ? true : leave.status.toLowerCase() === activeTab
+  );
 
   // ✅ Helpers
   const getStatusColor = (status: string) => {
@@ -238,11 +275,10 @@ const StudentLeaves = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Notification Popup */}
           {notification.show && (
-            <div className={`fixed top-4 right-4 z-50 transform animate-slideInRight ${
-              notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+            <div className={`fixed top-4 right-4 z-50 transform animate-slideInRight ${notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
               notification.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
-              'bg-blue-50 border-blue-200 text-blue-800'
-            } border rounded-2xl p-4 shadow-lg max-w-sm backdrop-blur-sm`}>
+                'bg-blue-50 border-blue-200 text-blue-800'
+              } border rounded-2xl p-4 shadow-lg max-w-sm backdrop-blur-sm`}>
               <div className="flex items-center gap-3">
                 <span className="text-xl">{getNotificationIcon(notification.type)}</span>
                 <div className="flex-1">
@@ -266,7 +302,7 @@ const StudentLeaves = () => {
               </h1>
               <p className="text-gray-600 text-lg">Track and manage your leave applications professionally</p>
             </div>
-            
+
             <button
               onClick={() => setShowForm(true)}
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center gap-3"
@@ -289,7 +325,7 @@ const StudentLeaves = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mr-4">
@@ -303,7 +339,7 @@ const StudentLeaves = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
@@ -333,45 +369,99 @@ const StudentLeaves = () => {
             </div>
           </div>
 
-          {/* Enhanced Filter Row */}
+          {/* Calendar Section */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-white/50">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Filter by Year
-                  </label>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value === "all" ? "all" : Number(e.target.value))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/50 backdrop-blur-sm"
-                  >
-                    <option value="all">All Years</option>
-                    {[2024, 2025, 2026].map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">
+                {viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => changeMonth(-1)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  ◀
+                </button>
+                <button
+                  onClick={() => setViewDate(new Date())}
+                  className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-100 transition-colors"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => changeMonth(1)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  ▶
+                </button>
+              </div>
+            </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Filter by Month
-                  </label>
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value === "all" ? "all" : Number(e.target.value))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/50 backdrop-blur-sm"
+            <div className="grid grid-cols-7 gap-2 mb-2 text-center text-sm font-semibold text-gray-500">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="py-2">{day}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: getDaysInMonth(viewDate).startingDay }).map((_, i) => (
+                <div key={`empty-${i}`} className="h-10 sm:h-20 bg-gray-50/50 rounded-xl" />
+              ))}
+
+              {Array.from({ length: getDaysInMonth(viewDate).daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const leaveInfo = isDateHasLeave(day);
+                const isToday = new Date().toDateString() === new Date(viewDate.getFullYear(), viewDate.getMonth(), day).toDateString();
+
+                let dayColorClass = "bg-white hover:bg-gray-50 border-gray-100";
+                if (leaveInfo) {
+                  if (leaveInfo.status.toLowerCase() === 'approved') dayColorClass = "bg-green-100 border-green-200 hover:bg-green-200";
+                  else if (leaveInfo.status.toLowerCase() === 'pending') dayColorClass = "bg-amber-100 border-amber-200 hover:bg-amber-200";
+                  else if (leaveInfo.status.toLowerCase() === 'rejected') dayColorClass = "bg-red-100 border-red-200 hover:bg-red-200";
+                } else if (isToday) {
+                  dayColorClass = "bg-blue-50 border-blue-200 ring-2 ring-blue-100";
+                }
+
+                return (
+                  <div
+                    key={day}
+                    className={`h-10 sm:h-20 border rounded-xl p-1 sm:p-2 transition-all cursor-default relative group ${dayColorClass}`}
                   >
-                    <option value="all">All Months</option>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {new Date(0, i).toLocaleString("default", { month: "long" })}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <span className={`text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                      {day}
+                    </span>
+                    {leaveInfo && (
+                      <div className="mt-1 hidden sm:block">
+                        <span className={`text-xs px-2 py-0.5 rounded-full truncate block w-full text-center ${leaveInfo.status.toLowerCase() === 'approved' ? 'bg-green-200 text-green-800' :
+                          leaveInfo.status.toLowerCase() === 'pending' ? 'bg-amber-200 text-amber-800' :
+                            'bg-red-200 text-red-800'
+                          }`}>
+                          {leaveInfo.type}
+                        </span>
+                      </div>
+                    )}
+                    {/* Mobile indicator for leave */}
+                    {leaveInfo && (
+                      <div className={`sm:hidden absolute bottom-2 right-2 w-2 h-2 rounded-full ${leaveInfo.status.toLowerCase() === 'approved' ? 'bg-green-500' :
+                        leaveInfo.status.toLowerCase() === 'pending' ? 'bg-amber-500' :
+                          'bg-red-500'
+                        }`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 mt-6 text-sm text-gray-600 justify-end">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div> Approved
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500"></div> Pending
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div> Rejected
               </div>
             </div>
           </div>
@@ -383,17 +473,16 @@ const StudentLeaves = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-3 text-sm font-medium rounded-xl transition-all flex items-center gap-2 ${
-                    activeTab === tab
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                      : "text-gray-600 bg-gray-100 hover:bg-gray-200"
-                  }`}
+                  className={`px-6 py-3 text-sm font-medium rounded-xl transition-all flex items-center gap-2 ${activeTab === tab
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                    : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                    }`}
                 >
                   <span>{getStatusIcon(tab === 'all' ? 'all' : tab)}</span>
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                   <span className="px-2 py-1 text-xs bg-white/20 rounded-full">
-                    {tab === "all" 
-                      ? leaves.length 
+                    {tab === "all"
+                      ? leaves.length
                       : leaves.filter(l => l.status.toLowerCase() === tab).length
                     }
                   </span>
@@ -424,15 +513,15 @@ const StudentLeaves = () => {
                           📅 {calculateDays(leave.start_date, leave.end_date)} days
                         </span>
                       </div>
-                      
+
                       <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                         {leave.leave_type} Leave
                       </h3>
-                      
+
                       <p className="text-gray-700 mb-4 leading-relaxed">
                         {leave.reason}
                       </p>
-                      
+
                       <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">📅 Period:</span>
@@ -488,7 +577,7 @@ const StudentLeaves = () => {
         {/* Enhanced Apply Leave Form Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-            <div 
+            <div
               className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp"
               onClick={(e) => e.stopPropagation()}
             >

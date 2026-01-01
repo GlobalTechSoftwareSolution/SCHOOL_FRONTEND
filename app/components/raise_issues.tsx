@@ -143,7 +143,7 @@ const Raise_issues = () => {
     };
 
     fetchCurrentUserInfo();
-  }, []);
+  }, [pathname]);
 
   // ✅ Add new issue
   const handleAddIssue = async (e: React.FormEvent) => {

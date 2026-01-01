@@ -16,7 +16,6 @@ import {
   TrendingUp,
   BarChart3,
   Filter,
-  Download,
   Search,
   GraduationCap,
   Crown,
@@ -361,7 +360,7 @@ export default function AttendanceByRole() {
     }
 
     return rows;
-  }, [attendanceForDate, mode, selectedClass, selectedSection, selectedDepartment, students, teachers]);
+  }, [attendanceForDate, mode, selectedClass, selectedSection, selectedDepartment, students, teachers, dateStr]);
 
   // Apply search filter
   const filteredBySearch = useMemo(() => {

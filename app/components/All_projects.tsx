@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { Plus, X, Trash2, Search, Filter, Calendar, Users, Clock, CheckCircle, PlayCircle, Eye } from "lucide-react";
+import { Plus, X, Trash2, Search, Calendar, Users, Clock, CheckCircle, PlayCircle, Eye } from "lucide-react";
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/`;
 
@@ -29,12 +29,26 @@ interface ClassInfo {
   sec: string;
 }
 
+interface Teacher {
+  id: number;
+  fullname: string;
+  first_name?: string;
+  email: string;
+}
+
+interface Student {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
 const ProjectsPage = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");

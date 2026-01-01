@@ -38,6 +38,7 @@
     "react-icons": "^5.5.0",
     "react-qr-barcode-scanner": "^2.1.18",
     "react-slick": "^0.31.0",
+    "react-toastify": "^11.0.5",
     "react-webcam": "^7.2.0",
     "recharts": "^3.4.1",
     "slick-carousel": "^1.8.1"

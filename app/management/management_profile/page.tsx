@@ -5,7 +5,6 @@ import axios from "axios";
 import Image from "next/image";
 import {
   FiUser,
-  FiMail,
   FiPhone,
   FiBriefcase,
   FiMapPin,
@@ -15,26 +14,12 @@ import {
   FiX,
   FiShield,
   FiCheckCircle,
-  FiClock,
   FiCamera,
-  FiAward,
-  FiFileText,
-  FiUpload
+  FiAward
 } from "react-icons/fi";
-import { MdWorkHistory, MdEmail } from "react-icons/md";
+import { MdEmail } from "react-icons/md";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://school.globaltechsoftwaresolutions.cloud/api";
-
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-      detail?: string;
-    };
-    status?: number;
-  };
-  message?: string;
-}
 
 interface ManagementUser {
   id?: number | string;
@@ -59,6 +44,8 @@ interface ManagementUser {
     is_approved?: boolean;
     created_at?: string;
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any; // Allow flexible access
 }
 
 interface FormData {
@@ -99,7 +86,6 @@ const ManagementProfilePage = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [identifier, setIdentifier] = useState<string | number | null>(null);
 
   // ✅ Resolve Image URL
@@ -149,7 +135,7 @@ const ManagementProfilePage = () => {
         try {
           const res = await axios.get(`${API_BASE}/management/`, { headers });
           const allManagers = res.data || [];
-          const profileData = allManagers.find((m: any) => m.email === email || m.user_details?.email === email);
+          const profileData = allManagers.find((m: ManagementUser) => m.email === email || m.user_details?.email === email);
           if (profileData) {
             profile = profileData;
             console.log("Found profile in list search:", profile);
@@ -168,7 +154,7 @@ const ManagementProfilePage = () => {
         console.log("PROFILE FIELDS:", Object.keys(activeProfile));
 
         // Detailed ID detection
-        let detectedId = (activeProfile as any).id || (activeProfile as any).pk || (activeProfile as any).management_id || (activeProfile as any).user_details?.id;
+        let detectedId = activeProfile.id || activeProfile.pk || activeProfile.management_id || activeProfile.user_details?.id;
 
         // Strategy 2b: If Strategy 1 succeeded but ID is missing, try to find it in the list search
         if (!detectedId) {
@@ -176,7 +162,7 @@ const ManagementProfilePage = () => {
           try {
             const listRes = await axios.get(`${API_BASE}/management/`, { headers });
             const allManagers = listRes.data || [];
-            const listProfile = allManagers.find((m: any) => m.email === email || m.user_details?.email === email);
+            const listProfile = allManagers.find((m: ManagementUser) => m.email === email || m.user_details?.email === email);
             if (listProfile) {
               detectedId = listProfile.id || listProfile.pk || listProfile.management_id || listProfile.user_details?.id;
               console.log("Found ID in list search:", detectedId);
@@ -295,7 +281,7 @@ const ManagementProfilePage = () => {
       const saveFormData = new FormData();
 
       // ✅ Helper to append and sanitize data (prevent "null" strings)
-      const appendSanitized = (key: string, value: any) => {
+      const appendSanitized = (key: string, value: unknown) => {
         if (value === null || value === undefined || value === "null" || value === "undefined") {
           // Send empty string or omit for ForeignKey fields if backend allows null
           saveFormData.append(key, "");
@@ -327,7 +313,7 @@ const ManagementProfilePage = () => {
       }
 
       console.log(`Sending PATCH request to: ${API_BASE}/management/${identifierStr}`);
-      console.log("PATCH PAYLOAD:", Object.fromEntries((saveFormData as any).entries()));
+      // console.log("PATCH PAYLOAD:", Object.fromEntries((saveFormData as any).entries()));
 
       const response = await axios.patch(
         `${API_BASE}/management/${identifierStr}`,
@@ -352,6 +338,7 @@ const ManagementProfilePage = () => {
       if (response.data.profile_picture) {
         setProfilePhoto(resolveImageUrl(response.data.profile_picture, true));
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Error updating management profile:", error);
 
@@ -679,7 +666,7 @@ const ManagementProfilePage = () => {
                 <FiShield className="w-12 h-12 text-gray-300" />
               </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-2">Profile Not Found</h3>
-              <p className="text-gray-500">We couldn't locate a management record for this account.</p>
+              <p className="text-gray-500">We couldn&apos;t locate a management record for this account.</p>
             </div>
           )}
         </div>

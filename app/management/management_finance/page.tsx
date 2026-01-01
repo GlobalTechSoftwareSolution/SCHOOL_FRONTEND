@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
-  Cell,
+  // Cell,
 } from "recharts";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
@@ -165,19 +165,9 @@ const ManagementFinance = () => {
 
         // Calculate totals
         // Calculate totals accurately across all statuses
-        const paidTotal = mergedData.reduce(
-          (sum: number, p: FeePayment) => sum + parseFloat(p.amount_paid || "0"),
-          0
-        );
-
-        const pendingTotal = mergedData.reduce(
-          (sum: number, p: FeePayment) => sum + parseFloat(p.remaining_amount || "0"),
-          0
-        );
-
-        const transport = mergedData
-          .filter((p: FeePayment) => p.fee_type === "Transport")
-          .reduce((sum: number, p: FeePayment) => sum + parseFloat(p.amount_paid || "0"), 0);
+        // const transport = mergedData
+        //   .filter((p: FeePayment) => p.fee_type === "Transport")
+        //   .reduce((sum: number, p: FeePayment) => sum + parseFloat(p.amount_paid || "0"), 0);
 
         setPayments(mergedData);
         setPaidFees(mergedData.filter((p: FeePayment) => p.status === "Paid"));
@@ -253,9 +243,10 @@ const ManagementFinance = () => {
   };
 
   // Enhanced Chart Data Processing
-  const monthsOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // monthsOrder moved inside useMemo
 
   const chartData = React.useMemo(() => {
+    const monthsOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const dataByMonth: Record<string, { month: string; collected: number; pending: number }> = {};
 
     // Initialize all months

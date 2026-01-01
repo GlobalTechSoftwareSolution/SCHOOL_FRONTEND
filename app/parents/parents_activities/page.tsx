@@ -11,8 +11,8 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  Filter,
-  Download,
+  // Filter,
+  // Download,
   Star,
   Award,
   BookOpen,
@@ -46,7 +46,8 @@ const ActivitiesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  // const [categoryFilter, setCategoryFilter] = useState("all");
+  const categoryFilter = "all";
   const [dateFilter, setDateFilter] = useState("");
   const [expandedActivity, setExpandedActivity] = useState<number | null>(null);
   const [viewType, setViewType] = useState<"all" | "upcoming" | "past">("all");
@@ -191,8 +192,8 @@ const ActivitiesPage = () => {
           {/* Total Activities Card */}
           <div
             className={`bg-gradient-to-br from-white to-blue-50/50 rounded-xl xs:rounded-2xl shadow-sm border p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 cursor-pointer ${viewType === "all"
-                ? "border-blue-500 shadow-lg scale-[1.02]"
-                : "border-blue-200/30 hover:border-blue-300"
+              ? "border-blue-500 shadow-lg scale-[1.02]"
+              : "border-blue-200/30 hover:border-blue-300"
               }`}
             onClick={() => handleStatsCardClick("all")}
           >
@@ -203,8 +204,8 @@ const ActivitiesPage = () => {
                 <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{stats.totalActivities}</p>
               </div>
               <div className={`p-2 xs:p-3 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 ${viewType === "all"
-                  ? "bg-gradient-to-br from-blue-600 to-blue-700"
-                  : "bg-gradient-to-br from-blue-500 to-blue-600"
+                ? "bg-gradient-to-br from-blue-600 to-blue-700"
+                : "bg-gradient-to-br from-blue-500 to-blue-600"
                 }`}>
                 <Calendar className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
@@ -220,8 +221,8 @@ const ActivitiesPage = () => {
           {/* Upcoming Activities Card */}
           <div
             className={`bg-gradient-to-br from-white to-green-50/50 rounded-xl xs:rounded-2xl shadow-sm border p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 cursor-pointer ${viewType === "upcoming"
-                ? "border-green-500 shadow-lg scale-[1.02]"
-                : "border-green-200/30 hover:border-green-300"
+              ? "border-green-500 shadow-lg scale-[1.02]"
+              : "border-green-200/30 hover:border-green-300"
               }`}
             onClick={() => handleStatsCardClick("upcoming")}
           >
@@ -232,8 +233,8 @@ const ActivitiesPage = () => {
                 <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{stats.upcomingActivities}</p>
               </div>
               <div className={`p-2 xs:p-3 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 ${viewType === "upcoming"
-                  ? "bg-gradient-to-br from-green-600 to-emerald-700"
-                  : "bg-gradient-to-br from-green-500 to-emerald-600"
+                ? "bg-gradient-to-br from-green-600 to-emerald-700"
+                : "bg-gradient-to-br from-green-500 to-emerald-600"
                 }`}>
                 <Clock className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
@@ -249,8 +250,8 @@ const ActivitiesPage = () => {
           {/* Past Events Card */}
           <div
             className={`bg-gradient-to-br from-white to-orange-50/50 rounded-xl xs:rounded-2xl shadow-sm border p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 cursor-pointer ${viewType === "past"
-                ? "border-orange-500 shadow-lg scale-[1.02]"
-                : "border-orange-200/30 hover:border-orange-300"
+              ? "border-orange-500 shadow-lg scale-[1.02]"
+              : "border-orange-200/30 hover:border-orange-300"
               }`}
             onClick={() => handleStatsCardClick("past")}
           >
@@ -261,12 +262,12 @@ const ActivitiesPage = () => {
                 <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{stats.pastActivities}</p>
               </div>
               <div className={`p-2 xs:p-3 rounded-lg xs:rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 ${viewType === "past"
-                  ? "bg-gradient-to-br from-orange-600 to-amber-700"
-                  : "bg-gradient-to-br from-orange-500 to-amber-600"
+                ? "bg-gradient-to-br from-orange-600 to-amber-700"
+                : "bg-gradient-to-br from-orange-500 to-amber-600"
                 }`}>
                 <Award className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-            </div>  
+            </div>
             <div className="flex items-center gap-1 mt-2 xs:mt-3 sm:mt-4">
               <Trophy className="h-3 w-3 xs:h-4 xs:w-4 text-orange-500" />
               <span className="text-xs xs:text-sm text-orange-600 font-medium">
@@ -556,8 +557,8 @@ const ActivitiesPage = () => {
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Status:</span>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${isUpcoming
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-red-100 text-red-700"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
                                   }`}>
                                   {isUpcoming ? "Upcoming Event" : "Past Event"}
                                 </span>

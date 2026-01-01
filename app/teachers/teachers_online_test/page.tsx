@@ -35,6 +35,10 @@ interface Question {
 interface Subject {
   id: number;
   subject_name: string;
+  subject_id?: number;
+  subject?: number;
+  name?: string;
+  [key: string]: string | number | boolean | undefined;
 }
 
 interface RawClassData {
@@ -95,13 +99,14 @@ interface StudentAnswer {
   option_3: string;
   option_4: string;
   correct_option: number;
+  student_email?: string;
+  email?: string;
+  student_id?: number;
+  student?: number | { id?: number };
   student_answer: number | null;
   result: boolean;
   exam: number;
-  student_id?: number;
   student_name?: string;
-  student_email?: string;
-  email?: string;
 }
 
 interface Student {
@@ -161,6 +166,7 @@ export default function CreateExamPage() {
 
   const [teacherSubjects, setTeacherSubjects] = useState<Subject[]>([]);
   const [allClasses, setAllClasses] = useState<ClassType[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
 
   const [onlineTests, setOnlineTests] = useState<OnlineTest[]>([]);
   const [selectedTest, setSelectedTest] = useState<number | null>(null);
@@ -198,35 +204,43 @@ export default function CreateExamPage() {
   ]);
 
   // --------------------------- Fetch Teacher Data ---------------------------
-  const fetchTeacherData = useCallback(async (): Promise<Subject[]> => {
+  const fetchTeacherData = useCallback(async (): Promise<{ subjects: Subject[], email: string | null }> => {
     try {
       // Try to get email from multiple sources in localStorage
       const storedUserData = localStorage.getItem("userData");
+      const storedUserInfo = localStorage.getItem("userInfo");
       const storedUserEmail = localStorage.getItem("userEmail");
+      const storedTeacherEmailSetting = localStorage.getItem("teacher_email");
 
       let email = "";
 
-      // First try to get email from userData
+      // 1. HIGH PRIORITY: Try to get definitive email from userData or userInfo
       if (storedUserData) {
         try {
           const userData = JSON.parse(storedUserData);
-          email = userData.email;
+          if (userData.email) email = userData.email;
         } catch (e) {
           console.error("[FETCH TEACHER DATA] Error parsing userData:", e);
         }
       }
 
-      // If that fails, try userEmail
+      if (!email && storedUserInfo) {
+        try {
+          const userInfo = JSON.parse(storedUserInfo);
+          if (userInfo.email) email = userInfo.email;
+        } catch (e) {
+          console.error("[FETCH TEACHER DATA] Error parsing userInfo:", e);
+        }
+      }
+
+      // 2. MEDIUM PRIORITY: Try userEmail
       if (!email && storedUserEmail) {
         email = storedUserEmail;
       }
 
-      // If still no email, try teacher_email from localStorage
-      if (!email) {
-        const storedTeacherEmail = localStorage.getItem("teacher_email");
-        if (storedTeacherEmail) {
-          email = storedTeacherEmail;
-        }
+      // 3. LOW PRIORITY: Try teacher_email (might be stale)
+      if (!email && storedTeacherEmailSetting) {
+        email = storedTeacherEmailSetting;
       }
 
       // If still no email, this is not necessarily an error - we can try to fetch all teachers
@@ -237,7 +251,8 @@ export default function CreateExamPage() {
 
 
 
-      let teacherRes; try {
+      let teacherRes;
+      try {
         teacherRes = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/teachers/?email=${email}`);
       } catch (error: unknown) {
         console.error("[FETCH TEACHER DATA] Error fetching teacher data:", error);
@@ -259,26 +274,15 @@ export default function CreateExamPage() {
           teacherRes = { data: [{ email: email, subject_list: [] }] };
         }
       }
-      const teacher = teacherRes.data && teacherRes.data.length > 0 ? teacherRes.data[0] : null;
+      const teacher = teacherRes.data && Array.isArray(teacherRes.data)
+        ? teacherRes.data.find((t: { email: string; subject_list?: Subject[] }) => t.email === email) || teacherRes.data[0]
+        : null;
 
 
-      // Set teacher email from API response - SINGLE SOURCE OF TRUTH
-      if (!teacher?.email) {
-        console.warn("[FETCH TEACHER DATA] Teacher email missing from API, using provided email:", email);
-        // Use the email we had before as fallback
-        if (email) {
-          setTeacherEmail(email);
-          // Sync with localStorage
-          localStorage.setItem("teacher_email", email);
-        } else {
-          throw new Error("Teacher email missing from API and no fallback email available");
-        }
-      }
-      setTeacherEmail(teacher.email);
 
-      // Optional sync (for refresh safety)
-      localStorage.setItem("teacher_email", teacher.email);
-      // Only fetch subjects from the subject_list field as requested
+      setTeacherEmail(email); // Use the DEFINITIVE email from login data
+
+      // Process subjects from teacher API response
       let subjects: Subject[] = [];
 
 
@@ -287,21 +291,23 @@ export default function CreateExamPage() {
         // Handle different possible structures of subject_list
         if (Array.isArray(teacher.subject_list)) {
           // Process each subject to ensure it has the correct structure
-          subjects = teacher.subject_list.map((subject: string | number | Subject) => {
-            // Handle case where subject might be just an ID or a full object
+          subjects = teacher.subject_list.map((subject: Subject | number | string | null) => {
+            if (!subject) return null;
+
+            // Handle case where subject is just an ID/string
             if (typeof subject === 'number' || typeof subject === 'string') {
               return { id: Number(subject), subject_name: `Subject ${subject}` } as Subject;
-            } else if (subject && typeof subject === 'object') {
-              // Ensure the subject object has the required fields
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const s = subject as any;
-              return {
-                id: Number(s.id || s.subject_id || 0),
-                subject_name: String(s.subject_name || s.name || `Subject ${s.id || s.subject_id || 'Unknown'}`)
-              } as Subject;
+            }
+
+            // Handle case where subject is an object
+            const sId = subject.id || subject.subject_id || subject.subject;
+            const sName = subject.subject_name || subject.name || (sId ? `Subject ${sId}` : 'Unknown Subject');
+
+            if (sId) {
+              return { id: Number(sId), subject_name: String(sName) } as Subject;
             }
             return null;
-          }).filter((s: Subject | null): s is Subject => s !== null && s.id > 0); // Type guard to ensure valid subjects
+          }).filter((s: Subject | null): s is Subject => s !== null && s.id > 0);
         } else {
 
 
@@ -351,12 +357,12 @@ export default function CreateExamPage() {
         setSubject(validSubjects[0].id);
       }
 
-      return validSubjects;
+      return { subjects: validSubjects, email: email };
     } catch (err) {
       console.error("Error fetching teacher subjects:", err);
       setTeacherSubjects([]);
       setSubject(null);
-      return [];
+      return { subjects: [], email: null };
     }
   }, []);  // --------------------------- Fetch All Classes ---------------------------
   const fetchAllClasses = useCallback(async (): Promise<ClassType[]> => {
@@ -394,10 +400,10 @@ export default function CreateExamPage() {
   }, []);
 
   // --------------------------- Fetch Online Tests ---------------------------
-  const fetchOnlineTests = useCallback(async (): Promise<OnlineTest[]> => {
+  const fetchOnlineTests = useCallback(async (emailToUse?: string, subjectsToUse?: Subject[]): Promise<OnlineTest[]> => {
     try {
-      // First try to get teacher email from state, then from localStorage as fallback
-      let email = teacherEmail;
+      // First try to get teacher email from arguments, then from state, then from localStorage as fallback
+      let email = emailToUse || teacherEmail;
 
       if (!email) {
         // Try to get email from localStorage as fallback
@@ -464,11 +470,11 @@ export default function CreateExamPage() {
           }
         }
       }
-
-      const testsData = testsRes.data || [];
+      const testsData = testsRes?.data || [];
 
       // Filter exams to only show those for subjects the teacher teaches
-      const teacherSubjectIds = teacherSubjects.map(s => s.id);
+      const subjects = subjectsToUse || teacherSubjects;
+      const teacherSubjectIds = subjects.map(s => s.id);
       const filteredTests = teacherSubjectIds.length > 0
         ? testsData.filter((test: OnlineTest) => teacherSubjectIds.includes(test.sub))
         : testsData;
@@ -477,8 +483,23 @@ export default function CreateExamPage() {
       return filteredTests;
     } catch (err) {
       console.error("Error fetching online tests:", err);
-      setOnlineTests([]);
-      return [];
+      // Fallback: try to fetch all exams if specific search fails
+      try {
+        const allTestsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/exams/`);
+        const allTestsData = allTestsRes.data || [];
+        // Extract email for filtering
+        const emailToSearch = emailToUse || teacherEmail || localStorage.getItem("teacher_email");
+
+        const filteredTests = allTestsData.filter((test: OnlineTest) =>
+          test.sub_teacher === emailToSearch
+        );
+        setOnlineTests(filteredTests);
+        return filteredTests;
+      } catch (fallbackError) {
+        console.error("[FETCH ONLINE TESTS] Fallback also failed:", fallbackError);
+        setOnlineTests([]);
+        return [];
+      }
     }
   }, [teacherEmail, teacherSubjects]);
 
@@ -486,7 +507,6 @@ export default function CreateExamPage() {
   const fetchExamDetails = async (examId: number): Promise<ExamWithDetails | null> => {
     // Check cache first
     if (examDetailsCache[examId]) {
-      console.log(`[CACHE] Using cached exam details for exam ${examId}`);
       setExamDetails(examDetailsCache[examId]);
       return examDetailsCache[examId];
     }
@@ -500,7 +520,6 @@ export default function CreateExamPage() {
 
         // If there's a CORS error, provide empty data
         if (axios.isAxiosError(error) && (error.response?.status === 403 || error.message?.includes('CORS'))) {
-          console.log(`[FETCH EXAM DETAILS] CORS error detected for exam ${examId}, returning empty data`);
           examRes = { data: {} };
         } else {
           throw error;
@@ -513,14 +532,13 @@ export default function CreateExamPage() {
           let questionsRes;
           try {
             questionsRes = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_BASE_URL}/get_all_mcq/?exam_id=${examId}`
+              `${process.env.NEXT_PUBLIC_API_BASE_URL}/submit_multiple_mcq/?exam_id=${examId}`
             );
           } catch (error: unknown) {
             console.error(`[FETCH EXAM DETAILS] Error fetching questions for exam ${examId}:`, error);
 
             // If there's a CORS error, provide empty data
             if (axios.isAxiosError(error) && (error.response?.status === 403 || error.message?.includes('CORS'))) {
-              console.log(`[FETCH EXAM DETAILS] CORS error detected for questions in exam ${examId}, returning empty data`);
               questionsRes = { data: { mcq_answers: [] } };
             } else {
               throw error;
@@ -559,31 +577,27 @@ export default function CreateExamPage() {
   const fetchStudentAnswers = async (examId: number): Promise<StudentAnswer[]> => {
     // Check cache first
     if (studentAnswersCache[examId]) {
-      console.log(`[CACHE] Using cached student answers for exam ${examId}`);
       setStudentAnswers(studentAnswersCache[examId]);
       return studentAnswersCache[examId];
     }
 
     try {
-      console.log(`[FETCH STUDENT ANSWERS] Fetching answers for exam ID: ${examId}`);
       let testResultsRes;
       try {
         testResultsRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/get_all_mcq/?exam_id=${examId}`
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/submit_multiple_mcq/?exam_id=${examId}`
         );
       } catch (error: unknown) {
         console.error(`[FETCH STUDENT ANSWERS] Error fetching student answers for exam ${examId}:`, error);
 
         // If there's a CORS error, provide empty data
         if (axios.isAxiosError(error) && (error.response?.status === 403 || error.message?.includes('CORS'))) {
-          console.log(`[FETCH STUDENT ANSWERS] CORS error detected for exam ${examId}, returning empty data`);
           testResultsRes = { data: {} };
         } else {
           throw error;
         }
       }
       const testData = testResultsRes.data || {};
-      console.log(`[FETCH STUDENT ANSWERS] Raw response data:`, testData);
 
       let answersData: StudentAnswer[] = [];
 
@@ -592,26 +606,40 @@ export default function CreateExamPage() {
       } else if (Array.isArray(testData)) {
         answersData = testData;
       } else {
-        console.log("Unexpected response structure:", testData);
         return [];
       }
 
       // Group answers by student
       const studentGroups: Record<string, StudentAnswer[]> = {};
       answersData.forEach((answer: StudentAnswer, index: number) => {
-        // Extract clean email from student_email or email fields
-        let studentKey = answer.student_email || answer.email || `student_${answer.student_id || answer.id}`;
+        // 1. Try to find student email from various potential fields
+        let email = answer.student_email || answer.email;
+        const studentId = answer.student_id || (typeof answer.student === 'number' ? answer.student : (answer.student?.id));
 
-        // Clean up the email if it contains extra text
-        if (typeof studentKey === 'string' && studentKey.includes('@')) {
-          // Extract just the email part (everything before any spaces or parentheses)
-          const emailMatch = studentKey.match(/([\w.-]+@[\w.-]+)/);
+        // 2. If no email, try to resolve it from studentId using the allStudents cache
+        if (!email && studentId) {
+          const foundStudent = allStudents.find((s: { id?: number; student_id?: number; email?: string; student_email?: string; user_email?: string }) => (s.id === studentId || s.student_id === studentId));
+          if (foundStudent) {
+            email = foundStudent.email || foundStudent.student_email || foundStudent.user_email;
+          }
+        }
+
+        // 3. Clean up the email for use as a key
+        let studentKey = email;
+        if (typeof email === 'string' && email.includes('@')) {
+          const emailMatch = email.match(/([\w.-]+@[\w.-]+)/);
           if (emailMatch && emailMatch[1]) {
             studentKey = emailMatch[1];
           }
         }
 
-        console.log(`[FETCH STUDENT ANSWERS] Processing answer ${index}:`, { answer, studentKey });
+        // Final fallback for missing email/student
+        if (!studentKey) {
+          studentKey = studentId ? `student_${studentId}` : `unknown_${answer.id || index}`;
+        }
+
+        studentKey = studentKey.toLowerCase();
+
 
         if (!studentGroups[studentKey]) {
           studentGroups[studentKey] = [];
@@ -619,7 +647,6 @@ export default function CreateExamPage() {
         studentGroups[studentKey].push(answer);
       });
 
-      console.log(`[FETCH STUDENT ANSWERS] Created ${Object.keys(studentGroups).length} student groups`);
 
       const enhancedAnswers: StudentAnswer[] = [];
 
@@ -630,8 +657,17 @@ export default function CreateExamPage() {
 
         if (hasSubmissions) {
           studentAnswers.forEach((answer: StudentAnswer) => {
-            // Extract clean email for student_email and email fields
+            // Re-resolve identifying info for each answer in the group
             let studentEmail = answer.student_email || answer.email;
+            const studentId = answer.student_id || (typeof answer.student === 'number' ? answer.student : (answer.student?.id));
+
+            if (!studentEmail && studentId) {
+              const foundStudent = allStudents.find((s: { id?: number; student_id?: number; email?: string; student_email?: string; user_email?: string }) => (s.id === studentId || s.student_id === studentId));
+              if (foundStudent) {
+                studentEmail = foundStudent.email || foundStudent.student_email || foundStudent.user_email;
+              }
+            }
+
             if (typeof studentEmail === 'string' && studentEmail.includes('@')) {
               const emailMatch = studentEmail.match(/([\w.-]+@[\w.-]+)/);
               if (emailMatch && emailMatch[1]) {
@@ -639,7 +675,8 @@ export default function CreateExamPage() {
               }
             }
 
-            const studentId = answer.student_id;
+            if (studentEmail) studentEmail = studentEmail.toLowerCase();
+
             const studentName = answer.student_name || (studentEmail ? studentEmail.split('@')[0] : `Student ${studentId || 'Unknown'}`);
 
             const enhancedAnswer = {
@@ -660,36 +697,31 @@ export default function CreateExamPage() {
               email: studentEmail
             };
 
-            console.log(`[FETCH STUDENT ANSWERS] Enhanced answer for ${studentEmail}:`, enhancedAnswer);
             enhancedAnswers.push(enhancedAnswer);
           });
         }
       });
 
-      console.log(`[FETCH STUDENT ANSWERS] Total enhanced answers: ${enhancedAnswers.length}`);
 
       // Cache the result
       setStudentAnswersCache(prev => ({ ...prev, [examId]: enhancedAnswers }));
       setStudentAnswers(enhancedAnswers);
 
-      // Fetch profiles for all students with emails - USING YOUR API ENDPOINT
+      // Fetch profiles for all students with emails - USING CACHED DATA
       const studentEmails = Array.from(new Set(
         enhancedAnswers
           .filter(a => a.student_email || a.email)
           .map(a => a.student_email || a.email)
       )) as string[];
 
-      console.log("[FETCH STUDENT ANSWERS] Found student emails:", studentEmails);
 
-      // Fetch profiles sequentially to avoid rate limiting
-      for (const email of studentEmails) {
-        if (email && !studentProfiles[email] && !profileFetchErrors[email]) {
-          console.log(`[FETCH STUDENT ANSWERS] Fetching profile for email: ${email}`);
-          await fetchStudentProfile(email);
-          // Small delay between requests
-          await new Promise(resolve => setTimeout(resolve, 100));
+      // Fetch profiles in "parallel" from cache
+      await Promise.all(studentEmails.map(email => {
+        if (email && !studentProfiles[email.toLowerCase()] && !profileFetchErrors[email.toLowerCase()]) {
+          return fetchStudentProfile(email);
         }
-      }
+        return Promise.resolve();
+      }));
 
       return enhancedAnswers;
     } catch (err: unknown) {
@@ -702,6 +734,7 @@ export default function CreateExamPage() {
   // --------------------------- Fetch Student Profile (UPDATED FOR YOUR API) ---------------------------
   const fetchStudentProfile = async (email: string): Promise<StudentProfile | null> => {
     // Clean the email if it contains extra text
+    // Clean and lowercase the email
     let cleanEmail = email;
     if (typeof email === 'string' && email.includes('@')) {
       const emailMatch = email.match(/([\w.-]+@[\w.-]+)/);
@@ -709,10 +742,10 @@ export default function CreateExamPage() {
         cleanEmail = emailMatch[1];
       }
     }
+    cleanEmail = cleanEmail.toLowerCase();
 
     // Check cache first
     if (studentProfiles[cleanEmail] !== undefined) {
-      console.log(`[PROFILE] Using cached profile for ${cleanEmail}:`, studentProfiles[cleanEmail]);
       return studentProfiles[cleanEmail];
     }
 
@@ -720,55 +753,37 @@ export default function CreateExamPage() {
     setLoadingStudentProfile(cleanEmail);
 
     try {
-      console.log(`[PROFILE] Fetching student profile for: ${cleanEmail}`);
 
       let studentData = null;
 
-      // USE YOUR SPECIFIC API ENDPOINT: http://127.0.0.1:8000/api/students/
-      try {
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`
-        );
+      // USE CACHED allStudents LIST
+      if (allStudents.length > 0) {
+        // Find student by email in the cached list
+        const foundStudent = allStudents.find((student: Student) => {
+          const studentEmail = student.email || student.student_email || student.user_email;
+          return studentEmail && studentEmail.toLowerCase() === cleanEmail.toLowerCase();
+        });
 
-        if (response.data && Array.isArray(response.data)) {
-          console.log(`[PROFILE] Received ${response.data.length} students from API`);
-          // Log all student data for debugging
-          response.data.forEach((student: Student, index: number) => {
-            console.log(`[PROFILE] Student ${index}:`, {
-              email: student.email,
-              student_email: student.student_email,
-              user_email: student.user_email,
-              fullname: student.fullname,
-              name: student.name,
-              first_name: student.first_name
-            });
-          });
-
-          // Find student by email in the array
-          const foundStudent = response.data.find((student: Student) => {
-            // Check multiple possible email fields
-            const studentEmail = student.email || student.student_email || student.user_email;
-            const isMatch = studentEmail && studentEmail.toLowerCase() === cleanEmail.toLowerCase();
-            console.log(`[PROFILE] Checking record: ${studentEmail} === ${cleanEmail} ? ${isMatch}`);
-            return isMatch;
-          });
-
-          if (foundStudent) {
-            studentData = foundStudent;
-            console.log(`[PROFILE] Found student for ${cleanEmail}:`, studentData);
-          } else {
-            console.log(`[PROFILE] No student found with email: ${cleanEmail} in API response`);
-            console.log("[PROFILE] Available students:", response.data.map((s: Student) => ({
-              email: s.email,
-              student_email: s.student_email,
-              user_email: s.user_email,
-              name: s.fullname || s.name
-            })));
-          }
+        if (foundStudent) {
+          studentData = foundStudent;
         }
-      } catch (error) {
-        console.error(`[PROFILE] Error fetching students list for ${cleanEmail}:`, error);
-        setProfileFetchErrors(prev => ({ ...prev, [cleanEmail]: true }));
+      }
+
+      // If not in cache, fallback to fetching specifically (though we should have fetched all)
+      if (!studentData) {
+        try {
+          const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`);
+          if (response.data && Array.isArray(response.data)) {
+            setAllStudents(response.data); // Update cache
+            studentData = response.data.find((student: Student) => {
+              const studentEmail = student.email || student.student_email || student.user_email;
+              return studentEmail && studentEmail.toLowerCase() === cleanEmail.toLowerCase();
+            });
+          }
+        } catch (error) {
+          console.error(`[PROFILE] Error fetching students list for ${cleanEmail}:`, error);
+          setProfileFetchErrors(prev => ({ ...prev, [cleanEmail]: true }));
+        }
       }
 
       if (studentData) {
@@ -799,9 +814,7 @@ export default function CreateExamPage() {
           ...studentData
         };
 
-        console.log(`[PROFILE] Successfully fetched and normalized profile for ${cleanEmail}:`, normalizedProfile);
 
-        console.log(`[PROFILE] Setting profile for ${cleanEmail}:`, normalizedProfile);
         setStudentProfiles(prev => ({
           ...prev,
           [cleanEmail]: normalizedProfile
@@ -810,7 +823,6 @@ export default function CreateExamPage() {
         setLoadingStudentProfile(null);
         return normalizedProfile;
       } else {
-        console.log(`[PROFILE] Creating fallback profile for ${email}`);
 
         // Create a basic profile from email
         const basicProfile: StudentProfile = {
@@ -861,8 +873,7 @@ export default function CreateExamPage() {
     setSelectedTest(examId);
     try {
       await fetchExamDetails(examId);
-      const answers = await fetchStudentAnswers(examId);
-      console.log("Fetched student answers:", answers);
+      await fetchStudentAnswers(examId);
       setShowExamDetails(true);
       setShowStudentDetails(false);
       setSelectedStudent(null);
@@ -876,11 +887,49 @@ export default function CreateExamPage() {
 
   // --------------------------- View Student Details ---------------------------
   const viewStudentDetails = async (answers: StudentAnswer[]) => {
+    // Clear the current selection first to show it's loading/changing
+    setSelectedStudent(null);
+
+    // Ensure we have exam details (for the full question list)
+    let currentExam = examDetails;
+    if (!currentExam || currentExam.id !== selectedTest) {
+      if (selectedTest) {
+        currentExam = await fetchExamDetails(selectedTest);
+      }
+    }
+
     if (!answers || answers.length === 0) return;
 
     const firstAnswer = answers[0];
-    const totalQuestions = answers.length;
-    const correctAnswers = answers.filter(a => a.result).length;
+
+    // Merge provided student answers with full exam questions to ensure none are missing
+    const mergedAnswers = [...answers];
+    if (currentExam && currentExam.questions) {
+      currentExam.questions.forEach(q => {
+        const hasAns = answers.find(a => a.question === q.question);
+        if (!hasAns) {
+          // Add a dummy "unanswered" record for this student
+          mergedAnswers.push({
+            id: -(q.id || 0), // Negative ID to indicate it's a dummy
+            question: q.question,
+            option_1: q.option_1,
+            option_2: q.option_2,
+            option_3: q.option_3,
+            option_4: q.option_4,
+            correct_option: q.correct_option,
+            student_answer: null,
+            result: false,
+            exam: selectedTest || 0,
+            student_name: firstAnswer.student_name,
+            student_email: firstAnswer.student_email,
+            email: firstAnswer.email
+          } as StudentAnswer);
+        }
+      });
+    }
+
+    const totalQuestions = mergedAnswers.length;
+    const correctAnswers = mergedAnswers.filter(a => a.result).length;
     const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
     // Extract clean email
@@ -894,17 +943,15 @@ export default function CreateExamPage() {
     }
     let profile: StudentProfile | undefined = undefined;
 
-    console.log('[VIEW STUDENT DETAILS] Starting with:', { firstAnswer, emailToUse });
 
     if (emailToUse) {
+      const cleanEmail = emailToUse.toLowerCase();
       // Fetch profile if not already loaded
-      if (!studentProfiles[emailToUse]) {
-        console.log(`[VIEW STUDENT DETAILS] Fetching profile for ${emailToUse} before showing details...`);
-        const fetchedProfile = await fetchStudentProfile(emailToUse);
+      if (!studentProfiles[cleanEmail]) {
+        const fetchedProfile = await fetchStudentProfile(cleanEmail);
         profile = fetchedProfile || undefined;
       } else {
-        profile = studentProfiles[emailToUse] || undefined;
-        console.log(`[VIEW STUDENT DETAILS] Using cached profile for ${emailToUse}:`, profile);
+        profile = studentProfiles[cleanEmail] || undefined;
       }
     }
 
@@ -915,7 +962,6 @@ export default function CreateExamPage() {
           firstAnswer.student_name ||
           (emailToUse ? emailToUse.split('@')[0] : 'Unknown Student');
 
-    console.log('[VIEW STUDENT DETAILS] Determining student name:', { emailToUse, profile, firstAnswer, studentName });
 
     const studentInfo = {
       student_id: profile?.student_id ? Number(profile.student_id) :
@@ -923,14 +969,13 @@ export default function CreateExamPage() {
       student_name: studentName,
       student_email: emailToUse,
       fullname: profile?.fullname || undefined,
-      answers: answers,
+      answers: mergedAnswers,
       totalQuestions,
       correctAnswers,
       score,
       profile: profile || undefined
     };
 
-    console.log("[VIEW STUDENT DETAILS] Selected student info:", studentInfo);
     setSelectedStudent(studentInfo);
     setShowStudentDetails(true);
   };
@@ -969,7 +1014,6 @@ export default function CreateExamPage() {
         studentKey = `student_${answer.id || index}`;
       }
 
-      console.log(`[GET STUDENT GROUPS] Processing answer ${index}:`, { answer, studentKey });
 
       if (!groups[studentKey]) {
         groups[studentKey] = [];
@@ -977,8 +1021,6 @@ export default function CreateExamPage() {
       groups[studentKey].push(answer);
     });
 
-    console.log("[GET STUDENT GROUPS] Total student groups created:", Object.keys(groups).length);
-    console.log("[GET STUDENT GROUPS] Groups:", groups);
     return groups;
   };
 
@@ -1005,17 +1047,21 @@ export default function CreateExamPage() {
 
   // --------------------------- Get Profile Picture ---------------------------
   const getProfilePicture = (email: string) => {
-    if (!email || !studentProfiles[email]) return null;
+    if (!email) return null;
+    const cleanEmail = email.toLowerCase();
+    if (!studentProfiles[cleanEmail]) return null;
 
-    const profile = studentProfiles[email];
+    const profile = studentProfiles[cleanEmail];
     return profile?.profile_picture || profile?.profile_image || profile?.image || profile?.avatar;
   };
 
   // --------------------------- Get Student Name ---------------------------
   const getStudentName = (email: string) => {
-    if (!email || !studentProfiles[email]) {
-      console.log(`[GET STUDENT NAME] No profile found for email: ${email}`, studentProfiles);
-      return email?.split('@')[0] || 'Student';
+    if (!email) return 'Student';
+    const cleanEmail = email.toLowerCase();
+
+    if (!studentProfiles[cleanEmail]) {
+      return email.split('@')[0] || 'Student';
     }
 
     const profile = studentProfiles[email];
@@ -1025,20 +1071,32 @@ export default function CreateExamPage() {
         (profile?.first_name && String(profile.first_name).trim() !== '') ? String(profile.first_name) :
           email?.split('@')[0] || 'Student';
 
-    console.log(`[GET STUDENT NAME] Profile found for ${email}:`, profile, `Returning name: ${name}`);
     return name;
+  };
+
+  // --------------------------- Get Subject Name ---------------------------
+  const getSubjectName = (subjectId: number | string) => {
+    const sId = Number(subjectId);
+    const subject = teacherSubjects.find(s => s.id === sId);
+    return subject ? subject.subject_name : `Subject ${sId}`;
+  };
+
+  // --------------------------- Get Class Name ---------------------------
+  const getClassName = (classId: number | string) => {
+    const cId = Number(classId);
+    const cls = allClasses.find(c => c.id === cId);
+    return cls ? cls.class_name : `Class ${cId}`;
   };
 
   // --------------------------- Get Student Class Info ---------------------------
   const getStudentClassInfo = (email: string) => {
-    if (!email || !studentProfiles[email]) return null;
+    if (!email) return null;
+    const cleanEmail = email.toLowerCase();
+    const profile = studentProfiles[cleanEmail];
+    if (!profile) return null;
 
-    const profile = studentProfiles[email];
-    if (profile?.class_name) {
-      return profile.class_name;
-    } else if (profile?.class_id) {
-      return `Class ${profile.class_id}`;
-    }
+    if (profile.class_name) return profile.class_name;
+    if (profile.class_id) return getClassName(profile.class_id);
     return null;
   };
 
@@ -1109,8 +1167,8 @@ export default function CreateExamPage() {
     setExamDetailsCache({});
     setStudentAnswersCache({});
     // Refresh teacher data first to ensure we have the latest email
-    await fetchTeacherData();
-    await fetchOnlineTests();
+    const teacherData = await fetchTeacherData();
+    await fetchOnlineTests(teacherData.email || undefined, teacherData.subjects);
     setLoading(false);
   };
   // --------------------------- Load Teacher + Classes ---------------------------
@@ -1124,13 +1182,28 @@ export default function CreateExamPage() {
         setIsLoading(true);
         setError(null);
 
-        await fetchTeacherData();
+        const [teacherData, classesData, studentsData] = await Promise.all([
+          fetchTeacherData(),
+          fetchAllClasses(),
+          axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/students/`).catch(() => ({ data: [] }))
+        ]);
+
         if (!isMounted) return;
-        await fetchAllClasses();
-        if (!isMounted) return;
-        // Add a small delay to ensure teacher email is set before fetching tests
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await fetchOnlineTests();
+
+        // Cache all students
+        if (Array.isArray(teacherData.subjects)) {
+          // This confirms teacherData is valid
+        }
+
+        if (classesData) {
+          // Confirm classesData is valid
+        }
+
+        const studentList = (studentsData as { data?: Student[] }).data || [];
+        setAllStudents(studentList);
+
+        // Use the returned teacher data to fetch tests immediately
+        await fetchOnlineTests(teacherData.email || undefined, teacherData.subjects);
       } catch (error) {
         console.error("Error loading data:", error);
         setError("Failed to load data. Please try again later.");
@@ -1145,13 +1218,14 @@ export default function CreateExamPage() {
     return () => {
       isMounted = false;
     };
-  }, [fetchTeacherData, fetchAllClasses, fetchOnlineTests]);
+  }, [fetchTeacherData, fetchAllClasses]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
 
   // --------------------------- Refresh Tests Effect ---------------------------
   // Reload tests when teacherEmail changes
   useEffect(() => {
     if (teacherEmail) {
-      console.log("[REFRESH EFFECT] Teacher email updated, refreshing tests", teacherEmail);
       fetchOnlineTests();
     }
   }, [teacherEmail, fetchOnlineTests]);
@@ -1465,11 +1539,11 @@ export default function CreateExamPage() {
                           <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-gray-600">
                             <div className="flex items-center">
                               <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 flex-shrink-0" />
-                              <span className="truncate">Subject ID: {test.sub}</span>
+                              <span className="truncate">Subject: {getSubjectName(test.sub)}</span>
                             </div>
                             <div className="flex items-center">
                               <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 flex-shrink-0" />
-                              <span className="truncate">Class: {test.class_name || `Class ${test.class_id}`}</span>
+                              <span className="truncate">Class: {test.class_name || getClassName(test.class_id)}</span>
                             </div>
                             {test.section && (
                               <div className="flex items-center">
@@ -1680,15 +1754,12 @@ export default function CreateExamPage() {
                                     }
                                   }
 
-                                  console.log('[TABLE RENDER] Processing student:', { studentKey, firstAnswer, email });
 
-                                  const profile = studentProfiles[email];
                                   const studentName = getStudentName(email);
                                   const profilePicture = getProfilePicture(email);
-                                  const studentClass = getStudentClassInfo(email);
-                                  const isLoading = loadingStudentProfile === email;
+                                  const studentClassLabel = getStudentClassInfo(email);
+                                  const isProfileLoading = loadingStudentProfile === email;
 
-                                  console.log('[TABLE RENDER] Student data:', { email, profile, studentName, profilePicture, studentClass, isLoading });
 
                                   const submittedCount = answers.filter(a => a.student_answer !== null).length;
                                   const totalQuestions = answers.length;
@@ -1701,7 +1772,7 @@ export default function CreateExamPage() {
                                       <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                           <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden bg-blue-100">
-                                            {isLoading ? (
+                                            {isProfileLoading ? (
                                               <div className="w-full h-full flex items-center justify-center">
                                                 <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
                                               </div>
@@ -1731,7 +1802,7 @@ export default function CreateExamPage() {
                                           </div>
                                           <div className="ml-3 sm:ml-4">
                                             <div className="text-sm font-medium text-gray-900 truncate max-w-[100px] sm:max-w-[150px] md:max-w-xs">
-                                              {isLoading ? "Loading..." : (studentName && studentName.trim() !== '' ? studentName : 'Student')}
+                                              {isProfileLoading ? "Loading..." : (studentName && studentName.trim() !== '' ? studentName : 'Student')}
                                             </div>
                                             {/* <div className="text-xs text-gray-500">
                                               {profile?.fullname && profile.fullname.trim() !== '' ? profile.fullname : (profile?.name && profile.name.trim() !== '' ? profile.name : 'No full name available')}
@@ -1746,7 +1817,7 @@ export default function CreateExamPage() {
                                       </td>
                                       <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
                                         <div className="text-sm text-gray-900">
-                                          {studentClass || 'N/A'}
+                                          {studentClassLabel || 'N/A'}
                                         </div>
                                       </td>
                                       <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap">

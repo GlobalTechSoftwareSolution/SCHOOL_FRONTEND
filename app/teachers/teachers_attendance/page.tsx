@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import Image from "next/image";
@@ -59,6 +59,12 @@ export default function Attendance() {
   const [classInfo, setClassInfo] = useState<ClassInfoType | null>(null);
   const [loading, setLoading] = useState(false);
   const [pendingAttendance, setPendingAttendance] = useState<Record<string, string>>({});
+  const pendingAttendanceRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    pendingAttendanceRef.current = pendingAttendance;
+  }, [pendingAttendance]);
+
   const [submittedAttendance, setSubmittedAttendance] = useState<Record<string, string>>({});
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showErrorMessage, setShowErrorMessage] = useState(false);
@@ -67,7 +73,14 @@ export default function Attendance() {
   const [selectedSubject, setSelectedSubject] = useState<number | null>(null);
   const [teacherAttendanceMarked, setTeacherAttendanceMarked] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('10-11');
-  const [attendanceStats, setAttendanceStats] = useState({ present: 0, absent: 0, leave: 0 });
+  const [attendanceStats, setAttendanceStats] = useState({ present: 0, absent: 0 });
+  const [showAttendanceDetails, setShowAttendanceDetails] = useState(false);
+  const [attendanceDetailsDate, setAttendanceDetailsDate] = useState<string | null>(null);
+  const [attendanceDetailsData, setAttendanceDetailsData] = useState<{
+    present: StudentInfo[];
+    absent: StudentInfo[];
+    notMarked: StudentInfo[];
+  }>({ present: [], absent: [], notMarked: [] });
 
   let userEmail = null;
 
@@ -75,7 +88,7 @@ export default function Attendance() {
     try {
       const userData = JSON.parse(localStorage.getItem("userData") || "{}");
       const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-      userEmail = userData?.email || userInfo?.email || null;
+      userEmail = localStorage.getItem("teacher_email") || userData?.email || userInfo?.email || null;
     } catch { }
   }
 
@@ -200,9 +213,9 @@ export default function Attendance() {
 
   /* ============================ 4) Attendance ============================ */
   const loadStudentAttendance = useCallback(async () => {
-    console.log('🔵 Loading student attendance for:', { selectedDate, selectedClass, selectedSubject });
+
     if (!selectedSubject || !selectedClass) {
-      console.log('❌ Missing subject or class, returning empty attendance');
+
       setAttendance([]);
       setLoading(false);
       return;
@@ -211,32 +224,30 @@ export default function Attendance() {
     setLoading(true);
 
     try {
-      console.log('📡 Fetching students for class:', selectedClass);
+
       // First, get all students in the class
       const studentsResponse = await axios.get<StudentInfo[]>(`${API}/students/`, {
         headers: {
           'Accept': 'application/json',
         }
       });
-      console.log('📋 Students response:', studentsResponse.data);
+
       const classStudents = studentsResponse.data.filter(s => s.class_id === selectedClass);
-      console.log('👥 Filtered class students:', classStudents);
+
 
       // Format the selected date
       const formattedDate = new Date(selectedDate).toISOString().split('T')[0];
-      console.log('📅 Formatted date for API:', formattedDate);
+
 
       // Fetch attendance for this date, class, and subject
-      console.log('📡 Fetching attendance from API:', `${API}/student_attendance/?date=${formattedDate}&class_id=${selectedClass}&subject=${selectedSubject}`);
+
       const response = await axios.get<AttendanceRecord[]>(
-        `${API}/student_attendance/?date=${formattedDate}&class_id=${selectedClass}&subject=${selectedSubject}`, {
+        `${API}/student_attendance/?date=${formattedDate}&class_id=${selectedClass}&subject=${selectedSubject}&period=${selectedPeriod}`, {
         headers: {
           'Accept': 'application/json',
         }
       });
-      console.log('📘 Attendance API response:', response.data);
-      console.log('📥 Attendance records retrieved from API:', `${API}/student_attendance/`);
-      console.log('📊 Number of records found:', response.data.length);
+
 
       // Create a map of student emails to their attendance status
       const attendanceMap = new Map<string, string>();
@@ -251,7 +262,7 @@ export default function Attendance() {
 
       // For each student in the class, set their status and count statuses
       const studentAttendance: Record<string, string> = {};
-      const stats = { present: 0, absent: 0, leave: 0 };
+      const stats = { present: 0, absent: 0 };
 
       // First, process existing attendance
       classStudents.forEach(student => {
@@ -263,24 +274,21 @@ export default function Attendance() {
           // Update counts
           if (status === 'Present') stats.present++;
           else if (status === 'Absent') stats.absent++;
-          else if (status === 'Leave') stats.leave++;
         }
       });
 
       // Then, apply any pending attendance that hasn't been saved yet
-      Object.entries(pendingAttendance).forEach(([email, status]) => {
+      Object.entries(pendingAttendanceRef.current).forEach(([email, status]) => {
         if (studentAttendance[email]) {
           // Update the status and adjust counts
           const oldStatus = studentAttendance[email];
           if (oldStatus === 'Present') stats.present--;
           else if (oldStatus === 'Absent') stats.absent--;
-          else if (oldStatus === 'Leave') stats.leave--;
 
           studentAttendance[email] = status;
 
           if (status === 'Present') stats.present++;
           else if (status === 'Absent') stats.absent++;
-          else if (status === 'Leave') stats.leave++;
         }
       });
 
@@ -294,9 +302,8 @@ export default function Attendance() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, selectedClass, selectedSubject, pendingAttendance]);
+  }, [selectedDate, selectedClass, selectedSubject, selectedPeriod]);
 
-  /* ============================ 5) Mark Attendance LOCALLY ============================ */
   const markAttendance = (email: string | null | undefined, status: string) => {
     if (!email || !selectedSubject) {
       return;
@@ -322,12 +329,10 @@ export default function Attendance() {
         const oldStatus = prev[normalizedEmail];
         if (oldStatus === 'Present') newStats.present--;
         else if (oldStatus === 'Absent') newStats.absent--;
-        else if (oldStatus === 'Leave') newStats.leave--;
 
         // Increment the new status count
         if (status === 'Present') newStats.present++;
         else if (status === 'Absent') newStats.absent++;
-        else if (status === 'Leave') newStats.leave++;
 
         return newStats;
       });
@@ -382,10 +387,7 @@ export default function Attendance() {
     }
 
     try {
-      setLoading(true);
-
       if (!userEmail || !selectedClass || !selectedSubject) {
-        console.log('❌ Missing required data for submission');
         return;
       }
 
@@ -404,10 +406,9 @@ export default function Attendance() {
         student_name: students.find((stu) => stu.email?.toLowerCase() === email)?.fullname || '',
         class_name: classInfo?.class_name || '',
         section: classInfo?.sec || '',
-        subject_name: subjectMeta?.name || ''
+        subject_name: subjectMeta?.name || '',
+        created_time: new Date().toISOString()
       }));
-
-
 
       try {
         const response = await axios.post(
@@ -426,13 +427,21 @@ export default function Attendance() {
         if (response.data.success || response.status === 207 || response.status === 201) {
           // Handle partial success (207) or full success (201/200)
           const errorCount = response.data.errors?.length || 0;
+          const createdCount = response.data.created_count || 0;
+
+
 
           if (errorCount > 0) {
             console.warn(`⚠️ ${errorCount} records had issues:`, response.data.errors);
             // Still show success but log the errors
-            response.data.errors.forEach((error: { data?: { student?: string }; errors?: unknown }) => {
-              console.error(`❌ Error for ${error.data?.student}:`, error.errors);
+            response.data.errors.forEach((error: { data?: { student?: string }; errors?: unknown; index?: number }) => {
+              console.error(`❌ Error at index ${error.index} for ${error.data?.student}:`, error.errors);
             });
+
+            // Show warning to user if some records failed
+            const firstError = response.data.errors[0]?.errors;
+            const errorMsg = typeof firstError === 'object' ? JSON.stringify(firstError) : String(firstError);
+            alert(`Attendance submitted! ${createdCount} records saved successfully. ${errorCount} records had errors.\nFirst error: ${errorMsg}`);
           }
 
           // Clear pending attendance
@@ -511,12 +520,67 @@ export default function Attendance() {
     return formatDate(date1) === date2;
   };
 
-  const handleDateSelect = (date: Date | null) => {
+  const handleDateSelect = async (date: Date | null) => {
     if (date) {
       // Format the date as YYYY-MM-DD before setting it
       const formattedDate = date.toISOString().split('T')[0];
       setSelectedDate(formattedDate);
       setShowCalendar(false);
+
+      // Fetch and show attendance details for this date
+      if (section === 'student' && selectedClass && selectedSubject) {
+        await fetchAttendanceDetailsForDate(formattedDate);
+      }
+    }
+  };
+
+  /* ============================ Fetch Attendance Details for Calendar Date ============================ */
+  const fetchAttendanceDetailsForDate = async (date: string) => {
+    if (!selectedClass || !selectedSubject) return;
+
+    try {
+      setLoading(true);
+
+      // Fetch students in the class
+      const studentsResponse = await axios.get<StudentInfo[]>(`${API}/students/`);
+      const classStudents = studentsResponse.data.filter(s => s.class_id === selectedClass);
+
+      // Fetch attendance for this date
+      const formattedDate = new Date(date).toISOString().split('T')[0];
+      const response = await axios.get<AttendanceRecord[]>(
+        `${API}/student_attendance/?date=${formattedDate}&class_id=${selectedClass}&subject=${selectedSubject}&period=${selectedPeriod}`
+      );
+
+      // Create attendance map
+      const attendanceMap = new Map<string, string>();
+      response.data.forEach(record => {
+        const email = (record.student || record.student_email || record.user_email)?.toLowerCase();
+        if (email && record.status) {
+          attendanceMap.set(email, record.status);
+        }
+      });
+
+      // Categorize students
+      const present: StudentInfo[] = [];
+      const absent: StudentInfo[] = [];
+      const notMarked: StudentInfo[] = [];
+
+      classStudents.forEach(student => {
+        if (student.email) {
+          const status = attendanceMap.get(student.email.toLowerCase());
+          if (status === 'Present') present.push(student);
+          else if (status === 'Absent') absent.push(student);
+          else notMarked.push(student);
+        }
+      });
+
+      setAttendanceDetailsData({ present, absent, notMarked });
+      setAttendanceDetailsDate(date);
+      setShowAttendanceDetails(true);
+    } catch (error) {
+      console.error('Error fetching attendance details:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -555,8 +619,7 @@ export default function Attendance() {
         return "bg-green-100 text-green-700 border-2 border-green-500";
       case "Absent":
         return "bg-red-100 text-red-700 border-2 border-red-500";
-      case "Leave":
-        return "bg-yellow-100 text-yellow-700 border-2 border-yellow-500";
+
       default:
         return "bg-gray-100 text-gray-600 border-2 border-gray-300";
     }
@@ -572,14 +635,12 @@ export default function Attendance() {
         ? `${baseClasses} bg-green-500 text-white shadow-md hover:bg-green-600`
         : targetStatus === "Absent"
           ? `${baseClasses} bg-red-500 text-white shadow-md hover:bg-red-600`
-          : `${baseClasses} bg-yellow-500 text-white shadow-md hover:bg-yellow-600`;
+          : `${baseClasses} bg-blue-500 text-white shadow-md hover:bg-blue-600`;
     }
 
     return targetStatus === "Present"
       ? `${baseClasses} bg-white text-green-600 hover:bg-green-50 border border-green-300`
-      : targetStatus === "Absent"
-        ? `${baseClasses} bg-white text-red-600 hover:bg-red-50 border border-red-300`
-        : `${baseClasses} bg-white text-yellow-600 hover:bg-yellow-50 border border-yellow-300`;
+      : `${baseClasses} bg-white text-red-600 hover:bg-red-50 border border-red-300`;
   };
 
   const subjectOptions = selectedClass ? classSubjectsMap[selectedClass] || [] : [];
@@ -721,6 +782,26 @@ export default function Attendance() {
               </button>
             </div>
 
+            {/* Quick Access - Mark Today's Attendance */}
+            {section === "student" && selectedDate === new Date().toISOString().split('T')[0] && (
+              <button
+                onClick={() => {
+                  if (!selectedClass || !selectedSubject) {
+                    alert('Please select a class and subject first');
+                    return;
+                  }
+                  // Scroll to student list
+                  window.scrollTo({ top: 900, behavior: 'smooth' });
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium text-sm shadow-md flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Mark Today&apos;s Attendance
+              </button>
+            )}
+
             {/* Date Controls */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
               <div className="relative flex-1">
@@ -732,18 +813,10 @@ export default function Attendance() {
                   </span>
                   <input
                     type="date"
-                    className="outline-none bg-transparent w-full text-base"
+                    className="outline-none bg-transparent w-full text-base cursor-pointer"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
                   />
-                  <button
-                    onClick={() => setShowCalendar(!showCalendar)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
                 </div>
 
                 {/* Calendar Popup */}
@@ -1018,10 +1091,7 @@ export default function Attendance() {
                     <p className="text-xs text-gray-500 uppercase tracking-wider">Absent</p>
                     <p className="text-xl font-bold text-red-600">{attendanceStats.absent}</p>
                   </div>
-                  <div className="bg-yellow-50 rounded-lg px-4 py-2 text-center min-w-[100px]">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider">Leave</p>
-                    <p className="text-xl font-bold text-yellow-600">{attendanceStats.leave}</p>
-                  </div>
+
                   <div className="relative">
                     <button
                       onClick={submitAttendance}
@@ -1050,7 +1120,7 @@ export default function Attendance() {
 
             {/* Students Cards Grid */}
             {students.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
                 {students.map((stu, index) => {
                   const status = getStudentStatus(stu.email);
                   const rowKey = stu.email || `${stu.fullname || "student"}-${index}`;
@@ -1112,12 +1182,7 @@ export default function Attendance() {
                         >
                           ✗ Absent
                         </button>
-                        <button
-                          onClick={() => markAttendance(stu.email, "Leave")}
-                          className={getStatusButtonStyles(stu.email, "Leave")}
-                        >
-                          ⟳ Leave
-                        </button>
+
                       </div>
                     </div>
                   );
@@ -1137,6 +1202,195 @@ export default function Attendance() {
           </div>
         )}
       </div>
+
+      {/* Attendance Details Modal */}
+      {showAttendanceDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Attendance Details</h2>
+                  <p className="text-blue-100 mt-1">
+                    {attendanceDetailsDate && new Date(attendanceDetailsDate).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                  {classInfo && currentSubjectName && (
+                    <p className="text-blue-100 text-sm mt-1">
+                      {classInfo.class_name} - Section {classInfo.sec} | {currentSubjectName}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowAttendanceDetails(false)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Stats Summary */}
+              <div className="grid grid-cols-4 gap-3 mt-4">
+                <div className="bg-white bg-opacity-20 rounded-lg p-3 text-center">
+                  <p className="text-sm text-blue-100">Total</p>
+                  <p className="text-2xl font-bold">
+                    {attendanceDetailsData.present.length + attendanceDetailsData.absent.length +
+                      attendanceDetailsData.notMarked.length}
+                  </p>
+                </div>
+                <div className="bg-green-500 bg-opacity-30 rounded-lg p-3 text-center">
+                  <p className="text-sm text-green-100">Present</p>
+                  <p className="text-2xl font-bold">{attendanceDetailsData.present.length}</p>
+                </div>
+                <div className="bg-red-500 bg-opacity-30 rounded-lg p-3 text-center">
+                  <p className="text-sm text-red-100">Absent</p>
+                  <p className="text-2xl font-bold">{attendanceDetailsData.absent.length}</p>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-300px)]">
+              {/* Present Students */}
+              {attendanceDetailsData.present.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-green-600 mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                    Present ({attendanceDetailsData.present.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {attendanceDetailsData.present.map((student, idx) => (
+                      <div key={idx} className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg p-3">
+                        {student.profile_picture ? (
+                          <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-green-500">
+                            <Image
+                              src={student.profile_picture}
+                              alt={student.fullname || "Student"}
+                              fill
+                              className="object-cover"
+                              sizes="40px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                            {student.fullname?.charAt(0) || "S"}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">{student.fullname || "Unnamed"}</p>
+                          <p className="text-sm text-gray-600 truncate">{student.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Absent Students */}
+              {attendanceDetailsData.absent.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-red-600 mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                    Absent ({attendanceDetailsData.absent.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {attendanceDetailsData.absent.map((student, idx) => (
+                      <div key={idx} className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg p-3">
+                        {student.profile_picture ? (
+                          <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-red-500">
+                            <Image
+                              src={student.profile_picture}
+                              alt={student.fullname || "Student"}
+                              fill
+                              className="object-cover"
+                              sizes="40px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
+                            {student.fullname?.charAt(0) || "S"}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">{student.fullname || "Unnamed"}</p>
+                          <p className="text-sm text-gray-600 truncate">{student.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+
+
+              {/* Not Marked Students */}
+              {attendanceDetailsData.notMarked.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-bold text-gray-600 mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-gray-400 rounded-full"></span>
+                    Not Marked ({attendanceDetailsData.notMarked.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {attendanceDetailsData.notMarked.map((student, idx) => (
+                      <div key={idx} className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        {student.profile_picture ? (
+                          <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-400">
+                            <Image
+                              src={student.profile_picture}
+                              alt={student.fullname || "Student"}
+                              fill
+                              className="object-cover"
+                              sizes="40px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white font-bold">
+                            {student.fullname?.charAt(0) || "S"}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">{student.fullname || "Unnamed"}</p>
+                          <p className="text-sm text-gray-600 truncate">{student.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {attendanceDetailsData.present.length === 0 &&
+                attendanceDetailsData.absent.length === 0 &&
+                attendanceDetailsData.notMarked.length === 0 && (
+                  <div className="text-center py-12">
+                    <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-gray-500 text-lg">No attendance records found for this date</p>
+                  </div>
+                )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 p-4 bg-gray-50">
+              <button
+                onClick={() => setShowAttendanceDetails(false)}
+                className="w-full px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

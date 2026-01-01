@@ -40,8 +40,7 @@ type MCQRow = {
 };
 
 export default function StudentsOnlineTestPage(): JSX.Element {
-  console.log("🔵 Component Loaded");
-  console.log("✅ Student Online Test component with anti-retest functionality loaded");
+
 
   const [loggedEmail, setLoggedEmail] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[] | null>(null);
@@ -61,18 +60,33 @@ export default function StudentsOnlineTestPage(): JSX.Element {
 
   /* -------- helpers -------- */
   function readEmailFromLocalStorage(): string | null {
+    // 1. Try JSON objects first
+    const jsonKeys = ["userData", "userInfo"];
+    for (const k of jsonKeys) {
+      try {
+        const v = localStorage.getItem(k);
+        if (v) {
+          const parsed = JSON.parse(v);
+          if (parsed && parsed.email) return parsed.email;
+        }
+      } catch {
+        // ignore json parse errors
+      }
+    }
+
+    // 2. Try simple strings
     const keys = ["student_email", "studentEmail", "userEmail", "email"];
-    console.log("🔍 Checking localStorage for email keys:", keys);
+
     for (const k of keys) {
       try {
         const v = localStorage.getItem(k);
-        console.log(`➡️ ${k}:`, v);
+
         if (v && v.trim()) return v.trim();
-      } catch (e) {
-        console.warn("⚠️ localStorage read error for", k, e);
+      } catch {
+        // Ignore localStorage errors
       }
     }
-    console.log("⚠️ No email found in localStorage");
+
     return null;
   }
 
@@ -80,25 +94,25 @@ export default function StudentsOnlineTestPage(): JSX.Element {
   useEffect(() => {
     const e = readEmailFromLocalStorage();
     setLoggedEmail(e);
-    console.log("👤 Logged Email:", e);
+
   }, []);
 
   /* -------- B. fetch students list -------- */
   useEffect(() => {
     if (!loggedEmail) {
-      console.log("⏸ waiting for loggedEmail before fetching students");
+
       return;
     }
 
     setError(null);
     const url = `${API_BASE}/students/`;
-    console.log("📡 Fetch Students:", url);
+
 
     fetch(url)
       .then(async (res) => {
         if (!res.ok) throw new Error(`Students fetch failed (${res.status})`);
         const data = await res.json();
-        console.log("📥 Students:", data?.length ?? data, data);
+
         setStudents(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
@@ -112,7 +126,7 @@ export default function StudentsOnlineTestPage(): JSX.Element {
   useEffect(() => {
     if (!students || !loggedEmail) return;
     const me = students.find((s) => (s.email || "").toLowerCase() === loggedEmail.toLowerCase());
-    console.log("🎯 Matched student record:", me);
+
     if (!me) {
       setClassId(null);
       setError("Student record not found in students list.");
@@ -125,67 +139,50 @@ export default function StudentsOnlineTestPage(): JSX.Element {
   /* -------- D. fetch all MCQs and derive available exams for the class -------- */
   useEffect(() => {
     if (classId == null) {
-      console.log("⏸ waiting for classId to fetch exams");
+
       return;
     }
 
     setFetchingExams(true);
     setError(null);
 
-    const url = `${API_BASE}/get_all_mcq/`;
-    console.log("📡 Fetch get_all_mcq:", url);
+    const url = `${API_BASE}/exams/`;
 
     fetch(url)
       .then(async (res) => {
-        if (!res.ok) throw new Error(`get_all_mcq failed (${res.status})`);
+        if (!res.ok) throw new Error(`Exams fetch failed (${res.status})`);
         const data = await res.json();
-        console.log("📥 get_all_mcq raw:", Array.isArray(data) ? `array(${data.length})` : data);
 
-        // support response shape: { mcq_answers: [...] } or direct array
-        const rows: MCQRow[] = Array.isArray(data)
-          ? data
-          : Array.isArray((data as { mcq_answers?: MCQRow[] }).mcq_answers)
-            ? (data as { mcq_answers?: MCQRow[] }).mcq_answers!
-            : [];
+        // Data is expected to be an array of exams
+        const allExams = Array.isArray(data) ? data : [];
 
-        // filter to this classId
-        const classRows = rows.filter((r) => {
-          try {
-            return Number(r.exam_details?.class_id) === Number(classId);
-          } catch {
-            return false;
-          }
-        }); console.log(`📌 Found ${classRows.length} MCQ rows for class ${classId}`);
+        // Filter exams by classId
+        const myExams = allExams.filter((ex: { id: number; class_id: number; title?: string }) => Number(ex.class_id) === Number(classId));
 
-        // build unique exam list from exam_details.id
-        const examMap = new Map<number, string>();
-        for (const r of classRows) {
-          const eid = Number(r.exam_details?.id ?? 0) || 0;
-          const title = r.exam_details?.title ?? `Exam ${eid}`;
-          if (eid) examMap.set(eid, title);
-        }
-        const examsArr = Array.from(examMap.entries()).map(([id, title]) => ({ id, title }));
-        console.log("📚 Available exams for your class:", examsArr);
+        const examsArr = myExams.map((ex: { id: number; title?: string }) => ({
+          id: ex.id,
+          title: ex.title || `Exam ${ex.id}`
+        }));
 
         setAvailableExams(examsArr);
 
-        // auto-select a sensible exam if possible
+        // Auto-select logic
         if (examsArr.length === 1) {
           setSelectedExamId(examsArr[0].id);
         } else if (examsArr.length > 1) {
-          // pick latest by id
-          const pick = examsArr.reduce((a, b) => (a.id > b.id ? a : b)).id;
+          // Default: select the latest one
+          const pick = examsArr.reduce((a, b) => (Number(a.id) > Number(b.id) ? a : b)).id;
           setSelectedExamId(pick);
         } else {
           setSelectedExamId(null);
-          setError("No exams found for your class.");
+          // Don't set error here, just show empty state UI
         }
 
         setFetchingExams(false);
       })
       .catch((err) => {
-        console.error("❌ get_all_mcq error:", err);
-        setError("Failed to discover exams.");
+        console.error("❌ Exams fetch error:", err);
+        setError("Failed to load exams.");
         setAvailableExams([]);
         setSelectedExamId(null);
         setFetchingExams(false);
@@ -195,7 +192,7 @@ export default function StudentsOnlineTestPage(): JSX.Element {
   /* -------- E. when selectedExamId changes, fetch exam details via get_all_mcq/?exam_id=ID -------- */
   useEffect(() => {
     if (!selectedExamId) {
-      console.log("⏸ waiting for selectedExamId");
+
       setExamRowsRaw(null);
       setUniqueQuestions([]);
       setAnswers({});
@@ -208,7 +205,7 @@ export default function StudentsOnlineTestPage(): JSX.Element {
     setError(null);
 
     const url = `${API_BASE}/get_all_mcq/?exam_id=${selectedExamId}`;
-    console.log("📡 Fetch Exam details:", url);
+
 
     fetch(url)
       .then(async (res) => {
@@ -216,13 +213,14 @@ export default function StudentsOnlineTestPage(): JSX.Element {
           throw new Error(`get_all_mcq GET failed (${res.status})`);
         }
         const data = await res.json();
-        console.log("📘 Exam GET response:", data);
+
 
         const rows: MCQRow[] = Array.isArray(data?.mcq_answers) ? data.mcq_answers : [];
 
         // 🔒 HARD BLOCK if exam class does not match
         const validRows = rows.filter(
-          r => Number(r.exam_details?.class_id) === Number(classId)
+          r => Number(r.exam_details?.class_id) === Number(classId) &&
+            Number(r.exam_details?.id) === Number(selectedExamId)
         );
 
         if (validRows.length === 0) {
@@ -245,41 +243,72 @@ export default function StudentsOnlineTestPage(): JSX.Element {
             seen.add(q);
             unique.push(r);
           } else {
-            console.log("🔁 duplicate question ignored (by text):", r.id, r.question);
+
           }
         }
 
-        console.log(`✅ Unique questions count: ${unique.length}`);        // Preload server-stored answers for loggedEmail
+        // Preload server-stored answers for loggedEmail
         const answeredSet = new Set<number>();
         const preload: Record<number, number> = {};
-        if (loggedEmail) {
+        // Check raw rows directly with robust matching
+        // API returns emails like "std101@school.com (Student) - Approved", so we extract just the email part
+        const extractEmail = (s: string | null | undefined): string => {
+          const raw = (s || "").trim().toLowerCase();
+          // Extract email before space or parenthesis
+          const match = raw.match(/^([^\s(]+)/);
+          return match ? match[1] : raw;
+        };
+        const myEmail = extractEmail(loggedEmail);
+
+        // Scan for answers
+        if (myEmail) {
           for (const r of rows) {
-            const rEmail = (r.student_email || "").toLowerCase();
-            if (rEmail === loggedEmail.toLowerCase()) {
-              // find matching unique row by question text
-              const match = unique.find((u) => u.question?.trim() === r.question?.trim());
+            const rEmail = extractEmail(r.student_email);
+
+            if (rEmail === myEmail) {
+              // Found a row for this student
+              // Match to unique question
+              const rQ = (r.question || "").trim();
+              const match = unique.find((u) => (u.question || "").trim() === rQ);
+
               if (match && r.student_answer != null) {
-                preload[match.id] = r.student_answer;
-                answeredSet.add(match.id);
+                const ans = Number(r.student_answer);
+                if (!isNaN(ans)) {
+                  preload[match.id] = ans;
+                  answeredSet.add(match.id);
+                }
               }
             }
           }
         }
-        
-        // Check if student has already taken the test (has submitted any answers for this exam)
-        // Backend prevents any submission if student has already submitted answers for this exam
-        const alreadyTakenTest = unique.length > 0 && answeredSet.size > 0;
-        console.log(`📊 Test attendance check: ${answeredSet.size}/${unique.length} questions answered, already taken: ${alreadyTakenTest}`);
-        
-        console.log("📝 Preloaded local answers (from server):", preload);
+
+        const alreadyTakenTest = Object.keys(preload).length > 0;
+
+        // DEBUG: Log attendance check results
+        console.log("🔍 DEBUG - Exam Attendance Check:");
+        console.log("   Student Email (from localStorage):", myEmail);
+        console.log("   Total rows from API:", rows.length);
+        console.log("   Unique questions:", unique.length);
+        console.log("   Rows matching student email:", rows.filter(r => extractEmail(r.student_email) === myEmail).length);
+        console.log("   Preloaded answers:", preload);
+        console.log("   Already taken test:", alreadyTakenTest);
+        console.log("   Answered question IDs:", Array.from(answeredSet));
+
+
+
+
         setExamRowsRaw(rows);
         setUniqueQuestions(unique);
         setAnswers(preload);
         setServerAnsweredQuestionIds(answeredSet);
         setHasAlreadyTakenTest(alreadyTakenTest);
-        
+
+        if (alreadyTakenTest) {
+          setShowAnswers(true);
+        }
+
         // Log the status for verification
-        console.log(`🎯 Exam ${selectedExamId} status - Questions: ${unique.length}, Answered: ${answeredSet.size}, Already taken: ${alreadyTakenTest}`);
+
 
         setLoading(false);
       })
@@ -297,23 +326,23 @@ export default function StudentsOnlineTestPage(): JSX.Element {
   /* -------- UI actions -------- */
   function handleOptionSelect(questionId: number, option: number) {
     if (serverAnsweredQuestionIds.has(questionId)) {
-      console.log("🔒 Attempt to change a server-stored answer blocked for question:", questionId);
+
       return;
     }
-    console.log(`✏️ Selected option ${option} for question ${questionId}`);
+
     setAnswers((prev) => ({ ...prev, [questionId]: option }));
   }
 
   async function submitAnswers() {
-    console.log("🔄 Submit Answers function called");
-    
+
+
     // Double check if test has already been taken before allowing submission
     if (hasAlreadyTakenTest) {
-      console.log("❌ Attempt to submit answers for already taken test prevented");
+
       alert("You have already taken this exam. You cannot submit again.");
       return;
     }
-    
+
     if (!selectedExamId) {
       alert("No exam selected");
       return;
@@ -343,7 +372,7 @@ export default function StudentsOnlineTestPage(): JSX.Element {
       answers: payloadAnswers,
     };
 
-    console.log("📤 SUBMIT payload:", payload);
+
 
     setSubmitting(true);
     setError(null);
@@ -356,12 +385,27 @@ export default function StudentsOnlineTestPage(): JSX.Element {
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => null);
-      console.log("📥 PATCH response (res.ok?)", res.ok, data);
+
 
       if (!res.ok) {
-        const msg = data ? JSON.stringify(data) : `Status ${res.status}`;
-        setError(`Submit failed: ${msg}`);
-        alert("Submit failed — check console");
+        // Try to parse error message if possible
+        const errorMsg = data?.error || data?.message || JSON.stringify(data) || `Status ${res.status}`;
+
+        if (errorMsg.includes("already completed") || errorMsg.includes("duplicate")) {
+
+          setHasAlreadyTakenTest(true);
+          alert("You have already completed this exam. Reloading your answers.");
+          // Refresh to show answers
+          setSelectedExamId((prev) => {
+            const cur = prev;
+            setTimeout(() => setSelectedExamId(cur), 200);
+            return null;
+          });
+          return;
+        }
+
+        setError(`Submit failed: ${errorMsg}`);
+        alert(`Submit failed: ${errorMsg}`);
       } else {
         alert("✅ Submitted successfully");
         // Show answers after successful submission
@@ -369,7 +413,7 @@ export default function StudentsOnlineTestPage(): JSX.Element {
         // Update the already taken state to reflect that the test has been submitted
         setHasAlreadyTakenTest(true);
         // re-fetch exam to show saved answers/results
-        console.log("🔁 Refreshing exam after submit");
+
         setSelectedExamId((prev) => {
           const cur = prev;
           setTimeout(() => setSelectedExamId(cur), 200);
@@ -378,11 +422,11 @@ export default function StudentsOnlineTestPage(): JSX.Element {
       }
     } catch (err) {
       console.error("❌ Submit error:", err);
-      
+
       // Check if the error is due to duplicate submission
       const errorMessage = err instanceof Error ? err.message : String(err);
-      if (errorMessage.includes("duplicate") || errorMessage.includes("already exists")) {
-        console.log("🔄 Detected duplicate submission - updating test status");
+      if (errorMessage.includes("duplicate") || errorMessage.includes("already exists") || errorMessage.includes("already completed")) {
+
         setHasAlreadyTakenTest(true);
         alert("You have already taken this exam. You cannot submit again.");
       } else {
@@ -401,10 +445,12 @@ export default function StudentsOnlineTestPage(): JSX.Element {
 
   // Calculate score
   const correctAnswers = uniqueQuestions.filter(q => {
-    const serverRow = (examRowsRaw || []).find(r =>
-      r.question?.trim() === q.question?.trim() &&
-      r.student_email?.toLowerCase() === loggedEmail?.toLowerCase()
-    );
+    const serverRow = (examRowsRaw || []).find(r => {
+      const rEmailRaw = (r.student_email || "").trim().toLowerCase();
+      const rEmail = rEmailRaw.match(/^([^\s(]+)/)?.[1] || rEmailRaw;
+      const myEmail = (loggedEmail || "").trim().toLowerCase();
+      return r.question?.trim() === q.question?.trim() && rEmail === myEmail;
+    });
     return serverRow?.result === true;
   }).length;
 
@@ -540,11 +586,11 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                           value={selectedExamId ?? ""}
                           onChange={async (e) => {
                             const v = Number(e.target.value) || null;
-                            
+
                             // If an exam is selected, check if it's already been taken
                             if (v) {
-                              console.log(`🔍 Checking if exam ${v} has been taken by student`);
-                              
+
+
                               // Fetch exam details to check if already taken
                               const url = `${API_BASE}/get_all_mcq/?exam_id=${v}`;
                               try {
@@ -553,14 +599,14 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                                   throw new Error(`get_all_mcq GET failed (${res.status})`);
                                 }
                                 const data = await res.json();
-                                
+
                                 const rows: MCQRow[] = Array.isArray(data?.mcq_answers) ? data.mcq_answers : [];
-                                
+
                                 // Filter to this classId
                                 const validRows = rows.filter(
                                   r => Number(r.exam_details?.class_id) === Number(classId)
                                 );
-                                
+
                                 // Deduplicate by question text but preserve the first encountered row as template
                                 const seen = new Set<string>();
                                 const unique: MCQRow[] = [];
@@ -572,23 +618,22 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                                     unique.push(r);
                                   }
                                 }
-                                
+
                                 // Check if student has already answered any questions (backend prevents any further submissions)
                                 const answeredCount = unique.filter(q => {
                                   const rEmail = (q.student_email || "").toLowerCase();
                                   return rEmail === loggedEmail?.toLowerCase() && q.student_answer != null;
                                 }).length;
-                                
+
                                 const alreadyTakenTest = unique.length > 0 && answeredCount > 0;
-                                console.log(`📊 Exam ${v} check: ${answeredCount}/${unique.length} questions answered by student, already taken: ${alreadyTakenTest}`);
-                                
+
+
                                 if (alreadyTakenTest) {
-                                  console.log(`❌ Student has already taken exam ${v}, preventing access`);
-                                  alert("You have already taken this exam. You cannot attempt it again.");
+
                                   setHasAlreadyTakenTest(true);
-                                  return; // Don't select this exam
+                                  // We allow selection so they can see results
                                 } else {
-                                  console.log(`✅ Student has not taken exam ${v} completely, allowing access`);
+
                                   setHasAlreadyTakenTest(false);
                                 }
                               } catch (err) {
@@ -597,7 +642,7 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                                 return; // Don't select the exam if there's an error
                               }
                             }
-                            
+
                             setSelectedExamId(v);
                           }}
                           className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900"
@@ -743,22 +788,10 @@ export default function StudentsOnlineTestPage(): JSX.Element {
               )}
 
               {/* Test Already Taken */}
-              {!loading && selectedExamId && uniqueQuestions.length > 0 && hasAlreadyTakenTest && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center">
-                  <div className="inline-flex items-center justify-center p-4 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full mb-4">
-                    <CheckCircle className="w-12 h-12 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Test Already Completed</h3>
-                  <p className="text-gray-600 mb-4">You have already taken this exam and cannot attempt it again.</p>
-                  <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg inline-block">
-                    <p>Questions: {uniqueQuestions.length}</p>
-                    <p>Answers: {serverAnsweredQuestionIds.size}/{uniqueQuestions.length}</p>
-                  </div>
-                </div>
-              )}
+              {/* Test Already Taken - Removed blocking view to show answers instead */}
 
               {/* Questions List */}
-              {!loading && uniqueQuestions.length > 0 && !hasAlreadyTakenTest && (
+              {!loading && uniqueQuestions.length > 0 && (
                 <div className="space-y-6">
                   {/* Exam Header */}
                   <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white">
@@ -817,16 +850,19 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                       const serverRowForMe = (examRowsRaw || []).find((r) => {
                         const rQ = (r.question || "").trim();
                         const qQ = (q.question || "").trim();
-                        const rEmail = (r.student_email || "").toLowerCase();
-                        return rQ === qQ && loggedEmail && rEmail === loggedEmail?.toLowerCase();
+                        // Extract email before space/parenthesis (API returns "email@domain.com (Student) - Approved")
+                        const rEmailRaw = (r.student_email || "").trim().toLowerCase();
+                        const rEmail = rEmailRaw.match(/^([^\s(]+)/)?.[1] || rEmailRaw;
+                        const myEmailLower = (loggedEmail || "").trim().toLowerCase();
+                        return rQ === qQ && myEmailLower && rEmail === myEmailLower;
                       }); return (
                         <div
                           key={q.id}
                           className={`bg-white rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${serverHas
-                              ? serverRowForMe?.result
-                                ? 'border-green-200'
-                                : 'border-red-200'
-                              : 'border-gray-200'
+                            ? serverRowForMe?.result
+                              ? 'border-green-200'
+                              : 'border-red-200'
+                            : 'border-gray-200'
                             }`}
                         >
                           <div className="p-6">
@@ -835,10 +871,10 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-3">
                                   <div className={`px-3 py-1 rounded-full text-sm font-semibold ${serverHas
-                                      ? serverRowForMe?.result
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
-                                      : 'bg-blue-100 text-blue-800'
+                                    ? serverRowForMe?.result
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-red-100 text-red-800'
+                                    : 'bg-blue-100 text-blue-800'
                                     }`}>
                                     <span className="flex items-center gap-2">
                                       <span className="w-6 h-6 flex items-center justify-center bg-white rounded-full">
@@ -850,8 +886,8 @@ export default function StudentsOnlineTestPage(): JSX.Element {
 
                                   {serverHas && serverRowForMe?.result != null && (
                                     <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium ${serverRowForMe.result
-                                        ? 'bg-green-50 text-green-700'
-                                        : 'bg-red-50 text-red-700'
+                                      ? 'bg-green-50 text-green-700'
+                                      : 'bg-red-50 text-red-700'
                                       }`}>
                                       {serverRowForMe.result ? (
                                         <>
@@ -889,10 +925,10 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                                   <label
                                     key={opt}
                                     className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${isChecked
-                                        ? isCorrect && showCorrect
-                                          ? 'border-green-500 bg-green-50'
-                                          : 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                      ? isCorrect && showCorrect
+                                        ? 'border-green-500 bg-green-50'
+                                        : 'border-blue-500 bg-blue-50'
+                                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                       } ${serverHas ? 'cursor-not-allowed' : ''} ${showCorrect && isCorrect ? 'border-green-500 bg-green-50' : ''
                                       }`}
                                   >
@@ -911,12 +947,12 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                                       <div className="flex items-center justify-between gap-4">
                                         <div className="flex items-center gap-4">
                                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${isChecked
-                                              ? isCorrect && showCorrect
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-blue-500 text-white'
-                                              : showCorrect && isCorrect
-                                                ? 'bg-green-100 text-green-800 border border-green-300'
-                                                : 'bg-gray-100 text-gray-700'
+                                            ? isCorrect && showCorrect
+                                              ? 'bg-green-500 text-white'
+                                              : 'bg-blue-500 text-white'
+                                            : showCorrect && isCorrect
+                                              ? 'bg-green-100 text-green-800 border border-green-300'
+                                              : 'bg-gray-100 text-gray-700'
                                             }`}>
                                             {String.fromCharCode(64 + opt)}
                                           </div>
@@ -984,6 +1020,43 @@ export default function StudentsOnlineTestPage(): JSX.Element {
                       );
                     })}
                   </div>
+
+                  {/* Score Summary Card - Only show if already taken */}
+                  {hasAlreadyTakenTest && (
+                    <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 p-6 shadow-lg">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                          <Award className="w-7 h-7 text-blue-600" />
+                          Your Results
+                        </h3>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white rounded-xl p-4 text-center border border-blue-100">
+                          <p className="text-sm text-gray-600 mb-1">Total Questions</p>
+                          <p className="text-3xl font-bold text-gray-900">{totalQuestions}</p>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-4 text-center border border-green-100">
+                          <p className="text-sm text-gray-600 mb-1">Correct Answers</p>
+                          <p className="text-3xl font-bold text-green-600">{correctAnswers}</p>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-4 text-center border border-purple-100">
+                          <p className="text-sm text-gray-600 mb-1">Score</p>
+                          <p className="text-3xl font-bold text-purple-600">
+                            {totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0}%
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 p-4 bg-white rounded-xl border border-blue-100">
+                        <p className="text-center text-lg font-semibold text-gray-700">
+                          Final Score: <span className="text-blue-600">{correctAnswers}</span> out of <span className="text-gray-900">{totalQuestions}</span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

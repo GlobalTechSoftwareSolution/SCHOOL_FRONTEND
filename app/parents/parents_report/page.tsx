@@ -6,7 +6,7 @@ import {
   FileText,
   Users,
   Calendar,
-  Download,
+  // Download,
   Search,
   BookOpen,
   Award,
@@ -212,7 +212,7 @@ const ParentReportsPage: React.FC = () => {
 
   // ✅ UI Rendering
   return (
-   <DashboardLayout role="parents">
+    <DashboardLayout role="parents">
       <div className="min-h-screen bg-gray-50/30 p-6">
         {/* Header */}
         <div className="mb-8">
@@ -280,7 +280,7 @@ const ParentReportsPage: React.FC = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {children.map((child, index) => {
-                const childReports = reports.filter(r => 
+                const childReports = reports.filter(r =>
                   r.student === child.email || r.email === child.email
                 );
                 return (
@@ -292,8 +292,8 @@ const ParentReportsPage: React.FC = () => {
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{child.fullname}</h3>
                         <div className="flex flex-col-2 mt-2">
-                          <p className="text-sm text-gray-600">{child.class_name }</p> 
-                        <p className="text-sm text-gray-600 ml-2">{child.section}  Section</p>
+                          <p className="text-sm text-gray-600">{child.class_name}</p>
+                          <p className="text-sm text-gray-600 ml-2">{child.section}  Section</p>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">{child.email}</p>
                       </div>
@@ -377,7 +377,7 @@ const ParentReportsPage: React.FC = () => {
                 {reports.length === 0 ? "No Reports Found" : "No Matching Reports"}
               </h3>
               <p className="text-gray-600">
-                {reports.length === 0 
+                {reports.length === 0
                   ? "There are no reports available for your children at this time."
                   : "Try adjusting your search or filters to find what you're looking for."
                 }
@@ -403,7 +403,7 @@ const ParentReportsPage: React.FC = () => {
                             {report.report_type || "General"}
                           </span>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-3">
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4" />
@@ -435,8 +435,8 @@ const ParentReportsPage: React.FC = () => {
                         }}
                         className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                       >
-                        {expandedReport === index ? 
-                          <ChevronUp className="h-4 w-4 text-gray-600" /> : 
+                        {expandedReport === index ?
+                          <ChevronUp className="h-4 w-4 text-gray-600" /> :
                           <ChevronDown className="h-4 w-4 text-gray-600" />
                         }
                       </button>
@@ -472,7 +472,7 @@ const ParentReportsPage: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div>
                           <h4 className="font-medium text-gray-900 mb-3">Full Description</h4>
                           <p className="text-gray-700 bg-gray-50 p-3 rounded-lg text-sm">
