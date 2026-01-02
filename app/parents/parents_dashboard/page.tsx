@@ -345,72 +345,72 @@ const ParentDashboard = () => {
         </div>
 
         {/* Statistics Cards - Enhanced */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8 print:grid-cols-2 print:gap-3 print:mb-4">
-          <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-2xl shadow-sm border border-blue-200/30 p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 print:shadow-none print:border">
+        <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 xl:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8 print:grid-cols-2 print:gap-3 print:mb-4">
+          <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-2xl shadow-sm border border-blue-200/30 p-3 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 print:shadow-none print:border">
             <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/5 rounded-full -translate-y-8 translate-x-8 print:hidden"></div>
             <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-sm font-medium text-gray-600 print:text-gray-800">Total Children</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 print:text-2xl">{overallStats.totalStudents}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 print:text-gray-800">Total Children</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 print:text-2xl">{overallStats.totalStudents}</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 print:hidden">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 print:hidden">
+                <Users className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-3 sm:mt-4 relative z-10">
-              <Sparkles className="h-4 w-4 text-blue-500 print:hidden" />
-              <span className="text-sm text-blue-600 font-medium print:text-blue-800">Your students</span>
+            <div className="flex items-center gap-1 mt-2 sm:mt-4 relative z-10">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 print:hidden" />
+              <span className="text-xs sm:text-sm text-blue-600 font-medium print:text-blue-800">Your students</span>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-white to-green-50/50 rounded-2xl shadow-sm border border-green-200/30 p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 print:shadow-none print:border">
+          <div className="bg-gradient-to-br from-white to-green-50/50 rounded-2xl shadow-sm border border-green-200/30 p-3 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 print:shadow-none print:border">
             <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/5 rounded-full -translate-y-8 translate-x-8 print:hidden"></div>
             <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-sm font-medium text-gray-600 print:text-gray-800">Attendance Rate</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 print:text-2xl">{overallStats.attendancePercentage}%</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 print:text-gray-800">Attendance Rate</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 print:text-2xl">{overallStats.attendancePercentage}%</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 print:hidden">
-                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 print:hidden">
+                <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-3 sm:mt-4 relative z-10">
-              <TrendingUp className="h-4 w-4 text-green-500 print:hidden" />
-              <span className="text-sm text-green-600 font-medium print:text-green-800">{stats.present} present</span>
+            <div className="flex items-center gap-1 mt-2 sm:mt-4 relative z-10">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 print:hidden" />
+              <span className="text-xs sm:text-sm text-green-600 font-medium print:text-green-800">{stats.present} present</span>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-2xl shadow-sm border border-purple-200/30 p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 print:shadow-none print:border">
+          <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-2xl shadow-sm border border-purple-200/30 p-3 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 print:shadow-none print:border">
             <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/5 rounded-full -translate-y-8 translate-x-8 print:hidden"></div>
             <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-sm font-medium text-gray-600 print:text-gray-800">Average Grade</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 print:text-2xl">{overallStats.avgGrade}%</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 print:text-gray-800">Average Grade</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 print:text-2xl">{overallStats.avgGrade}%</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 print:hidden">
-                <Award className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 print:hidden">
+                <Award className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-3 sm:mt-4 relative z-10">
-              <Target className="h-4 w-4 text-purple-500 print:hidden" />
-              <span className="text-sm text-purple-600 font-medium print:text-purple-800">Performance</span>
+            <div className="flex items-center gap-1 mt-2 sm:mt-4 relative z-10">
+              <Target className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500 print:hidden" />
+              <span className="text-xs sm:text-sm text-purple-600 font-medium print:text-purple-800">Performance</span>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-white to-orange-50/50 rounded-2xl shadow-sm border border-orange-200/30 p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 print:shadow-none print:border">
+          <div className="bg-gradient-to-br from-white to-orange-50/50 rounded-2xl shadow-sm border border-orange-200/30 p-3 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 print:shadow-none print:border">
             <div className="absolute top-0 right-0 w-20 h-20 bg-orange-500/5 rounded-full -translate-y-8 translate-x-8 print:hidden"></div>
             <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-sm font-medium text-gray-600 print:text-gray-800">Leave Applications</p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 print:text-2xl">{overallStats.totalLeaves}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 print:text-gray-800">Leave Applications</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 print:text-2xl">{overallStats.totalLeaves}</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 print:hidden">
-                <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 print:hidden">
+                <FileText className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
               </div>
             </div>
-            <div className="flex items-center gap-1 mt-3 sm:mt-4 relative z-10">
-              <Clock className="h-4 w-4 text-orange-500 print:hidden" />
-              <span className="text-sm text-orange-600 font-medium print:text-orange-800">Applications</span>
+            <div className="flex items-center gap-1 mt-2 sm:mt-4 relative z-10">
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500 print:hidden" />
+              <span className="text-xs sm:text-sm text-orange-600 font-medium print:text-orange-800">Applications</span>
             </div>
           </div>
         </div>
@@ -671,7 +671,7 @@ const ParentDashboard = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6 p-4 sm:p-6 print:grid-cols-1 print:gap-3 print:p-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 p-4 sm:p-6 print:grid-cols-1 print:gap-3 print:p-3">
                 {filteredAttendance.map((record, index) => (
                   <div
                     key={index}

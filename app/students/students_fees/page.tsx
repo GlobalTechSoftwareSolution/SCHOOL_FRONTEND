@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { jsPDF } from "jspdf";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
@@ -45,7 +46,7 @@ interface PaymentFormData {
   transaction_id: string;
   status: string;
   remarks: string;
-} 
+}
 
 const StudentFeesPage = () => {
   const [fees, setFees] = useState<FeeDetails[]>([]);
@@ -114,10 +115,10 @@ const StudentFeesPage = () => {
         }
 
         setStudent(studentData);
-        
+
         // Fetch fee structures based on student's class and section
         const structures = await fetchFeeStructures(studentData.class_name, studentData.section);
-        
+
         // Fetch fee payments for this student
         const feesRes = await axios.get<FeeDetails[]>(FEES_API);
 
@@ -149,13 +150,13 @@ const StudentFeesPage = () => {
           ([structureId, feesForStructure]) => {
             const structureIdNum = parseInt(structureId);
             const matchedStructure = structures.find((fs: FeeStructure) => fs.id === structureIdNum);
-            
+
             if (!matchedStructure) return feesForStructure;
-            
+
             const totalAmount = parseFloat(matchedStructure.amount || "0");
             const totalPaid = feesForStructure.reduce((sum, fee) => sum + parseFloat(fee.amount_paid || "0"), 0);
             const remainingAmount = Math.max(totalAmount - totalPaid, 0);
-            
+
             // Enhance each fee with structure info and calculated remaining
             return feesForStructure.map((fee) => ({
               ...fee,
@@ -230,14 +231,14 @@ const StudentFeesPage = () => {
 
   // Calculate total paid across all fees
   const totalPaid = fees.reduce((sum, f) => sum + parseFloat(f.amount_paid || "0"), 0);
-  
+
   // Calculate total due - Perfect calculation using fee structures
   const totalDue = (() => {
     // Get unique fee structures from the fees
     const uniqueStructures = [...new Set(fees.map(fee => fee.fee_structure))];
-    
+
     let totalRemaining = 0;
-    
+
     // For each unique structure, get the remaining amount from the first fee of that structure
     uniqueStructures.forEach(structureId => {
       // Find the first fee with this structure ID
@@ -247,10 +248,10 @@ const StudentFeesPage = () => {
         totalRemaining += parseFloat(feeWithStructure.calculated_remaining_amount || "0");
       }
     });
-    
+
     return totalRemaining;
   })();
-  
+
   const paidFees = fees.filter((f) => f.status === "Paid").length;
   const pendingFees = fees.filter((f) => f.status !== "Paid").length;
 
@@ -259,7 +260,69 @@ const StudentFeesPage = () => {
     setShowReceiptModal(true);
   };
 
-  const handlePrintReceipt = () => window.print();
+  const handleDownloadReceipt = (fee: FeeDetails) => {
+    const doc = new jsPDF();
+
+    // Add School Header
+    doc.setFontSize(22);
+    doc.setTextColor(37, 99, 235); // Blue color
+    doc.text("SMART SCHOOL", 105, 20, { align: "center" });
+
+    doc.setFontSize(16);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Fee Payment Receipt", 105, 30, { align: "center" });
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 35, 190, 35);
+
+    // Receipt Info
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+
+    let y = 50;
+    const addLine = (label: string, value: string) => {
+      doc.setFont("helvetica", "bold");
+      doc.text(`${label}:`, 20, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(value), 80, y);
+      y += 10;
+    };
+
+    addLine("Student Name", fee.student_name);
+    addLine("Fee Type", fee.fee_type);
+    addLine("Payment Date", fee.payment_date);
+    addLine("Payment Method", fee.payment_method);
+    addLine("Transaction ID", fee.transaction_id);
+
+    y += 5;
+    doc.line(20, y, 190, y);
+    y += 10;
+
+    doc.setFontSize(14);
+    addLine("Total Amount", `INR ${fee.structure_amount || fee.total_amount}`);
+    doc.setTextColor(22, 163, 74); // Green
+    addLine("Amount Paid", `INR ${fee.amount_paid}`);
+    doc.setTextColor(220, 38, 38); // Red
+    addLine("Remaining Balance", `INR ${fee.calculated_remaining_amount}`);
+
+    y += 10;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    addLine("Status", fee.status);
+
+    if (fee.remarks) {
+      y += 5;
+      doc.setFont("helvetica", "italic");
+      doc.text(`Remarks: ${fee.remarks}`, 20, y);
+    }
+
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text("This is a computer-generated receipt.", 105, 280, { align: "center" });
+
+    doc.save(`Receipt_${fee.transaction_id}.pdf`);
+  };
 
   // Fee Card Component
   const FeeCard = ({ fee }: { fee: FeeDetails }) => (
@@ -277,11 +340,10 @@ const StudentFeesPage = () => {
             </div>
           </div>
           <span
-            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-              fee.status === "Paid"
+            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${fee.status === "Paid"
                 ? "bg-green-100 text-green-800 border border-green-200"
                 : "bg-amber-100 text-amber-800 border border-amber-200"
-            }`}
+              }`}
           >
             {fee.status === "Paid" ? "✅ Paid" : "⏳ Pending"}
           </span>
@@ -361,11 +423,10 @@ const StudentFeesPage = () => {
                 }
                 setShowPaymentModal(true);
               }}
-              className={`w-full lg:w-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg justify-center ${
-                !student
+              className={`w-full lg:w-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg justify-center ${!student
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white hover:shadow-xl transform hover:-translate-y-0.5"
-              }`}
+                }`}
               disabled={!student}
             >
               <span>💳</span>
@@ -375,28 +436,28 @@ const StudentFeesPage = () => {
 
           {/* SUMMARY CARDS */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            <SummaryCard 
-              title="Total Paid" 
-              value={`₹${totalPaid.toFixed(2)}`} 
-              color="green" 
+            <SummaryCard
+              title="Total Paid"
+              value={`₹${totalPaid.toFixed(2)}`}
+              color="green"
               icon="💰"
             />
-            <SummaryCard 
-              title="Total Due" 
-              value={`₹${totalDue.toFixed(2)}`} 
-              color="red" 
+            <SummaryCard
+              title="Total Due"
+              value={`₹${totalDue.toFixed(2)}`}
+              color="red"
               icon="📋"
             />
-            <SummaryCard 
-              title="Paid Fees" 
-              value={paidFees} 
-              color="blue" 
+            <SummaryCard
+              title="Paid Fees"
+              value={paidFees}
+              color="blue"
               icon="✅"
             />
-            <SummaryCard 
-              title="Pending Fees" 
-              value={pendingFees} 
-              color="orange" 
+            <SummaryCard
+              title="Pending Fees"
+              value={pendingFees}
+              color="orange"
               icon="⏳"
             />
           </div>
@@ -411,7 +472,7 @@ const StudentFeesPage = () => {
                 {fees.length} records
               </span>
             </div>
-            
+
             {fees.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 {fees.map((fee) => (
@@ -430,10 +491,10 @@ const StudentFeesPage = () => {
 
         {/* RECEIPT MODAL */}
         {showReceiptModal && selectedFee && (
-          <ReceiptModal 
-            fee={selectedFee} 
-            onClose={() => setShowReceiptModal(false)} 
-            onPrint={handlePrintReceipt} 
+          <ReceiptModal
+            fee={selectedFee}
+            onClose={() => setShowReceiptModal(false)}
+            onDownload={() => handleDownloadReceipt(selectedFee)}
           />
         )}
 
@@ -449,7 +510,7 @@ const StudentFeesPage = () => {
           />
         )}
       </div>
-      
+
       {/* Media Queries for Responsive Design */}
       <style jsx global>{`
         @media (max-width: 640px) {
@@ -563,17 +624,17 @@ const SummaryCard = ({ title, value, color, icon }: SummaryCardProps) => {
 interface ReceiptModalProps {
   fee: FeeDetails;
   onClose: () => void;
-  onPrint: () => void;
+  onDownload: () => void;
 }
 
-const ReceiptModal = ({ fee, onClose, onPrint }: ReceiptModalProps) => (
+const ReceiptModal = ({ fee, onClose, onDownload }: ReceiptModalProps) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-3 sm:p-4">
     <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full overflow-hidden receipt-modal">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6 text-white">
         <h2 className="text-xl sm:text-2xl font-bold">Payment Receipt</h2>
         <p className="text-blue-100 text-xs sm:text-sm">Transaction Confirmation</p>
       </div>
-      
+
       <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div>
@@ -598,14 +659,13 @@ const ReceiptModal = ({ fee, onClose, onPrint }: ReceiptModalProps) => (
           </div>
           <div>
             <p className="text-xs sm:text-sm text-gray-500">Status</p>
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-              fee.status === "Paid" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
-            }`}>
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${fee.status === "Paid" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+              }`}>
               {fee.status}
             </span>
           </div>
         </div>
-        
+
         <div className="border-t pt-3 sm:pt-4 space-y-2">
           <div className="flex justify-between text-xs sm:text-sm">
             <span className="text-gray-500">Payment Date:</span>
@@ -627,19 +687,19 @@ const ReceiptModal = ({ fee, onClose, onPrint }: ReceiptModalProps) => (
           )}
         </div>
       </div>
-      
+
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200">
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           className="px-4 sm:px-6 py-2 border border-gray-300 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-colors duration-200 text-sm sm:text-base order-2 sm:order-1"
         >
           Close
         </button>
-        <button 
-          onClick={onPrint} 
+        <button
+          onClick={onDownload}
           className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2 text-sm sm:text-base justify-center order-1 sm:order-2 mb-2 sm:mb-0"
         >
-          🖨️ Print
+          📥 Download
         </button>
       </div>
     </div>
@@ -663,7 +723,7 @@ const PaymentModal = ({ paymentForm, setPaymentForm, feeStructures, submitting, 
         <h2 className="text-xl sm:text-2xl font-bold">Pay Fees</h2>
         <p className="text-green-100 text-xs sm:text-sm">Complete your payment securely</p>
       </div>
-      
+
       <form onSubmit={onSubmit} className="p-4 sm:p-6 space-y-3 sm:space-y-4">
         <div>
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Select Fee Structure</label>
@@ -738,9 +798,9 @@ const PaymentModal = ({ paymentForm, setPaymentForm, feeStructures, submitting, 
         </div>
 
         <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-3 sm:pt-4">
-          <button 
-            type="button" 
-            onClick={onClose} 
+          <button
+            type="button"
+            onClick={onClose}
             className="px-4 sm:px-6 py-2 sm:py-3 border border-gray-300 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-colors duration-200 font-medium text-sm sm:text-base order-2 sm:order-1"
           >
             Cancel

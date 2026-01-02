@@ -114,7 +114,7 @@ const ParentFeePayments = () => {
         axios.get(`${API_BASE}/parents/`),
         axios.get(`${API_BASE}/students/`)
       ]);
-      
+
       const currentParent = parents.find(
         (p: Record<string, unknown>) => p.email === email
       );
@@ -155,7 +155,7 @@ const ParentFeePayments = () => {
 
       const allPayments: FeePayment[] = paymentsRes.data;
       const structures: FeeStructure[] = structuresRes.data;
-      
+
       // Store fee structures for the payment form
       setFeeStructures(structures);
 
@@ -172,8 +172,8 @@ const ParentFeePayments = () => {
             p.remaining_amount !== null && p.remaining_amount !== undefined
               ? Number(p.remaining_amount)
               : total - paid > 0
-              ? total - paid
-              : 0;
+                ? total - paid
+                : 0;
           return {
             ...p,
             fee_type: structure?.fee_type || "Unknown",
@@ -291,11 +291,11 @@ const ParentFeePayments = () => {
       };
 
       const response = await axios.post(`${API_BASE}/fee_payments/`, paymentData);
-      
+
       if (response.data) {
         // Add the new payment to the list
         setFeePayments(prev => [response.data, ...prev]);
-        
+
         // Reset form and close modal
         setNewPayment({
           student: "",
@@ -310,7 +310,7 @@ const ParentFeePayments = () => {
           payment_date: new Date().toISOString().split('T')[0]
         });
         setShowPaymentModal(false);
-        
+
         alert("Payment added successfully!");
       }
     } catch (error: unknown) {
@@ -382,7 +382,7 @@ const ParentFeePayments = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-2 xs:gap-3">
               <button
                 onClick={() => setActiveView(activeView === "overview" ? "analytics" : "overview")}
@@ -412,11 +412,10 @@ const ParentFeePayments = () => {
             <button
               key={tab.id}
               onClick={() => setActiveView(tab.id)}
-              className={`px-3 xs:px-4 sm:px-6 py-2 xs:py-2.5 sm:py-3 font-medium transition-all duration-300 flex items-center gap-1 xs:gap-2 rounded-lg xs:rounded-xl flex-shrink-0 ${
-                activeView === tab.id
+              className={`px-3 xs:px-4 sm:px-6 py-2 xs:py-2.5 sm:py-3 font-medium transition-all duration-300 flex items-center gap-1 xs:gap-2 rounded-lg xs:rounded-xl flex-shrink-0 ${activeView === tab.id
                   ? "bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 shadow-inner border border-blue-200/50"
                   : "text-gray-600 hover:text-gray-800 hover:bg-gray-100/50"
-              }`}
+                }`}
             >
               <tab.icon className="h-3 w-3 xs:h-4 xs:w-4" />
               <span className="hidden xs:inline">{tab.label}</span>
@@ -517,7 +516,7 @@ const ParentFeePayments = () => {
                 </div>
               </div>
               <div className="w-full bg-gray-200/50 rounded-full h-3 xs:h-4 shadow-inner">
-                <div 
+                <div
                   className={`h-3 xs:h-4 rounded-full shadow-lg transition-all duration-1000 ease-out ${getProgressColor(stats.paidPercentage)}`}
                   style={{ width: `${stats.paidPercentage}%` }}
                 ></div>
@@ -549,7 +548,7 @@ const ParentFeePayments = () => {
                 📊 Insights
               </span>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-6">
               {/* Payment Status Distribution */}
               <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5">
@@ -561,33 +560,33 @@ const ParentFeePayments = () => {
                       <span className="text-gray-600">{stats.totalPaid} ({stats.totalPayments > 0 ? Math.round((stats.totalPaid / stats.totalPayments) * 100) : 0}%)</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
+                      <div
                         className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-500"
                         style={{ width: `${stats.totalPayments > 0 ? (stats.totalPaid / stats.totalPayments) * 100 : 0}%` }}
                       ></div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-amber-600 font-medium">Pending</span>
                       <span className="text-gray-600">{stats.totalPending} ({stats.totalPayments > 0 ? Math.round((stats.totalPending / stats.totalPayments) * 100) : 0}%)</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
+                      <div
                         className="h-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
                         style={{ width: `${stats.totalPayments > 0 ? (stats.totalPending / stats.totalPayments) * 100 : 0}%` }}
                       ></div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-rose-600 font-medium">Failed</span>
                       <span className="text-gray-600">{stats.totalFailed} ({stats.totalPayments > 0 ? Math.round((stats.totalFailed / stats.totalPayments) * 100) : 0}%)</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
+                      <div
                         className="h-2 rounded-full bg-gradient-to-r from-rose-500 to-red-500"
                         style={{ width: `${stats.totalPayments > 0 ? (stats.totalFailed / stats.totalPayments) * 100 : 0}%` }}
                       ></div>
@@ -595,7 +594,7 @@ const ParentFeePayments = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Fee Type Distribution */}
               <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5">
                 <h3 className="font-semibold text-gray-900 text-sm xs:text-base mb-3 xs:mb-4">Fee Type Distribution</h3>
@@ -603,7 +602,7 @@ const ParentFeePayments = () => {
                   {uniqueFeeTypes.map((type, index) => {
                     const typeCount = feePayments.filter(p => p.fee_type === type).length;
                     const percentage = feePayments.length > 0 ? Math.round((typeCount / feePayments.length) * 100) : 0;
-                    
+
                     // Generate different colors for different fee types
                     const colors = [
                       'from-blue-500 to-blue-600',
@@ -614,7 +613,7 @@ const ParentFeePayments = () => {
                       'from-indigo-500 to-indigo-600'
                     ];
                     const colorClass = colors[index % colors.length];
-                    
+
                     return (
                       <div key={type}>
                         <div className="flex justify-between text-sm mb-1">
@@ -622,7 +621,7 @@ const ParentFeePayments = () => {
                           <span className="text-gray-600">{typeCount} ({percentage}%)</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
+                          <div
                             className={`h-2 rounded-full bg-gradient-to-r ${colorClass}`}
                             style={{ width: `${percentage}%` }}
                           ></div>
@@ -632,7 +631,7 @@ const ParentFeePayments = () => {
                   })}
                 </div>
               </div>
-              
+
               {/* Payment Trend */}
               <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 md:col-span-2">
                 <h3 className="font-semibold text-gray-900 text-sm xs:text-base mb-3 xs:mb-4">Payment Trend</h3>
@@ -644,15 +643,15 @@ const ParentFeePayments = () => {
                       const paymentMonth = new Date(p.payment_date).getMonth();
                       return paymentMonth === index;
                     });
-                    
+
                     const totalAmount = monthPayments.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
                     const maxValue = Math.max(...feePayments.map(p => Number(p.amount_paid) || 0), 1);
                     const heightPercentage = (totalAmount / maxValue) * 80;
-                    
+
                     return (
                       <div key={month} className="flex flex-col items-center flex-1">
                         <div className="text-xs text-gray-600 mb-1">{month}</div>
-                        <div 
+                        <div
                           className="w-full bg-gradient-to-t from-blue-500 to-purple-500 rounded-t-sm transition-all duration-300 hover:from-blue-600 hover:to-purple-600"
                           style={{ height: `${heightPercentage || 5}%` }}
                         ></div>
@@ -686,7 +685,7 @@ const ParentFeePayments = () => {
                 const childPaid = childPayments.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
                 const childPercentage = childTotal > 0 ? Math.round((childPaid / childTotal) * 100) : 0;
                 const paidPayments = childPayments.filter(p => p.status === "Paid").length;
-                
+
                 return (
                   <div key={index} className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-3 xs:p-4 sm:p-5 hover:shadow-lg transition-all duration-300 group hover:border-blue-300">
                     <div className="flex items-start justify-between mb-3 xs:mb-4">
@@ -721,16 +720,15 @@ const ParentFeePayments = () => {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          childPercentage === 100 ? 'bg-emerald-100 text-emerald-700' :
-                          childPercentage >= 50 ? 'bg-amber-100 text-amber-700' :
-                          'bg-rose-100 text-rose-700'
-                        }`}>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${childPercentage === 100 ? 'bg-emerald-100 text-emerald-700' :
+                            childPercentage >= 50 ? 'bg-amber-100 text-amber-700' :
+                              'bg-rose-100 text-rose-700'
+                          }`}>
                           {childPercentage}%
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2 xs:space-y-3">
                       <div className="flex justify-between items-center text-xs xs:text-sm">
                         <span className="text-gray-600">Paid:</span>
@@ -741,7 +739,7 @@ const ParentFeePayments = () => {
                         <span className="font-semibold">₹{Math.round(childTotal)}</span>
                       </div>
                       <div className="w-full bg-gray-200/50 rounded-full h-1.5 xs:h-2 shadow-inner">
-                        <div 
+                        <div
                           className={`h-1.5 xs:h-2 rounded-full shadow-sm transition-all duration-500 ${getProgressColor(childPercentage)}`}
                           style={{ width: `${childPercentage}%` }}
                         ></div>
@@ -836,168 +834,168 @@ const ParentFeePayments = () => {
               </div>
             </div>
 
-          {filteredPayments.length === 0 ? (
-            <div className="text-center py-12 xs:py-16">
-              <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-3 xs:mb-4">
-                <CreditCard className="h-6 w-6 xs:h-8 xs:w-8 sm:h-10 sm:w-10 text-gray-400" />
+            {filteredPayments.length === 0 ? (
+              <div className="text-center py-12 xs:py-16">
+                <div className="w-16 h-16 xs:w-20 xs:h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-3 xs:mb-4">
+                  <CreditCard className="h-6 w-6 xs:h-8 xs:w-8 sm:h-10 sm:w-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg xs:text-xl font-semibold text-gray-900 mb-1 xs:mb-2">
+                  {feePayments.length === 0 ? "No Fee Payments Found" : "No Matching Payments"}
+                </h3>
+                <p className="text-gray-600 max-w-md mx-auto text-sm xs:text-base px-4">
+                  {feePayments.length === 0
+                    ? "Start by adding your first payment to track your children's fee payments."
+                    : "Try adjusting your search criteria or filters to find what you're looking for."
+                  }
+                </p>
+                {feePayments.length === 0 && (
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    className="mt-4 xs:mt-6 bg-blue-600 text-white px-4 xs:px-6 py-2 xs:py-3 rounded-lg xs:rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm xs:text-base"
+                  >
+                    Add First Payment
+                  </button>
+                )}
               </div>
-              <h3 className="text-lg xs:text-xl font-semibold text-gray-900 mb-1 xs:mb-2">
-                {feePayments.length === 0 ? "No Fee Payments Found" : "No Matching Payments"}
-              </h3>
-              <p className="text-gray-600 max-w-md mx-auto text-sm xs:text-base px-4">
-                {feePayments.length === 0 
-                  ? "Start by adding your first payment to track your children's fee payments."
-                  : "Try adjusting your search criteria or filters to find what you're looking for."
-                }
-              </p>
-              {feePayments.length === 0 && (
-                <button
-                  onClick={() => setShowPaymentModal(true)}
-                  className="mt-4 xs:mt-6 bg-blue-600 text-white px-4 xs:px-6 py-2 xs:py-3 rounded-lg xs:rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm xs:text-base"
-                >
-                  Add First Payment
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6 p-4 xs:p-5 sm:p-6">
-              {filteredPayments.map((payment, index) => (
-                <div
-                  key={payment.id || index}
-                  className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-blue-300"
-                  onClick={() => setExpandedPayment(expandedPayment === index ? null : index)}
-                >
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-3 xs:mb-4">
-                    <div className="flex items-center gap-2 xs:gap-3">
-                      <div className="transform group-hover:scale-110 transition-transform duration-300">
-                        {getStatusIcon(payment.status)}
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6 p-4 xs:p-5 sm:p-6">
+                {filteredPayments.map((payment, index) => (
+                  <div
+                    key={payment.id || index}
+                    className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-blue-300"
+                    onClick={() => setExpandedPayment(expandedPayment === index ? null : index)}
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3 xs:mb-4">
+                      <div className="flex items-center gap-2 xs:gap-3">
+                        <div className="transform group-hover:scale-110 transition-transform duration-300">
+                          {getStatusIcon(payment.status)}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900 text-sm xs:text-base group-hover:text-blue-900 transition-colors line-clamp-1">
+                            {payment.student_name}
+                          </h3>
+                          <span className={`px-2 xs:px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)} group-hover:shadow-sm transition-all duration-300`}>
+                            {payment.status}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 text-sm xs:text-base group-hover:text-blue-900 transition-colors line-clamp-1">
-                          {payment.student_name}
-                        </h3>
-                        <span className={`px-2 xs:px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(payment.status)} group-hover:shadow-sm transition-all duration-300`}>
-                          {payment.status}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedPayment(expandedPayment === index ? null : index);
-                      }}
-                      className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300"
-                    >
-                      {expandedPayment === index ? 
-                        <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> : 
-                        <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-blue-600" />
-                      }
-                    </button>
-                  </div>
-
-                  {/* Payment Details */}
-                  <div className="space-y-2 xs:space-y-3">
-                    <div className="flex items-center justify-between text-xs xs:text-sm">
-                      <span className="text-gray-600">Fee Type:</span>
-                      <span className="font-semibold text-blue-600">{payment.fee_type}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs xs:text-sm">
-                      <span className="text-gray-600">Amount Paid:</span>
-                      <span className="font-bold text-emerald-600">₹{payment.amount_paid}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs xs:text-sm">
-                      <span className="text-gray-600">Total Amount:</span>
-                      <span className="font-semibold">₹{payment.total_amount}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs xs:text-sm">
-                      <span className="text-gray-600">Remaining:</span>
-                      <span className="font-semibold text-amber-600">₹{payment.remaining_amount}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedPayment(expandedPayment === index ? null : index);
+                        }}
+                        className="p-1 xs:p-2 hover:bg-gray-50 rounded-lg transition-colors duration-300"
+                      >
+                        {expandedPayment === index ?
+                          <ChevronUp className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600" /> :
+                          <ChevronDown className="h-4 w-4 xs:h-5 xs:w-5 text-gray-600 group-hover:text-blue-600" />
+                        }
+                      </button>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs xs:text-sm">
-                      <span className="text-gray-600">Date:</span>
-                      <span>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : "N/A"}</span>
-                    </div>
-
-                    {payment.payment_method && (
+                    {/* Payment Details */}
+                    <div className="space-y-2 xs:space-y-3">
                       <div className="flex items-center justify-between text-xs xs:text-sm">
-                        <span className="text-gray-600">Method:</span>
-                        <span className="font-medium">{payment.payment_method}</span>
+                        <span className="text-gray-600">Fee Type:</span>
+                        <span className="font-semibold text-blue-600">{payment.fee_type}</span>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Enhanced Expanded Details */}
-                  {expandedPayment === index && (
-                    <div className="mt-4 xs:mt-5 border-t border-gray-200/60 pt-4 xs:pt-5 bg-gray-50/50 rounded-lg xs:rounded-xl p-3 xs:p-4">
-                      <div className="space-y-3 xs:space-y-4">
-                        <div>
-                          <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
-                            <Shield className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
-                            Payment Details
-                          </h4>
-                          <div className="space-y-2 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Student Email:</span>
-                              <span className="text-gray-900 font-medium truncate ml-2 max-w-[120px] xs:max-w-[150px]">{payment.student}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Payment Method:</span>
-                              <span className="text-gray-900 font-medium">{payment.payment_method || "N/A"}</span>
-                            </div>
-                            {payment.transaction_id && (
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Transaction ID:</span>
-                                <span className="text-gray-900 font-mono truncate ml-2 max-w-[100px] xs:max-w-[120px]">{payment.transaction_id}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
-                            <Zap className="h-3 w-3 xs:h-4 xs:w-4 text-amber-500" />
-                            Amount Breakdown
-                          </h4>
-                          <div className="space-y-2 bg-white rounded-lg xs:rounded-xl p-2 xs:p-3 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Total Amount:</span>
-                              <span className="font-bold">₹{payment.total_amount}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Amount Paid:</span>
-                              <span className="font-bold text-emerald-600">₹{payment.amount_paid}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Remaining:</span>
-                              <span className="font-bold text-amber-600">₹{payment.remaining_amount}</span>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="flex items-center justify-between text-xs xs:text-sm">
+                        <span className="text-gray-600">Amount Paid:</span>
+                        <span className="font-bold text-emerald-600">₹{payment.amount_paid}</span>
                       </div>
-                      
-                      {payment.remarks && (
-                        <div className="mt-3 xs:mt-4">
-                          <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
-                            <Star className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
-                            Remarks
-                          </h4>
-                          <p className="text-gray-700 bg-white p-2 xs:p-3 rounded-lg xs:rounded-xl border border-gray-200/60 text-xs leading-relaxed">
-                            {payment.remarks}
-                          </p>
+
+                      <div className="flex items-center justify-between text-xs xs:text-sm">
+                        <span className="text-gray-600">Total Amount:</span>
+                        <span className="font-semibold">₹{payment.total_amount}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs xs:text-sm">
+                        <span className="text-gray-600">Remaining:</span>
+                        <span className="font-semibold text-amber-600">₹{payment.remaining_amount}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs xs:text-sm">
+                        <span className="text-gray-600">Date:</span>
+                        <span>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : "N/A"}</span>
+                      </div>
+
+                      {payment.payment_method && (
+                        <div className="flex items-center justify-between text-xs xs:text-sm">
+                          <span className="text-gray-600">Method:</span>
+                          <span className="font-medium">{payment.payment_method}</span>
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+
+                    {/* Enhanced Expanded Details */}
+                    {expandedPayment === index && (
+                      <div className="mt-4 xs:mt-5 border-t border-gray-200/60 pt-4 xs:pt-5 bg-gray-50/50 rounded-lg xs:rounded-xl p-3 xs:p-4">
+                        <div className="space-y-3 xs:space-y-4">
+                          <div>
+                            <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                              <Shield className="h-3 w-3 xs:h-4 xs:w-4 text-blue-500" />
+                              Payment Details
+                            </h4>
+                            <div className="space-y-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Student Email:</span>
+                                <span className="text-gray-900 font-medium truncate ml-2 max-w-[120px] xs:max-w-[150px]">{payment.student}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Payment Method:</span>
+                                <span className="text-gray-900 font-medium">{payment.payment_method || "N/A"}</span>
+                              </div>
+                              {payment.transaction_id && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Transaction ID:</span>
+                                  <span className="text-gray-900 font-mono truncate ml-2 max-w-[100px] xs:max-w-[120px]">{payment.transaction_id}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                              <Zap className="h-3 w-3 xs:h-4 xs:w-4 text-amber-500" />
+                              Amount Breakdown
+                            </h4>
+                            <div className="space-y-2 bg-white rounded-lg xs:rounded-xl p-2 xs:p-3 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Total Amount:</span>
+                                <span className="font-bold">₹{payment.total_amount}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Amount Paid:</span>
+                                <span className="font-bold text-emerald-600">₹{payment.amount_paid}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Remaining:</span>
+                                <span className="font-bold text-amber-600">₹{payment.remaining_amount}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {payment.remarks && (
+                          <div className="mt-3 xs:mt-4">
+                            <h4 className="font-bold text-gray-900 text-xs xs:text-sm mb-2 flex items-center gap-1 xs:gap-2">
+                              <Star className="h-3 w-3 xs:h-4 xs:w-4 text-purple-500" />
+                              Remarks
+                            </h4>
+                            <p className="text-gray-700 bg-white p-2 xs:p-3 rounded-lg xs:rounded-xl border border-gray-200/60 text-xs leading-relaxed">
+                              {payment.remarks}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Enhanced Summary Footer - Only show for Overview view */}

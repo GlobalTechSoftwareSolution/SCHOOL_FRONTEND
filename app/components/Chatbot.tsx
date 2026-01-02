@@ -34,7 +34,7 @@ export default function Chatbot() {
       email: contactData.email,
       message: contactData.message
     }).toString();
-    
+
     window.location.href = `/contact?${queryParams}`;
   };
 
@@ -101,7 +101,7 @@ export default function Chatbot() {
     <div className="text-black">
       {/* Contact Buttons that appear when arrow is clicked */}
       {showContactButtons && <WhatsappButton />}
-      
+
       {/* Arrow Button to toggle contact buttons */}
       <motion.button
         whileHover={{ scale: 1.1 }}
@@ -119,7 +119,7 @@ export default function Chatbot() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
         </svg>
       </motion.button>
-      
+
       {/* Floating Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
@@ -160,7 +160,7 @@ export default function Chatbot() {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bottom-24 right-6 z-[9999] w-96 max-h-[85vh] bg-white shadow-2xl rounded-2xl flex flex-col border border-gray-200 overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 md:bottom-24 md:right-6 md:left-auto z-[9999] w-full md:w-96 h-[80vh] md:h-auto md:max-h-[85vh] bg-white shadow-2xl rounded-t-2xl rounded-b-none md:rounded-2xl flex flex-col border border-gray-200 overflow-hidden"
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 flex justify-between items-center">
@@ -169,38 +169,38 @@ export default function Chatbot() {
                 <span className="font-semibold">School ERP Assistant</span>
               </div>
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={clearChat}
                   className="hover:bg-white/20 p-1 rounded-full transition-colors"
                   title="Clear chat"
                 >
-                 <svg
-  xmlns="http://www.w3.org/2000/svg"
-  className="h-4 w-4"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2"
-  strokeLinecap="round"
-  strokeLinejoin="round"
->
-  {/* <!-- Bot Head --> */}
-  <rect x="3" y="8" width="18" height="12" rx="4" ry="4" />
-  
-  {/* <!-- Eyes --> */}
-  <circle cx="9" cy="13" r="1" />
-  <circle cx="15" cy="13" r="1" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {/* <!-- Bot Head --> */}
+                    <rect x="3" y="8" width="18" height="12" rx="4" ry="4" />
 
-  {/* <!-- Mouth --> */}
-  <path d="M9 17h6" />
+                    {/* <!-- Eyes --> */}
+                    <circle cx="9" cy="13" r="1" />
+                    <circle cx="15" cy="13" r="1" />
 
-  {/* <!-- Antenna --> */}
-  <path d="M12 2v4" />
-  <circle cx="12" cy="6" r="1" />
-</svg>
+                    {/* <!-- Mouth --> */}
+                    <path d="M9 17h6" />
+
+                    {/* <!-- Antenna --> */}
+                    <path d="M12 2v4" />
+                    <circle cx="12" cy="6" r="1" />
+                  </svg>
 
                 </button>
-                <button 
+                <button
                   onClick={() => setOpen(false)}
                   className="hover:bg-white/20 p-1 rounded-full transition-colors"
                 >
@@ -221,7 +221,7 @@ export default function Chatbot() {
                     transition={{ duration: 0.2 }}
                     className={`flex ${msg.user ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`max-w-[85%] flex flex-col ${msg.user ? '' : 'items-start'}`}>
+                    <div className={`max-w-[90%] md:max-w-[85%] flex flex-col ${msg.user ? '' : 'items-start'}`}>
                       <div className="flex items-start gap-2">
                         {!msg.user && (
                           <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
@@ -229,11 +229,10 @@ export default function Chatbot() {
                           </div>
                         )}
                         <div
-                          className={`p-3 rounded-2xl ${
-                            msg.user
-                              ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-tr-none"
-                              : "bg-white text-gray-800 border border-gray-200 rounded-tl-none shadow-sm"
-                          }`}
+                          className={`p-4 rounded-2xl text-sm md:text-base leading-relaxed break-words shadow-sm ${msg.user
+                            ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-tr-none"
+                            : "bg-white text-gray-800 border border-gray-200 rounded-tl-none shadow-sm"
+                            }`}
                         >
                           {msg.text}
                         </div>
@@ -259,7 +258,7 @@ export default function Chatbot() {
                 >
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="font-semibold text-gray-800">Contact Form</h3>
-                    <button 
+                    <button
                       onClick={() => setShowContactForm(false)}
                       className="text-gray-500 hover:text-gray-700"
                     >
@@ -273,7 +272,7 @@ export default function Chatbot() {
                         placeholder="Your Name"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={contactData.name}
-                        onChange={(e) => setContactData({...contactData, name: e.target.value})}
+                        onChange={(e) => setContactData({ ...contactData, name: e.target.value })}
                       />
                     </div>
                     <div>
@@ -282,7 +281,7 @@ export default function Chatbot() {
                         placeholder="Your Email"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={contactData.email}
-                        onChange={(e) => setContactData({...contactData, email: e.target.value})}
+                        onChange={(e) => setContactData({ ...contactData, email: e.target.value })}
                       />
                     </div>
                     <div>
@@ -291,7 +290,7 @@ export default function Chatbot() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         rows={3}
                         value={contactData.message}
-                        onChange={(e) => setContactData({...contactData, message: e.target.value})}
+                        onChange={(e) => setContactData({ ...contactData, message: e.target.value })}
                       />
                     </div>
                     <div className="flex gap-2">
@@ -308,7 +307,7 @@ export default function Chatbot() {
               )}
 
               {loading && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="flex items-center gap-2 text-gray-500"
@@ -340,11 +339,10 @@ export default function Chatbot() {
                   whileTap={{ scale: 0.9 }}
                   onClick={sendMessage}
                   disabled={showContactForm || loading || !input.trim()}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    input.trim() 
-                      ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:opacity-90" 
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  } transition-all duration-200`}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center ${input.trim()
+                    ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:opacity-90"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    } transition-all duration-200`}
                 >
                   <Send size={18} />
                 </motion.button>

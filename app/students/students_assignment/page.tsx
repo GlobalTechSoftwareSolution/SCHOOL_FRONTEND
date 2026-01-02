@@ -565,9 +565,11 @@ const StudentAssignmentsPage = () => {
   }, [loadData]);
 
   const handleSubmissionSuccess = useCallback(async () => {
-    await loadData();
-    setPopup({ message: "Assignment submitted successfully!", type: "success" });
-  }, [loadData]);
+    setPopup({ message: "Assignment submitted successfully! Reloading...", type: "success" });
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
+  }, []);
 
   const isSubmitted = useCallback((assignmentId: number) =>
     submitted.some((s) => s.assignment === assignmentId), [submitted]);

@@ -14,8 +14,6 @@ import {
 } from "lucide-react";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-// import Navbar from "../components/Navbar";
-// import Footer from "../components/Footer";
 
 const slides = [
   {
@@ -105,23 +103,32 @@ export default function SchoolFeaturesSlider() {
     dots: true,
     infinite: true,
     speed: 800,
-    slidesToShow: 3,
+    slidesToShow: 1,
     slidesToScroll: 1,
+    mobileFirst: true,
     autoplay: isPlaying,
     autoplaySpeed: 4000,
     pauseOnHover: true,
-    arrows: true,
-    nextArrow: <CustomArrow direction="next" />,
-    prevArrow: <CustomArrow direction="prev" />,
+    arrows: false,
+    nextArrow: <CustomArrow direction="next" className="hidden md:flex" />,
+    prevArrow: <CustomArrow direction="prev" className="hidden md:flex" />,
     responsive: [
       {
-        breakpoint: 1280,
-        settings: { slidesToShow: 2, slidesToScroll: 1 }
+        breakpoint: 768,
+        settings: {
+          slidesToShow: 2,
+          slidesToScroll: 1,
+          arrows: true
+        }
       },
       {
-        breakpoint: 768,
-        settings: { slidesToShow: 1, slidesToScroll: 1 }
-      },
+        breakpoint: 1280,
+        settings: {
+          slidesToShow: 3,
+          slidesToScroll: 1,
+          arrows: true
+        }
+      }
     ],
     appendDots: (dots: React.ReactNode) => (
       <div className="absolute -bottom-10">
@@ -145,31 +152,31 @@ export default function SchoolFeaturesSlider() {
   return (
     <>
       {/* <Navbar /> */}
-      <section className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-20 px-4 sm:px-6 lg:px-0 overflow-hidden">
+      <section className="relative min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-12 md:py-20 px-4 sm:px-6 lg:px-0 overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
           <div className="absolute -bottom-0 -left-40 w-80 h-80 bg-purple-200 rounded-full blur-3xl opacity-30"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header Section */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            className="text-center mb-10 md:mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-lg mb-6 border border-gray-100">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-white rounded-full shadow-lg mb-4 md:mb-6 border border-gray-100">
               <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-semibold text-gray-700">FEATURES SHOWCASE</span>
+              <span className="text-xs md:text-sm font-semibold text-gray-700">FEATURES SHOWCASE</span>
             </div>
-            
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
+
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4 md:mb-6 leading-tight">
               Comprehensive School Management
             </h1>
-            
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
+
+            <p className="text-base md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-6 md:mb-8 px-2">
               Discover our powerful suite of tools designed to streamline every aspect of educational institution management.
             </p>
 
@@ -198,7 +205,7 @@ export default function SchoolFeaturesSlider() {
                   </>
                 )}
               </motion.button>
-              
+
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Zap className="w-4 h-4 text-yellow-500" />
                 <span>Interactive Carousel</span>
@@ -215,13 +222,13 @@ export default function SchoolFeaturesSlider() {
           >
             <Slider ref={sliderRef} {...settings}>
               {slides.map((slide, index) => (
-                <div key={index} className="px-3 pb-12">
+                <div key={index} className="px-2 md:px-3 pb-8 md:pb-12 h-full">
                   <motion.div
                     whileHover={{ y: -8, scale: 1.02 }}
-                    className="group relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100"
+                    className="group relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 flex flex-col h-full"
                   >
                     {/* Image Section */}
-                    <div className="relative w-full h-48 overflow-hidden">
+                    <div className="relative w-full h-40 md:h-48 overflow-hidden flex-shrink-0">
                       <Image
                         src={slide.image}
                         alt={slide.title}
@@ -229,11 +236,11 @@ export default function SchoolFeaturesSlider() {
                         className="object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                       <div className={`absolute inset-0 bg-gradient-to-t ${slide.color} opacity-20`} />
-                      
+
                       {/* Stats Badge */}
                       <div className="absolute top-4 right-4">
-                        <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 shadow-lg">
-                          <span className="text-xs font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        <div className="bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 md:px-3 shadow-lg">
+                          <span className="text-[10px] md:text-xs font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                             {slide.stats}
                           </span>
                         </div>
@@ -241,21 +248,21 @@ export default function SchoolFeaturesSlider() {
                     </div>
 
                     {/* Content Section */}
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-3 leading-tight">
+                    <div className="p-5 md:p-6 flex flex-col flex-grow">
+                      <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2 md:mb-3 leading-tight">
                         {slide.title}
                       </h3>
-                      
-                      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+
+                      <p className="text-gray-600 text-xs md:text-sm leading-relaxed mb-4 flex-grow">
                         {slide.description}
                       </p>
 
                       {/* Features List */}
-                      <div className="space-y-2 mb-6">
+                      <div className="space-y-2 mt-auto">
                         {slide.features.map((feature, featureIndex) => (
                           <div key={featureIndex} className="flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                            <span className="text-xs text-gray-600 font-medium">{feature}</span>
+                            <CheckCircle className="w-3 h-3 md:w-4 md:h-4 text-green-500 flex-shrink-0" />
+                            <span className="text-[10px] md:text-xs text-gray-600 font-medium">{feature}</span>
                           </div>
                         ))}
                       </div>

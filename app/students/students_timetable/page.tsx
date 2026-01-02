@@ -129,7 +129,7 @@ const Student_Timetable = () => {
   useEffect(() => {
     const fetchTimetable = async () => {
       if (!student?.class_id) return;
-      
+
       try {
         const res = await axios.get(TIMETABLE_API);
         const data = res.data || [];
@@ -207,15 +207,15 @@ const Student_Timetable = () => {
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
     const today = now.toLocaleDateString('en-US', { weekday: 'long' });
-    
+
     return timetable.find(item => {
       if (item.day_of_week !== today) return false;
-      
+
       const [startHours, startMinutes] = item.start_time.split(':').map(Number);
       const [endHours, endMinutes] = item.end_time.split(':').map(Number);
       const startTime = startHours * 60 + startMinutes;
       const endTime = endHours * 60 + endMinutes;
-      
+
       return currentTime >= startTime && currentTime <= endTime;
     });
   };
@@ -262,7 +262,7 @@ const Student_Timetable = () => {
       <DashboardLayout role="students">
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
           <div className="text-center">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-400 border-t-transparent rounded-full mx-auto mb-3 sm:mb-4" style={{animation: 'spin 1s linear infinite'}}></div>
+            <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-400 border-t-transparent rounded-full mx-auto mb-3 sm:mb-4" style={{ animation: 'spin 1s linear infinite' }}></div>
             <p className="text-gray-600 text-sm sm:text-lg">
               Loading your timetable...
             </p>
@@ -296,14 +296,14 @@ const Student_Timetable = () => {
     <DashboardLayout role="students">
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
-          
+
           {/* Header Section */}
           <div className="text-center mb-8 sm:mb-12">
             <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
               {classInfo && (
                 <div className="space-y-2 sm:space-y-3">
                   <p className="text-lg sm:text-xl lg:text-2xl text-gray-700 font-medium">
-                    {classInfo.class_name} • {classInfo.sec} Section 
+                    {classInfo.class_name} • {classInfo.sec} Section
                   </p>
                   {classInfo.class_teacher_name && (
                     <p className="text-blue-600 font-semibold text-sm sm:text-base">
@@ -338,11 +338,10 @@ const Student_Timetable = () => {
                 <button
                   key={tab.id}
                   onClick={() => setViewMode(tab.id as ViewMode)}
-                  className={`flex-1 min-w-0 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 font-semibold text-xs sm:text-sm ${
-                    viewMode === tab.id
-                      ? 'text-white bg-blue-500'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                  className={`flex-1 min-w-0 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 font-semibold text-xs sm:text-sm ${viewMode === tab.id
+                    ? 'text-white bg-blue-500'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
                 >
                   <span className="hidden sm:inline">{tab.label}</span>
                   <span className="sm:hidden text-base">{tab.icon}</span>
@@ -352,89 +351,89 @@ const Student_Timetable = () => {
           </div>
 
           <div>
-              {/* Calendar View */}
-              {viewMode === "calendar" && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-                  {/* Calendar */}
-                  <div className="lg:col-span-2 bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 lg:p-8">
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                      <span className="text-2xl sm:text-3xl">📅</span>
-                      Academic Calendar
-                    </h2>
-                    <div className="flex justify-center">
-                      <Calendar
-                        onClickDay={handleDateClick}
-                        value={selectedDate}
-                        className="rounded-lg border-0 w-full max-w-[280px] sm:max-w-[320px] md:max-w-[400px] lg:max-w-full react-calendar-advanced shadow-inner bg-white"
-                      />
-                    </div>
+            {/* Calendar View */}
+            {viewMode === "calendar" && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                {/* Calendar */}
+                <div className="lg:col-span-2 bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 lg:p-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+                    <span className="text-2xl sm:text-3xl">📅</span>
+                    Academic Calendar
+                  </h2>
+                  <div className="flex justify-center">
+                    <Calendar
+                      onClickDay={handleDateClick}
+                      value={selectedDate}
+                      className="rounded-lg border-0 w-full max-w-[280px] sm:max-w-[320px] md:max-w-[400px] lg:max-w-full react-calendar-advanced shadow-inner bg-white"
+                    />
                   </div>
+                </div>
 
-                  {/* Side Panel */}
-                  <div className="space-y-4 sm:space-y-6">
-                    {/* Selected Date Details */}
-                    <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">
-                        {selectedDate.toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </h3>
+                {/* Side Panel */}
+                <div className="space-y-4 sm:space-y-6">
+                  {/* Selected Date Details */}
+                  <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">
+                      {selectedDate.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </h3>
 
-                      {/* Classes */}
-                      <div className="mb-3 sm:mb-4">
-                        <h4 className="font-semibold text-gray-700 mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
-                          📚 Schedule
-                        </h4>
-                        {filteredTimetable.length > 0 ? (
-                          <div className="space-y-2 sm:space-y-3">
-                            {filteredTimetable.map((item: Timetable, index: number) => (
-                              <ClassCard key={item.id} classItem={item} index={index} />
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500 text-xs sm:text-sm text-center py-3 sm:py-4">
-                            No classes scheduled for this date
-                          </p>
-                        )}
-                      </div>
+                    {/* Classes */}
+                    <div className="mb-3 sm:mb-4">
+                      <h4 className="font-semibold text-gray-700 mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
+                        📚 Schedule
+                      </h4>
+                      {filteredTimetable.length > 0 ? (
+                        <div className="space-y-2 sm:space-y-3">
+                          {filteredTimetable.map((item: Timetable, index: number) => (
+                            <ClassCard key={item.id} classItem={item} index={index} />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-xs sm:text-sm text-center py-3 sm:py-4">
+                          No classes scheduled for this date
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Visual Timetable View */}
-              {viewMode === "timetable" && (
-                <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 lg:p-8">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2 sm:gap-3">
-                      <span className="text-2xl sm:text-3xl">🕐</span>
-                      Weekly Schedule
-                    </h2>
-                    <div className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-3 sm:px-4 py-1 sm:py-2 rounded-full">
-                      {timetable.length} classes scheduled
-                    </div>
+            {/* Visual Timetable View */}
+            {viewMode === "timetable" && (
+              <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2 sm:gap-3">
+                    <span className="text-2xl sm:text-3xl">🕐</span>
+                    Weekly Schedule
+                  </h2>
+                  <div className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-3 sm:px-4 py-1 sm:py-2 rounded-full">
+                    {timetable.length} classes scheduled
                   </div>
-
-                  {Object.keys(timetableByDay).length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-                      {Object.entries(timetableByDay).map(([day, classes]: [string, Timetable[]]) => (
-                        <DayScheduleCard key={day} day={day} classes={classes} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 sm:py-12 lg:py-16">
-                      <div className="text-4xl mb-4">📚</div>
-                      <h3 className="text-lg sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">No Schedule Available</h3>
-                      <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">
-                        Your class schedule is being prepared. Check back soon.
-                      </p>
-                    </div>
-                  )}
                 </div>
-              )}
+
+                {Object.keys(timetableByDay).length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                    {Object.entries(timetableByDay).map(([day, classes]: [string, Timetable[]]) => (
+                      <DayScheduleCard key={day} day={day} classes={classes} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 sm:py-12 lg:py-16">
+                    <div className="text-4xl mb-4">📚</div>
+                    <h3 className="text-lg sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">No Schedule Available</h3>
+                    <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">
+                      Your class schedule is being prepared. Check back soon.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

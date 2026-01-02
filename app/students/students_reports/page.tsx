@@ -117,11 +117,11 @@ const StudentReportsPage = () => {
   // Filter and search logic
   const filteredReports = reports.filter((report) => {
     const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filterType === "all" || 
-                       report.report_type?.toLowerCase() === filterType.toLowerCase();
-    
+      report.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesType = filterType === "all" ||
+      report.report_type?.toLowerCase() === filterType.toLowerCase();
+
     return matchesSearch && matchesType;
   });
 
@@ -148,7 +148,7 @@ const StudentReportsPage = () => {
             <div className="text-red-500 text-4xl mb-4">⚠️</div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Error Loading Reports</h2>
             <p className="text-gray-600 mb-4">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -193,7 +193,7 @@ const StudentReportsPage = () => {
                 <div className="text-blue-500 text-2xl">📊</div>
               </div>
             </div>
-            
+
             <div className="bg-white p-6 rounded-2xl shadow border-l-4 border-green-500">
               <div className="flex items-center justify-between">
                 <div>
@@ -203,15 +203,15 @@ const StudentReportsPage = () => {
                       const reportDate = new Date(report.created_at);
                       const currentMonth = new Date().getMonth();
                       const currentYear = new Date().getFullYear();
-                      return reportDate.getMonth() === currentMonth && 
-                             reportDate.getFullYear() === currentYear;
+                      return reportDate.getMonth() === currentMonth &&
+                        reportDate.getFullYear() === currentYear;
                     }).length}
                   </p>
                 </div>
                 <div className="text-green-500 text-2xl">📅</div>
               </div>
             </div>
-            
+
             <div className="bg-white p-6 rounded-2xl shadow border-l-4 border-purple-500">
               <div className="flex items-center justify-between">
                 <div>
@@ -278,7 +278,7 @@ const StudentReportsPage = () => {
                 {reports.length === 0 ? "No Reports Found" : "No Matching Reports"}
               </h3>
               <p className="text-gray-600 mb-6">
-                {reports.length === 0 
+                {reports.length === 0
                   ? "You don't have any reports yet. They will appear here once your teachers create them."
                   : "Try adjusting your search or filter criteria."
                 }
@@ -309,15 +309,14 @@ const StudentReportsPage = () => {
                         {report.title}
                       </h2>
                       <div className="inline-block mt-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          report.report_type === 'progress' 
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${report.report_type === 'progress'
                             ? 'bg-green-100 text-green-800'
                             : report.report_type === 'behavior'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : report.report_type === 'academic'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : report.report_type === 'academic'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }`}>
                           {report.report_type || "General"}
                         </span>
                       </div>

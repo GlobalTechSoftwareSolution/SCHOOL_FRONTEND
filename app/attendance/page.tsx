@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -12,6 +13,10 @@ import {
 } from "@zxing/library";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import axios from 'axios';
+
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
+
 
 interface BackendResponse {
   status: 'success' | 'fail' | 'error';
@@ -67,14 +72,14 @@ const AttendanceSystem = () => {
 
       const optionsHighAccuracy = {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+        timeout: 20000,
+        maximumAge: 60000 // Accept cached location up to 1 minute old
       };
 
       const optionsLowAccuracy = {
         enableHighAccuracy: false,
-        timeout: 15000,
-        maximumAge: 0
+        timeout: 30000,
+        maximumAge: 60000 // Accept cached location up to 1 minute old
       };
 
       // First try high accuracy
@@ -126,8 +131,35 @@ const AttendanceSystem = () => {
         setCurrentLocation(loc);
       })
       .catch(() => {
-        setMessage('Location services unavailable. Some features may be limited.');
-      })
+        console.warn('Location retrieval failed, defaulting to (0,0)');
+        setCurrentLocation({ latitude: 0, longitude: 0 });
+      });
+
+    // Check for logged-in user email
+    const storedEmail = localStorage.getItem('userEmail');
+    if (storedEmail) {
+      setLastUserEmail(storedEmail);
+    }
+
+    // Restore attendance state (check-in status) for today
+    try {
+      const savedState = localStorage.getItem('attendanceState');
+      if (savedState) {
+        const { date, checkedIn, email } = JSON.parse(savedState);
+        const today = new Date().toDateString();
+
+        // Only restore if it's the same day and same user
+        if (date === today && (!storedEmail || email === storedEmail)) {
+          setUserCheckedIn(checkedIn);
+          console.log(`Restored attendance state: ${checkedIn ? 'Checked In' : 'Checked Out'}`);
+        } else {
+          // New day or different user, reset
+          localStorage.removeItem('attendanceState');
+        }
+      }
+    } catch (e) {
+      console.error('Error restoring attendance state', e);
+    }
 
     return () => {
       // cleanup
@@ -159,8 +191,18 @@ const AttendanceSystem = () => {
       setCheckinTime(null);
       setCheckoutTime(null);
 
-      const location = await getCurrentLocation();
-      setCurrentLocation(location);
+      let location;
+      try {
+        location = await getCurrentLocation();
+        setCurrentLocation(location);
+      } catch (error) {
+        if (currentLocation) {
+          console.warn('Location refresh failed, using cached location:', error);
+          location = currentLocation;
+        } else {
+          throw error;
+        }
+      }
 
       // Start webcam automatically via Webcam component; just set mode and active
       setAttendanceMode('face');
@@ -185,8 +227,18 @@ const AttendanceSystem = () => {
       setCheckinTime(null);
       setCheckoutTime(null);
 
-      const location = await getCurrentLocation();
-      setCurrentLocation(location);
+      let location;
+      try {
+        location = await getCurrentLocation();
+        setCurrentLocation(location);
+      } catch (error) {
+        if (currentLocation) {
+          console.warn('Location refresh failed, using cached location:', error);
+          location = currentLocation;
+        } else {
+          throw error;
+        }
+      }
 
       setAttendanceMode('barcode');
       setBarcodeScanMode('upload'); // Default to upload, but user can switch
@@ -268,9 +320,10 @@ const AttendanceSystem = () => {
                 loc = await getCurrentLocation();
                 setCurrentLocation(loc);
               } catch {
-                setMessage('Location required to mark attendance');
-                setIsLoading(false);
-                return;
+                // Fallback to 0,0
+                console.warn('Location failed during upload, using fallback');
+                loc = { latitude: 0, longitude: 0 };
+                setCurrentLocation(loc);
               }
             }
             await markAttendanceWithBarcode(decodedText, loc!);
@@ -292,9 +345,10 @@ const AttendanceSystem = () => {
                 loc = await getCurrentLocation();
                 setCurrentLocation(loc);
               } catch {
-                setMessage('Location required to mark attendance');
-                setIsLoading(false);
-                return;
+                // Fallback to 0,0
+                console.warn('Location failed during upload, using fallback');
+                loc = { latitude: 0, longitude: 0 };
+                setCurrentLocation(loc);
               }
             }
             await markAttendanceWithBarcode(strong, loc!);
@@ -335,73 +389,81 @@ const AttendanceSystem = () => {
 
   // Format time for display
   const formatTime = useCallback((timeString: string | null) => {
-    if (!timeString) return 'Not recorded';
+    if (!timeString || timeString === 'null' || timeString === 'undefined') return 'Not recorded';
 
     try {
-      // Assuming timeString is in ISO format
+      // Handle HH:mm:ss or HH:mm format (e.g., "13:35:52")
+      if (typeof timeString === 'string' && timeString.includes(':') && !timeString.includes('T') && !timeString.includes('-')) {
+        const parts = timeString.split(':');
+        let hours = parseInt(parts[0]);
+        const minutes = parts[1];
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        return `${hours}:${minutes} ${ampm}`;
+      }
+
       const date = new Date(timeString);
+      if (isNaN(date.getTime())) return timeString; // Fallback
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch {
       return timeString;
     }
   }, []);
 
-  // Handle backend response shape (your backend returns status/message/user/role)
-  const handleBackendResult = useCallback((result: BackendResponse) => {
+  // Handle backend response shape
+  const handleBackendResult = useCallback((result: BackendResponse | any) => {
     if (!result) {
       setMessage('No response from server');
       return;
     }
 
-    if (result.status === 'success') {
-      const name = result.user || result.email || 'User';
-      const email = result.email || '';
-      const role = result.role || 'N/A';
-      const checkin = result.checkin_time || null;
-      const checkout = result.checkout_time || null;
+    // Check for success: either a status field or presence of standard attendance fields
+    const isSuccess = result.status === 'success' ||
+      result.id ||
+      result.user_email ||
+      result.check_in ||
+      result.status === 'Present';
 
-      // This logic determines what action we JUST performed based on our previous state
-      let actionPerformed = 'checkin';
-      if (email && lastUserEmail === email && userCheckedIn) {
-        actionPerformed = 'checkout';
-      }
+    if (isSuccess) {
+      // The backend 'mark' endpoint returns the serialized Attendance object
+      // Based on Postman response: { id, user_email, user_name, check_in, check_out, status, role }
+      const name = result.user_name || result.user_full_name || result.fullname || result.user?.fullname || result.user?.email || result.user_email || 'User';
+      const email = result.user_email || (typeof result.user === 'object' ? result.user.email : result.email) || '';
+      const role = result.role || result.user_role || (typeof result.user === 'object' ? result.user.role : result.role) || 'N/A';
+      const checkin = result.check_in || result.checkin_time || null;
+      const checkout = result.check_out || result.checkout_time || null;
+
+      // Determine action performed based on response fields
+      const isCheckoutAction = (checkout && checkout !== 'null' && checkout !== 'Not recorded');
+      const actionPerformed = isCheckoutAction ? 'checkout' : 'checkin';
 
       setUserName(name);
       setUserRole(role);
       setCheckinTime(checkin);
       setCheckoutTime(checkout);
 
-      // Update local tracking state for next time
-      // This logic prepares us for the NEXT action
+      // Update local tracking state for next scan
       if (email) {
-        if (lastUserEmail === email) {
-          // Same user, toggle state for next action
-          // If they were checked in, next action should be checkout
-          // If they were checked out, next action should be checkin
-          setUserCheckedIn(!userCheckedIn);
-        } else {
-          // New user, set initial state
-          setLastUserEmail(email);
-          setUserCheckedIn(true); // Next action should be checkout
-        }
+        setLastUserEmail(email);
+        const nextScanShouldBeCheckout = !isCheckoutAction;
+        setUserCheckedIn(nextScanShouldBeCheckout);
+
+        // Persist state to localStorage so it survives reloads
+        localStorage.setItem('attendanceState', JSON.stringify({
+          date: new Date().toDateString(),
+          checkedIn: nextScanShouldBeCheckout,
+          email: email
+        }));
       }
 
       // Customize message based on what action was performed
       if (actionPerformed === 'checkin') {
-        if (checkin) {
-          setMessage(`✅ Check-in marked for ${name} (${role}) at ${formatTime(checkin)}`);
-        } else {
-          setMessage(`✅ Check-in marked for ${name} (${role})`);
-        }
+        setMessage(`✅ Check-in marked for ${name} (${role}) at ${formatTime(checkin)}`);
       } else {
-        if (checkout) {
-          setMessage(`✅ Check-out marked for ${name} (${role}) at ${formatTime(checkout)}`);
-        } else {
-          setMessage(`✅ Check-out marked for ${name} (${role})`);
-        }
+        setMessage(`✅ Check-out marked for ${name} (${role}) at ${formatTime(checkout)}`);
       }
 
-      // keep displayed for 3 seconds then reset
+      // keep displayed for 5 seconds then reset
       setTimeout(() => {
         setMessage('');
         setUserName('');
@@ -409,13 +471,27 @@ const AttendanceSystem = () => {
         setScannedEmail(null);
         setCheckinTime(null);
         setCheckoutTime(null);
-      }, 3000);
+      }, 5000);
     } else {
-      // for 'fail' or 'error'
-      const emsg = result.message || result.error || 'Attendance failed';
+      // Handle error cases
+      let emsg = result.message || result.error;
+
+      if (!emsg) {
+        const fieldErrors = Object.entries(result)
+          .filter(([_, v]) => Array.isArray(v))
+          .map(([k, v]) => `${k}: ${(v as any[]).join(', ')}`)
+          .join('; ');
+
+        emsg = fieldErrors || (Object.keys(result).length > 0 ? JSON.stringify(result) : 'Attendance failed');
+      }
+
+      if (emsg === 'User not found') {
+        emsg = 'Face or barcode not recognized. Please try again.';
+      }
+
       setMessage(`❌ ${emsg}`);
     }
-  }, [lastUserEmail, userCheckedIn, formatTime]);
+  }, [formatTime]);
 
   // Mark attendance with face (send 'image' field)
   const markAttendanceWithFace = useCallback(async (imageData: string, location: { latitude: number; longitude: number }) => {
@@ -427,61 +503,51 @@ const AttendanceSystem = () => {
 
       const formData = new FormData();
       const blob = dataURLtoBlob(imageData);
-      // backend checks request.FILES.get('image') or request.FILES.get('file')
+
+      // ✅ EXACTLY MATCH POSTMAN + TOGGLE LOGIC
       formData.append('image', blob, 'face.jpg');
-      // latitude and longitude expected
+
+      const emailToUse = lastUserEmail || scannedEmail || localStorage.getItem('userEmail');
+      if (emailToUse) {
+        formData.append('user_email', emailToUse);
+
+        // If user is already checked in, send current time for checkout
+        if (lastUserEmail === emailToUse && userCheckedIn) {
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString('en-GB', { hour12: false }); // HH:mm:ss
+          formData.append('check_out', timeStr);
+        }
+      }
+
+      formData.append('method', 'face');
       formData.append('latitude', location.latitude.toString());
       formData.append('longitude', location.longitude.toString());
-      // Add flag to indicate this is a face scan
-      formData.append('method', 'face');
-      // Add timestamp to help backend distinguish requests
-      formData.append('timestamp', new Date().toISOString());
-      // Add action type to help backend understand intent
-      formData.append('action', 'attendance');
 
-      // Add explicit check-in/check-out indicator based on local state
-      if (lastUserEmail && userCheckedIn) {
-        formData.append('attendance_action', 'checkout');
-        // For checkout, also send the current time
-        formData.append('check_out_time', new Date().toISOString());
-      } else {
-        formData.append('attendance_action', 'checkin');
-        // For checkin, also send the current time
-        formData.append('check_in_time', new Date().toISOString());
-      }
-
-      // Also send the last user email to help backend identify the user
-      // For first-time users, we'll need to get the email from the face recognition response
-      if (lastUserEmail) {
-        formData.append('user_email', lastUserEmail);
-      }
-
-      // Use the correct endpoint for marking attendance - the attendance/mark endpoint
-      const response = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/attendance/mark/', {
-        method: 'POST',
-        body: formData
+      const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
+      const response = await axios.post(`${API_BASE}/attendance/mark/`, formData, {
+        headers: {
+          'Accept': 'application/json',
+        }
       });
 
-      let result: BackendResponse | null = null;
-      try {
-        const jsonData = await response.json();
-        result = jsonData as BackendResponse;
-      } catch {
-        setMessage('Server returned non-JSON response');
-        return;
+      console.log('Attendance Success:', response.data);
+      if (response.data) {
+        handleBackendResult(response.data);
       }
 
-      if (result) {
-        handleBackendResult(result);
+    } catch (error: any) {
+      console.error('Attendance Error:', error);
+      let errorMsg = 'Face not recognized or invalid request';
+      if (axios.isAxiosError(error) && error.response) {
+        const data = error.response.data;
+        errorMsg = data.message || data.error || JSON.stringify(data);
       }
-    } catch {
-      setMessage('Error connecting to server');
+      setMessage(`❌ ${errorMsg}`);
     } finally {
       setIsLoading(false);
-      // stop camera after attempt
       stopCamera();
     }
-  }, [lastUserEmail, userCheckedIn, stopCamera, handleBackendResult]);
+  }, [lastUserEmail, userCheckedIn, scannedEmail, handleBackendResult, stopCamera]);
 
   // Capture image for face recognition
   const captureAndDetectFace = useCallback(async () => {
@@ -553,7 +619,7 @@ const AttendanceSystem = () => {
     return new Blob([u8arr], { type: mime });
   };
 
-  // Mark attendance with barcode (send 'barcode' field — backend treats barcode as email)
+  // Mark attendance with barcode (send 'user_email' field)
   const markAttendanceWithBarcode = useCallback(async (barcodeData: string, location: { latitude: number; longitude: number }) => {
     try {
       setIsLoading(true);
@@ -561,58 +627,39 @@ const AttendanceSystem = () => {
       setUserName('');
       setUserRole('');
 
+      // The backend 'mark' action expects 'user_email'
       const formData = new FormData();
-      // backend expects 'barcode' (we send the scanned email as barcode)
-      formData.append('barcode', barcodeData);
+      formData.append('user_email', barcodeData);
+      formData.append('method', 'barcode');
       formData.append('latitude', location.latitude.toString());
       formData.append('longitude', location.longitude.toString());
-      // Add flag to indicate this is a barcode scan
-      formData.append('method', 'barcode');
-      // Add timestamp to help backend distinguish requests
-      formData.append('timestamp', new Date().toISOString());
-      // Add action type to help backend understand intent
-      formData.append('action', 'attendance');
 
-      // Add explicit check-in/check-out indicator based on local state
-      if (lastUserEmail && userCheckedIn) {
-        formData.append('attendance_action', 'checkout');
-        // For checkout, also send the current time
-        formData.append('check_out_time', new Date().toISOString());
-      } else {
-        formData.append('attendance_action', 'checkin');
-        // For checkin, also send the current time
-        formData.append('check_in_time', new Date().toISOString());
+      // Add explicit check-out indicator based on local state
+      if (lastUserEmail === barcodeData && userCheckedIn) {
+        // Current time in HH:mm:ss format
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-GB', { hour12: false }); // HH:mm:ss
+        formData.append('check_out', timeStr);
       }
 
-      // Also send the last user email to help backend identify the user
-      // For barcode scans, the barcodeData is the email
-      if (lastUserEmail) {
-        formData.append('user_email', lastUserEmail);
-      } else {
-        // For first-time barcode scans, use the barcode data as the email
-        formData.append('user_email', barcodeData);
-      }
-
-      // Use the correct endpoint for marking attendance - the attendance/mark endpoint
-      const response = await fetch('https://school.globaltechsoftwaresolutions.cloud/api/attendance/mark/', {
-        method: 'POST',
-        body: formData
+      const response = await axios.post(`${API_BASE}/attendance/mark/`, formData, {
+        headers: {
+          'Accept': 'application/json',
+          // Omit Content-Type for FormData
+        }
       });
 
-      let result: BackendResponse | null = null;
-      try {
-        const jsonData = await response.json();
-        result = jsonData as BackendResponse;
-      } catch {
-        setMessage('Server returned non-JSON response');
-        return;
+      if (response.data) {
+        handleBackendResult(response.data);
       }
-
-      if (result) {
-        handleBackendResult(result);
+    } catch (error: any) {
+      console.error("Barcode Attendance Error:", error);
+      let errorMsg = 'Error connecting to server';
+      if (axios.isAxiosError(error) && error.response) {
+        const data = error.response.data;
+        errorMsg = data.message || data.error || JSON.stringify(data);
       }
-    } catch {
-      setMessage('Error connecting to server');
+      setMessage(`❌ ${errorMsg}`);
     } finally {
       setIsLoading(false);
       stopCamera();
@@ -655,9 +702,9 @@ const AttendanceSystem = () => {
               loc = await getCurrentLocation();
               setCurrentLocation(loc);
             } catch {
-              setMessage('Location required to mark attendance');
-              setIsLoading(false);
-              return;
+              // Fallback
+              loc = { latitude: 0, longitude: 0 };
+              setCurrentLocation(loc);
             }
           }
           await markAttendanceWithBarcode(text, loc!);
@@ -689,12 +736,22 @@ const AttendanceSystem = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-10">School Attendance</h1>
             <p className="text-gray-600">Mark your attendance using face recognition or barcode scan</p>
 
+            {/* Manual Email Override */}
+            <div className="mt-4 flex justify-center">
+              <input
+                type="email"
+                placeholder="Enter your email (teacher10@school.com)"
+                value={lastUserEmail || ''}
+                onChange={(e) => setLastUserEmail(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-center text-sm w-full max-w-xs focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
             {currentLocation ? (
               <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm">
                 <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                 </svg>
-                Location Ready
+                Location Ready ({currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)})
               </div>
             ) : (
               <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm">
@@ -1000,3 +1057,4 @@ const AttendanceSystem = () => {
 };
 
 export default AttendanceSystem;
+

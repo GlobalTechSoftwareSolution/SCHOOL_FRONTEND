@@ -1238,6 +1238,26 @@ export default function CreateExamPage() {
       { question: "", option_1: "", option_2: "", option_3: "", option_4: "", correct_option: 1 },
     ]);
   };
+
+  const insertQuestion = (index: number) => {
+    const newQuestions = [...questions];
+    newQuestions.splice(index + 1, 0, {
+      question: "",
+      option_1: "",
+      option_2: "",
+      option_3: "",
+      option_4: "",
+      correct_option: 1,
+    });
+    setQuestions(newQuestions);
+  };
+
+  const scrollToForm = () => {
+    const element = document.getElementById("exam-creation-form");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
   const removeQuestion = (index: number) => {
     if (questions.length > 1) {
       setQuestions(questions.filter((_, i) => i !== index));
@@ -1271,6 +1291,13 @@ export default function CreateExamPage() {
                   <RefreshCw className="w-4 h-4 mr-1 sm:mr-2" />
                   <span className="hidden xs:inline">Refresh</span>
                 </button>
+                <button
+                  onClick={scrollToForm}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  <PlusCircle className="w-5 h-5 mr-2" />
+                  <span className="font-semibold">Create New Exam</span>
+                </button>
                 <div className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg">
                   <BookOpen className="w-5 h-5 mr-2" />
                   <span className="font-medium">{onlineTests.length} Exams</span>
@@ -1303,7 +1330,7 @@ export default function CreateExamPage() {
           {!isLoading && !error && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Create Exam Form */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2" id="exam-creation-form">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center mb-4 sm:mb-6">
                     <div className="p-2 bg-blue-100 rounded-lg">
@@ -1461,6 +1488,16 @@ export default function CreateExamPage() {
                                   ))}
                                 </div>
                               </div>
+                            </div>
+
+                            <div className="mt-4 pt-4 border-t border-dashed border-gray-200 flex justify-center">
+                              <button
+                                onClick={() => insertQuestion(i)}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100"
+                              >
+                                <PlusCircle className="h-4 w-4" />
+                                Add Question Below
+                              </button>
                             </div>
                           </div>
                         ))}

@@ -19,7 +19,7 @@ import {
 } from "react-icons/fi";
 import DashboardLayout from "@/app/components/DashboardLayout";
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/issues/`;
+const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/issues/`;
 
 interface Issue {
   id: number;
@@ -65,30 +65,30 @@ const Issues_Page = () => {
   const fetchIssues = async () => {
     try {
       setLoading(true);
-      
+
       // Get user email from localStorage
-      const userEmail = localStorage.getItem("email") || 
-                       JSON.parse(localStorage.getItem("userData") || "{}")?.email ||
-                       JSON.parse(localStorage.getItem("userInfo") || "{}")?.email;
-      
-      
+      const userEmail = localStorage.getItem("email") ||
+        JSON.parse(localStorage.getItem("userData") || "{}")?.email ||
+        JSON.parse(localStorage.getItem("userInfo") || "{}")?.email;
+
+
       if (!userEmail) {
         console.error("No user email found in localStorage");
         setLoading(false);
         return;
       }
-      
+
       // Fetch all issues
       const res = await axios.get(API_URL);
-      
-      
+
+
       // Check if we got data
       if (!res.data || !Array.isArray(res.data)) {
         console.error("Invalid data received from API:", res.data);
         setIssues([]);
         return;
       }
-      
+
       // Filter issues to show those raised to the current user OR raised by the current user
       const userIssues = res.data.filter((issue: Issue) => {
         const issueRaisedTo = issue.raised_to?.toLowerCase().trim();
@@ -97,8 +97,8 @@ const Issues_Page = () => {
         const matches = issueRaisedTo === userEmailLower || issueRaisedBy === userEmailLower;
         return matches;
       });
-      
-      
+
+
       setIssues(userIssues);
     } catch (err: unknown) {
       const apiError = err as ApiError;
@@ -109,7 +109,7 @@ const Issues_Page = () => {
         response: apiError.response?.data,
         status: apiError.response?.status
       });
-      
+
       // Set empty array on error to avoid infinite loading
       setIssues([]);
     } finally {
@@ -122,7 +122,7 @@ const Issues_Page = () => {
     console.log("email:", localStorage.getItem("email"));
     console.log("userData:", localStorage.getItem("userData"));
     console.log("userInfo:", localStorage.getItem("userInfo"));
-    
+
     fetchIssues();
   }, []);
 
@@ -153,10 +153,10 @@ const Issues_Page = () => {
 
     try {
       // 🔹 Get commenter email from localStorage
-      const commenterEmail = localStorage.getItem("email") || 
-                           JSON.parse(localStorage.getItem("userData") || "{}")?.email ||
-                           JSON.parse(localStorage.getItem("userInfo") || "{}")?.email ||
-                           "admin@school.com";
+      const commenterEmail = localStorage.getItem("email") ||
+        JSON.parse(localStorage.getItem("userData") || "{}")?.email ||
+        JSON.parse(localStorage.getItem("userInfo") || "{}")?.email ||
+        "admin@school.com";
 
       // 🔹 Format the comment with email + timestamp
       const updatedDescription =
@@ -216,7 +216,7 @@ const Issues_Page = () => {
     setSelectedIssue(issue);
     setShowView(true);
     setActiveTab("details");
-    
+
     // Fetch full issue details
     try {
       const res = await axios.get(`${API_URL}${issue.id}/`);
@@ -327,7 +327,7 @@ const Issues_Page = () => {
               </span>
             )}
           </div>
-          
+
           {/* Quick Action Buttons */}
           <div className="flex gap-1">
             {issue.status !== "Closed" && (
@@ -380,7 +380,7 @@ const Issues_Page = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-3 sm:p-4 lg:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-l-4 border-l-red-500">
             <div className="flex items-center justify-between">
               <div>
@@ -503,21 +503,19 @@ const Issues_Page = () => {
                 <div className="flex overflow-x-auto">
                   <button
                     onClick={() => setActiveTab("details")}
-                    className={`px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
-                      activeTab === "details" 
-                        ? "border-blue-500 text-blue-600" 
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === "details"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     📋 Issue Details
                   </button>
                   <button
                     onClick={() => setActiveTab("comments")}
-                    className={`px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
-                      activeTab === "comments" 
-                        ? "border-blue-500 text-blue-600" 
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-4 sm:px-6 py-3 sm:py-4 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === "comments"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     💬 Add Comment
                   </button>

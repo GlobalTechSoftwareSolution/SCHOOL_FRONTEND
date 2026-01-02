@@ -19,8 +19,8 @@ import {
 
 const tabs = [
   { id: "academics", label: "Academics", icon: BookOpen, color: "from-blue-500 to-cyan-500" },
-  { id: "administration", label: "Administration", icon: Users, color: "from-green-500 to-emerald-500" },
   { id: "finance", label: "Finance", icon: DollarSign, color: "from-purple-500 to-pink-500" },
+  { id: "administration", label: "Administration", icon: Users, color: "from-green-500 to-emerald-500" },
   { id: "communication", label: "Communication", icon: MessageSquare, color: "from-indigo-500 to-blue-500" },
 ];
 
@@ -278,11 +278,10 @@ export default function ERPModules() {
                 }}
                 whileHover={{ scale: 1.05, y: -4 }}
                 whileTap={{ scale: 0.95 }}
-                className={`relative group flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold transition-all duration-300 shadow-lg ${
-                  isActive
+                className={`relative group flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold transition-all duration-300 shadow-lg ${isActive
                     ? `bg-gradient-to-r ${tab.color} text-white shadow-2xl`
                     : "bg-white text-gray-700 hover:text-gray-900 hover:shadow-xl border border-gray-200"
-                }`}
+                  }`}
               >
                 <Icon className="w-5 h-5" />
                 {tab.label}

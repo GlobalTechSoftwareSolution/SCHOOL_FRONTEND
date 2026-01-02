@@ -202,7 +202,7 @@ const StudentMarks = () => {
             </div>
             <div className="text-red-600 font-semibold text-lg mb-2">Oops! Something went wrong</div>
             <div className="text-gray-600">{error}</div>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -259,7 +259,7 @@ const StudentMarks = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
@@ -273,7 +273,7 @@ const StudentMarks = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
@@ -306,7 +306,7 @@ const StudentMarks = () => {
           {/* Enhanced Grades Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
             {grades.map((grade, index) => (
-              <div 
+              <div
                 key={grade.id ?? `${grade.subject_name}-${index}`}
                 onClick={() => handleCardClick(grade)}
                 className="group cursor-pointer transform transition-all duration-300 hover:scale-105"
@@ -395,7 +395,7 @@ const StudentMarks = () => {
         {/* Enhanced Modal for Grade Details */}
         {isModalOpen && selectedGrade && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-            <div 
+            <div
               className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideUp"
               onClick={(e) => e.stopPropagation()}
             >
@@ -441,7 +441,7 @@ const StudentMarks = () => {
                       {selectedGrade.marks_obtained ?? "0"}/{selectedGrade.total_marks ?? "0"}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <span className="text-gray-600 font-medium">Exam Date</span>
                     <span className="text-gray-900 font-semibold">
@@ -453,12 +453,12 @@ const StudentMarks = () => {
                       }) : "—"}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <span className="text-gray-600 font-medium">Exam Type</span>
                     <span className="text-gray-900 font-semibold">{selectedGrade.exam_type ?? "—"}</span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <span className="text-gray-600 font-medium">Teacher</span>
                     <span className="text-gray-900 font-semibold">{selectedGrade.teacher_name ?? "—"}</span>

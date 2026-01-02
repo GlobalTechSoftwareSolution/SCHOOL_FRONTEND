@@ -70,6 +70,8 @@ const ManagementFinance = () => {
   const [selectedStudent, setSelectedStudent] = useState<FeePayment | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"paid" | "pending">("paid");
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
 
   const [totalPaid, setTotalPaid] = useState(0);
   const [totalPending, setTotalPending] = useState(0);
@@ -86,28 +88,28 @@ const ManagementFinance = () => {
   const transportIncomeDisplay = transportIncome.toFixed(2).toLocaleString();
   const transportIncomeDigits = transportIncomeDisplay.replace(/\D/g, "").length;
 
-  let overallRevenueTextClass = "text-2xl sm:text-3xl";
-  if (overallRevenueDigits > 7) {
-    overallRevenueTextClass = "text-xl sm:text-2xl";
+  let overallRevenueTextClass = "text-2xl sm:text-3xl lg:text-4xl";
+  if (overallRevenueDigits > 8) {
+    overallRevenueTextClass = "text-xl sm:text-2xl lg:text-3xl";
   }
-  if (overallRevenueDigits > 10) {
-    overallRevenueTextClass = "text-lg sm:text-xl";
-  }
-
-  let totalCollectedTextClass = "text-3xl";
-  if (totalCollectedDigits > 7) {
-    totalCollectedTextClass = "text-2xl";
-  }
-  if (totalCollectedDigits > 10) {
-    totalCollectedTextClass = "text-xl";
+  if (overallRevenueDigits > 11) {
+    overallRevenueTextClass = "text-lg sm:text-xl lg:text-2xl";
   }
 
-  let transportIncomeTextClass = "text-3xl";
-  if (transportIncomeDigits > 7) {
-    transportIncomeTextClass = "text-2xl";
+  let totalCollectedTextClass = "text-2xl sm:text-3xl lg:text-4xl";
+  if (totalCollectedDigits > 8) {
+    totalCollectedTextClass = "text-xl sm:text-2xl lg:text-3xl";
   }
-  if (transportIncomeDigits > 10) {
-    transportIncomeTextClass = "text-xl";
+  if (totalCollectedDigits > 11) {
+    totalCollectedTextClass = "text-lg sm:text-xl lg:text-2xl";
+  }
+
+  let transportIncomeTextClass = "text-2xl sm:text-3xl lg:text-4xl";
+  if (transportIncomeDigits > 8) {
+    transportIncomeTextClass = "text-xl sm:text-2xl lg:text-3xl";
+  }
+  if (transportIncomeDigits > 11) {
+    transportIncomeTextClass = "text-lg sm:text-xl lg:text-2xl";
   }
 
   useEffect(() => {
@@ -169,44 +171,22 @@ const ManagementFinance = () => {
         //   .filter((p: FeePayment) => p.fee_type === "Transport")
         //   .reduce((sum: number, p: FeePayment) => sum + parseFloat(p.amount_paid || "0"), 0);
 
-        setPayments(mergedData);
-        setPaidFees(mergedData.filter((p: FeePayment) => p.status === "Paid"));
-        setPendingFees(mergedData.filter((p: FeePayment) => p.remaining_amount && parseFloat(p.remaining_amount.toString()) > 0));
-
-        // Use a precise grouping strategy to calculate global totals accurately
-        // This avoids double-counting the 'total_amount' of a fee structure when multiple payments exist for it
-        const studentFeeTotals = new Map<string, { total: number; paid: number; transport: number }>();
-
+        // Extract unique years for the dropdown
+        const years = new Set<string>();
         mergedData.forEach(p => {
-          const key = `${p.student}-${p.fee_structure}`;
-          if (!studentFeeTotals.has(key)) {
-            studentFeeTotals.set(key, {
-              total: parseFloat(p.total_amount || "0"),
-              paid: 0,
-              transport: 0
-            });
-          }
-          const entry = studentFeeTotals.get(key)!;
-          const paid = parseFloat(p.amount_paid || "0");
-          entry.paid += paid;
-          if (p.fee_type === "Transport") {
-            entry.transport += paid;
+          if (p.payment_date) {
+            const year = p.payment_date.split('-')[0];
+            if (year) years.add(year);
           }
         });
 
-        let finalPaid = 0;
-        let finalPending = 0;
-        let finalTransport = 0;
+        // Ensure current year is always an option
+        const currentYear = new Date().getFullYear().toString();
+        years.add(currentYear);
 
-        studentFeeTotals.forEach(data => {
-          finalPaid += data.paid;
-          finalPending += Math.max(data.total - data.paid, 0);
-          finalTransport += data.transport;
-        });
+        setAvailableYears(Array.from(years).sort((a, b) => b.localeCompare(a)));
 
-        setTotalPaid(finalPaid);
-        setTotalPending(finalPending);
-        setTransportIncome(finalTransport);
+        setPayments(mergedData);
       } catch (err) {
         console.error("Error fetching finance data:", err);
       } finally {
@@ -216,6 +196,50 @@ const ManagementFinance = () => {
 
     fetchFinanceData();
   }, []);
+
+  // Calculate statistics based on selectedYear
+  useEffect(() => {
+    if (payments.length === 0) return;
+
+    // Filter to currently selected year
+    const yearFilteredData = payments.filter(p => p.payment_date && p.payment_date.startsWith(selectedYear));
+
+    setPaidFees(yearFilteredData.filter((p: FeePayment) => p.status === "Paid"));
+    setPendingFees(yearFilteredData.filter((p: FeePayment) => p.remaining_amount && parseFloat(p.remaining_amount.toString()) > 0));
+
+    const studentFeeTotals = new Map<string, { total: number; paid: number; transport: number }>();
+
+    yearFilteredData.forEach(p => {
+      const key = `${p.student}-${p.fee_structure}`;
+      if (!studentFeeTotals.has(key)) {
+        studentFeeTotals.set(key, {
+          total: parseFloat(p.total_amount || "0"),
+          paid: 0,
+          transport: 0
+        });
+      }
+      const entry = studentFeeTotals.get(key)!;
+      const paid = parseFloat(p.amount_paid || "0");
+      entry.paid += paid;
+      if (p.fee_type === "Transport") {
+        entry.transport += paid;
+      }
+    });
+
+    let finalPaid = 0;
+    let finalPending = 0;
+    let finalTransport = 0;
+
+    studentFeeTotals.forEach(data => {
+      finalPaid += data.paid;
+      finalPending += Math.max(data.total - data.paid, 0);
+      finalTransport += data.transport;
+    });
+
+    setTotalPaid(finalPaid);
+    setTotalPending(finalPending);
+    setTransportIncome(finalTransport);
+  }, [payments, selectedYear]);
 
   // Get unique classes from paid fees
   const getUniqueClasses = () => {
@@ -254,26 +278,28 @@ const ManagementFinance = () => {
       dataByMonth[m] = { month: m, collected: 0, pending: 0 };
     });
 
-    payments.forEach((payment) => {
-      if (!payment.payment_date) return;
+    payments
+      .filter(p => p.payment_date && p.payment_date.startsWith(selectedYear))
+      .forEach((payment) => {
+        if (!payment.payment_date) return;
 
-      // Robust month extraction from YYYY-MM-DD
-      const parts = payment.payment_date.split('-');
-      if (parts.length < 2) return;
-      const monthIndex = parseInt(parts[1]) - 1;
-      const monthName = monthsOrder[monthIndex];
+        // Robust month extraction from YYYY-MM-DD
+        const parts = payment.payment_date.split('-');
+        if (parts.length < 2) return;
+        const monthIndex = parseInt(parts[1]) - 1;
+        const monthName = monthsOrder[monthIndex];
 
-      if (!monthName) return;
+        if (!monthName) return;
 
-      const paid = parseFloat(payment.amount_paid || "0");
-      const pending = parseFloat(payment.remaining_amount || "0");
+        const paid = parseFloat(payment.amount_paid || "0");
+        const pending = parseFloat(payment.remaining_amount || "0");
 
-      dataByMonth[monthName].collected += paid;
-      dataByMonth[monthName].pending += pending;
-    });
+        dataByMonth[monthName].collected += paid;
+        dataByMonth[monthName].pending += pending;
+      });
 
     return monthsOrder.map(m => dataByMonth[m]);
-  }, [payments]);
+  }, [payments, selectedYear]);
 
   if (loading)
     return (
@@ -299,49 +325,67 @@ const ManagementFinance = () => {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
-            <div className="bg-gradient-to-br from-green-400 to-green-600 p-4 sm:p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-10 sm:mb-12">
+            {/* Total Collected */}
+            <div className="bg-gradient-to-br from-green-400 to-green-600 p-6 sm:p-8 rounded-[2rem] shadow-xl text-white transform hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group">
+              <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+                <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              </div>
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md mb-6">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                   </svg>
                 </div>
-                <div className="text-right">
-                  <p className="text-green-100 text-xs sm:text-sm">Total Collected</p>
-                  <p className={`${totalCollectedTextClass} font-bold`}>
+                <div>
+                  <p className="text-green-100 text-xs sm:text-sm font-bold uppercase tracking-widest mb-2">Total Collected</p>
+                  <p className={`${totalCollectedTextClass} font-black tracking-tight`}>
                     ₹{totalCollectedDisplay}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-4 sm:p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Transport Income */}
+            <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-6 sm:p-8 rounded-[2rem] shadow-xl text-white transform hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group">
+              <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+                <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md mb-6">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <div className="text-right">
-                  <p className="text-blue-100 text-xs sm:text-sm">Transport Income</p>
-                  <p className={`${transportIncomeTextClass} font-bold`}>
+                <div>
+                  <p className="text-blue-100 text-xs sm:text-sm font-bold uppercase tracking-widest mb-2">Transport Income</p>
+                  <p className={`${transportIncomeTextClass} font-black tracking-tight`}>
                     ₹{transportIncomeDisplay}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-400 to-purple-600 p-4 sm:p-6 rounded-3xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Overall Revenue */}
+            <div className="bg-gradient-to-br from-purple-400 to-purple-600 p-6 sm:p-8 rounded-[2rem] shadow-xl text-white transform hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group md:col-span-2 lg:col-span-1">
+              <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+                <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md mb-6">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
-                <div className="text-right max-w-[9rem] sm:max-w-none">
-                  <p className="text-purple-100 text-xs sm:text-sm">Overall Revenue</p>
-                  <p className={`${overallRevenueTextClass} font-bold break-words leading-tight`}
+                <div>
+                  <p className="text-purple-100 text-xs sm:text-sm font-bold uppercase tracking-widest mb-2">Overall Revenue</p>
+                  <p className={`${overallRevenueTextClass} font-black tracking-tight`}
                   >
                     ₹{overallRevenueDisplay}
                   </p>
@@ -372,14 +416,19 @@ const ManagementFinance = () => {
                     dataKey="month"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    tick={{ fill: '#6b7280', fontSize: 10 }}
                     dy={10}
+                    // Show every month but slant them on small screens to avoid overlap
+                    angle={typeof window !== 'undefined' && window.innerWidth < 640 ? -45 : 0}
+                    textAnchor={typeof window !== 'undefined' && window.innerWidth < 640 ? "end" : "middle"}
+                    height={60}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                    tick={{ fill: '#6b7280', fontSize: 10 }}
                     tickFormatter={(value) => `₹${value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value}`}
+                    width={40}
                   />
                   <Tooltip
                     cursor={{ fill: '#f9fafb' }}
@@ -465,21 +514,40 @@ const ManagementFinance = () => {
                 </button>
               </div>
 
-              {/* Class Filter */}
-              <div className="flex items-center gap-3">
-                <label className="text-gray-700 font-medium">Filter by Class:</label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white font-medium"
-                >
-                  <option value="all">All Classes</option>
-                  {getUniqueClasses().map((className) => (
-                    <option key={className} value={className}>
-                      {className}
-                    </option>
-                  ))}
-                </select>
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                {/* Year Filter */}
+                <div className="flex items-center gap-3">
+                  <label className="text-gray-700 font-medium">Year:</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white font-medium text-sm transition-all"
+                  >
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Class Filter */}
+                <div className="flex items-center gap-3">
+                  <label className="text-gray-700 font-medium">Class:</label>
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    className="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white font-medium text-sm transition-all"
+                  >
+                    <option value="all">All Classes</option>
+                    {getUniqueClasses().map((className) => (
+                      <option key={className} value={className}>
+                        {className}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
