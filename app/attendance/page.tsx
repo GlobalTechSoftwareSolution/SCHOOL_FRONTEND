@@ -19,15 +19,24 @@ const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 
 interface BackendResponse {
-  status: 'success' | 'fail' | 'error';
+  status: 'success' | 'fail' | 'error' | 'Present' | string;
   message?: string;
-  user?: string; // backend returns 'user' as name in your code
+  error?: string;
+  id?: string | number;
+  user?: string | { email?: string; role?: string; fullname?: string;[key: string]: unknown }; // backend returns 'user' as name or object
+  user_email?: string;
+  user_name?: string;
+  user_full_name?: string;
+  fullname?: string;
   email?: string;
   role?: string;
+  user_role?: string;
   method_used?: string;
   debug_info?: unknown;
   // Fields that might be returned by backend
   attendance_status?: 'checkin' | 'checkout' | 'completed';
+  check_in?: string;
+  check_out?: string;
   checkin_time?: string;
   checkout_time?: string;
   has_checkin?: boolean;
@@ -411,7 +420,7 @@ const AttendanceSystem = () => {
   }, []);
 
   // Handle backend response shape
-  const handleBackendResult = useCallback((result: BackendResponse | any) => {
+  const handleBackendResult = useCallback((result: BackendResponse) => {
     if (!result) {
       setMessage('No response from server');
       return;
@@ -427,9 +436,14 @@ const AttendanceSystem = () => {
     if (isSuccess) {
       // The backend 'mark' endpoint returns the serialized Attendance object
       // Based on Postman response: { id, user_email, user_name, check_in, check_out, status, role }
-      const name = result.user_name || result.user_full_name || result.fullname || result.user?.fullname || result.user?.email || result.user_email || 'User';
-      const email = result.user_email || (typeof result.user === 'object' ? result.user.email : result.email) || '';
-      const role = result.role || result.user_role || (typeof result.user === 'object' ? result.user.role : result.role) || 'N/A';
+
+      // Safe access helpers for the user object/string union
+      const userObj = typeof result.user === 'object' && result.user !== null ? result.user : null;
+      const userStr = typeof result.user === 'string' ? result.user : null;
+
+      const name = result.user_name || result.user_full_name || result.fullname || userObj?.fullname || userObj?.email || userStr || result.user_email || 'User';
+      const email = result.user_email || userObj?.email || userStr || result.email || '';
+      const role = result.role || result.user_role || userObj?.role || 'N/A';
       const checkin = result.check_in || result.checkin_time || null;
       const checkout = result.check_out || result.checkout_time || null;
 
@@ -478,8 +492,8 @@ const AttendanceSystem = () => {
 
       if (!emsg) {
         const fieldErrors = Object.entries(result)
-          .filter(([_, v]) => Array.isArray(v))
-          .map(([k, v]) => `${k}: ${(v as any[]).join(', ')}`)
+          .filter(([, v]) => Array.isArray(v))
+          .map(([k, v]) => `${k}: ${(v as unknown[]).join(', ')}`)
           .join('; ');
 
         emsg = fieldErrors || (Object.keys(result).length > 0 ? JSON.stringify(result) : 'Attendance failed');
@@ -535,11 +549,11 @@ const AttendanceSystem = () => {
         handleBackendResult(response.data);
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Attendance Error:', error);
       let errorMsg = 'Face not recognized or invalid request';
       if (axios.isAxiosError(error) && error.response) {
-        const data = error.response.data;
+        const data = error.response.data as BackendResponse;
         errorMsg = data.message || data.error || JSON.stringify(data);
       }
       setMessage(`❌ ${errorMsg}`);
@@ -652,11 +666,11 @@ const AttendanceSystem = () => {
       if (response.data) {
         handleBackendResult(response.data);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Barcode Attendance Error:", error);
       let errorMsg = 'Error connecting to server';
       if (axios.isAxiosError(error) && error.response) {
-        const data = error.response.data;
+        const data = error.response.data as BackendResponse;
         errorMsg = data.message || data.error || JSON.stringify(data);
       }
       setMessage(`❌ ${errorMsg}`);

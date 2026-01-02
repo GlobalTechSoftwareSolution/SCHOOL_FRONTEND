@@ -19,17 +19,12 @@ import {
   BarChart3,
   CheckCircle,
   XCircle,
-  Clock4,
   GraduationCap,
   Users,
   BookMarked,
   Building,
   Contact,
-  Eye,
-  School,
-  GraduationCap as GraduationCapIcon,
-  BookOpen as BookOpenIcon,
-  Building as BuildingIcon
+  Eye
 } from "lucide-react";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
@@ -274,17 +269,7 @@ const TeachersPage = () => {
     }
   };
 
-  // ✅ Helper function to get education level icon
-  const getEducationLevelIcon = (level: string) => {
-    switch (level) {
-      case "nursery": return <BookOpenIcon className="w-4 h-4" />;
-      case "primary": return <GraduationCapIcon className="w-4 h-4" />;
-      case "highschool": return <School className="w-4 h-4" />;
-      case "college": return <BuildingIcon className="w-4 h-4" />;
-      case "school": return <School className="w-4 h-4" />;
-      default: return <User className="w-4 h-4" />;
-    }
-  };
+
 
   // ✅ Helper function to get education level color
   const getEducationLevelColor = (level: string) => {
@@ -1178,7 +1163,7 @@ const TeachersPage = () => {
                                 {leave.status}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-500 italic">" {leave.reason} "</p>
+                            <p className="text-sm text-gray-500 italic">&quot; {leave.reason} &quot;</p>
                             <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
                               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-600">
                                 {String(leave.approved_by_email || "?").charAt(0).toUpperCase()}

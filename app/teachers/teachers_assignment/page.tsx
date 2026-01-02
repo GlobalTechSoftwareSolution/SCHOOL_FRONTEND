@@ -118,7 +118,7 @@ const TeachersAssignmentsPage = () => {
   const [classesData, setClassesData] = useState<Class[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [teacherClasses, setTeacherClasses] = useState<Class[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const [teacherStudents, setTeacherStudents] = useState<Student[]>([]);
   const [viewMode, setViewMode] = useState<'assignments' | 'total' | 'pending' | 'completed' | 'overdue'>('assignments');
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
@@ -924,7 +924,7 @@ const TeachersAssignmentsPage = () => {
           return (
             <div
               key={card.type}
-              onClick={() => handleCardClick(card.type as any)}
+              onClick={() => handleCardClick(card.type as 'total' | 'pending' | 'completed' | 'overdue')}
               className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer shadow-sm hover:shadow-md transition-all hover:-translate-y-1"
             >
               <div className="flex items-center justify-between">
@@ -1111,7 +1111,7 @@ const TeachersAssignmentsPage = () => {
                           ].map((stat) => (
                             <button
                               key={stat.type}
-                              onClick={() => handleAssignmentCardClick(stat.type as any, assignment)}
+                              onClick={() => handleAssignmentCardClick(stat.type as 'total' | 'pending' | 'completed' | 'overdue', assignment)}
                               className={`flex-1 p-2 rounded text-center transition-all hover:scale-105 border ${stat.color === 'blue' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                                 stat.color === 'green' ? 'bg-green-50 text-green-700 border-green-100' :
                                   stat.color === 'yellow' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :

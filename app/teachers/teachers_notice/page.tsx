@@ -10,7 +10,6 @@ import {
   Calendar,
   Search,
   Trash2,
-  Mail,
   Loader2,
   Users,
   MessageSquare,
@@ -59,7 +58,7 @@ const TeacherNoticePage = () => {
   const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+
   const [activeFilter, setActiveFilter] = useState("all");
   const [noticeSearch, setNoticeSearch] = useState("");
 
@@ -521,8 +520,8 @@ const TeacherNoticePage = () => {
                     <button
                       onClick={() => setActiveFilter("all")}
                       className={`flex-1 sm:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeFilter === "all"
-                          ? "bg-white text-blue-600 shadow-sm"
-                          : "text-gray-500 hover:text-gray-900"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
                         }`}
                     >
                       All
@@ -530,8 +529,8 @@ const TeacherNoticePage = () => {
                     <button
                       onClick={() => setActiveFilter("my")}
                       className={`flex-1 sm:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${activeFilter === "my"
-                          ? "bg-white text-blue-600 shadow-sm"
-                          : "text-gray-500 hover:text-gray-900"
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
                         }`}
                     >
                       Mine
