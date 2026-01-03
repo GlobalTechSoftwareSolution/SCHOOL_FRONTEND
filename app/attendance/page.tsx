@@ -15,8 +15,6 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import axios from 'axios';
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
-
 
 interface BackendResponse {
   status: 'success' | 'fail' | 'error' | 'Present' | string;
@@ -153,7 +151,7 @@ const AttendanceSystem = () => {
     try {
       const savedState = localStorage.getItem('attendanceState');
       if (savedState) {
-        const { date, checkedIn, email } = JSON.parse(savedState);
+        const { date, checkedIn } = JSON.parse(savedState);
         const today = new Date().toDateString();
 
         // Only restore if it's the same day
@@ -659,7 +657,7 @@ const AttendanceSystem = () => {
         formData.append('check_out', timeStr);
       }
 
-      const response = await axios.post('http://127.0.0.1:8000/api/attendance/mark/', formData, {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/attendance/mark/`, formData, {
         headers: {
           'Accept': 'application/json',
           // Omit Content-Type for FormData
@@ -687,11 +685,11 @@ const AttendanceSystem = () => {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/health/'); // or any simple endpoint to test
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/health/`); // or any simple endpoint to test
         console.log('Backend is accessible:', response.status);
-      } catch (error) {
-        console.error('Backend is not accessible. Please ensure your Django backend server is running at http://127.0.0.1:8000');
-        setMessage('⚠️ Backend server not accessible. Please ensure your Django backend server is running at http://127.0.0.1:8000');
+      } catch {
+        console.error('Backend is not accessible.');
+        setMessage('⚠️ Backend server not accessible.');
       }
     };
     checkBackend();
