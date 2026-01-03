@@ -41,6 +41,9 @@ interface BackendResponse {
   checkout_time?: string;
   has_checkin?: boolean;
   date?: string;
+  // Face recognition specific fields
+  face_recognition_used?: boolean;
+  distance?: number;
   // Add generic index signature for any other fields
   [key: string]: unknown;
 }
@@ -59,7 +62,7 @@ const AttendanceSystem = () => {
 
   // Add state to manually track check-in status
   const [userCheckedIn, setUserCheckedIn] = useState<boolean>(false);
-  const [lastUserEmail, setLastUserEmail] = useState<string | null>(null);
+
 
   // New state for barcode scanner mode
   const [barcodeScanMode, setBarcodeScanMode] = useState<'camera' | 'upload'>('upload');
@@ -144,11 +147,7 @@ const AttendanceSystem = () => {
         setCurrentLocation({ latitude: 0, longitude: 0 });
       });
 
-    // Check for logged-in user email
-    const storedEmail = localStorage.getItem('userEmail');
-    if (storedEmail) {
-      setLastUserEmail(storedEmail);
-    }
+
 
     // Restore attendance state (check-in status) for today
     try {
@@ -157,12 +156,12 @@ const AttendanceSystem = () => {
         const { date, checkedIn, email } = JSON.parse(savedState);
         const today = new Date().toDateString();
 
-        // Only restore if it's the same day and same user
-        if (date === today && (!storedEmail || email === storedEmail)) {
+        // Only restore if it's the same day
+        if (date === today) {
           setUserCheckedIn(checkedIn);
           console.log(`Restored attendance state: ${checkedIn ? 'Checked In' : 'Checked Out'}`);
         } else {
-          // New day or different user, reset
+          // New day or reset
           localStorage.removeItem('attendanceState');
         }
       }
@@ -184,7 +183,6 @@ const AttendanceSystem = () => {
   // Reset user tracking
   const resetUserTracking = () => {
     setUserCheckedIn(false);
-    setLastUserEmail(null);
   };
 
   // Start camera for face recognition
@@ -458,7 +456,6 @@ const AttendanceSystem = () => {
 
       // Update local tracking state for next scan
       if (email) {
-        setLastUserEmail(email);
         const nextScanShouldBeCheckout = !isCheckoutAction;
         setUserCheckedIn(nextScanShouldBeCheckout);
 
@@ -471,11 +468,19 @@ const AttendanceSystem = () => {
       }
 
       // Customize message based on what action was performed
+      let actionMessage = '';
       if (actionPerformed === 'checkin') {
-        setMessage(`✅ Check-in marked for ${name} (${role}) at ${formatTime(checkin)}`);
+        actionMessage = `✅ Check-in marked for ${name} (${role}) at ${formatTime(checkin)}`;
       } else {
-        setMessage(`✅ Check-out marked for ${name} (${role}) at ${formatTime(checkout)}`);
+        actionMessage = `✅ Check-out marked for ${name} (${role}) at ${formatTime(checkout)}`;
       }
+      
+      // Add face recognition indicator if applicable
+      if (result.face_recognition_used) {
+        actionMessage += ' [Face Recognition]';
+      }
+      
+      setMessage(actionMessage);
 
       // keep displayed for 5 seconds then reset
       setTimeout(() => {
@@ -518,27 +523,13 @@ const AttendanceSystem = () => {
       const formData = new FormData();
       const blob = dataURLtoBlob(imageData);
 
-      // ✅ EXACTLY MATCH POSTMAN + TOGGLE LOGIC
+      // Send image file to backend for face recognition
       formData.append('image', blob, 'face.jpg');
-
-      const emailToUse = lastUserEmail || scannedEmail || localStorage.getItem('userEmail');
-      if (emailToUse) {
-        formData.append('user_email', emailToUse);
-
-        // If user is already checked in, send current time for checkout
-        if (lastUserEmail === emailToUse && userCheckedIn) {
-          const now = new Date();
-          const timeStr = now.toLocaleTimeString('en-GB', { hour12: false }); // HH:mm:ss
-          formData.append('check_out', timeStr);
-        }
-      }
-
-      formData.append('method', 'face');
       formData.append('latitude', location.latitude.toString());
       formData.append('longitude', location.longitude.toString());
 
-      const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
-      const response = await axios.post(`${API_BASE}/attendance/mark/`, formData, {
+      // const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/attendance/mark/`, formData, {
         headers: {
           'Accept': 'application/json',
         }
@@ -552,16 +543,28 @@ const AttendanceSystem = () => {
     } catch (error: unknown) {
       console.error('Attendance Error:', error);
       let errorMsg = 'Face not recognized or invalid request';
-      if (axios.isAxiosError(error) && error.response) {
-        const data = error.response.data as BackendResponse;
-        errorMsg = data.message || data.error || JSON.stringify(data);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ERR_NETWORK') {
+          errorMsg = 'Network error: Backend server not accessible. Please ensure your Django backend server is running at http://127.0.0.1:8000';
+        } else if (error.response) {
+          const data = error.response.data as BackendResponse;
+          errorMsg = data.message || data.error || JSON.stringify(data);
+        } else if (error.request) {
+          errorMsg = 'No response received from server. Please check your backend connection.';
+        } else {
+          errorMsg = error.message;
+        }
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
       }
+      
       setMessage(`❌ ${errorMsg}`);
     } finally {
       setIsLoading(false);
       stopCamera();
     }
-  }, [lastUserEmail, userCheckedIn, scannedEmail, handleBackendResult, stopCamera]);
+  }, [handleBackendResult, stopCamera]);
 
   // Capture image for face recognition
   const captureAndDetectFace = useCallback(async () => {
@@ -649,14 +652,14 @@ const AttendanceSystem = () => {
       formData.append('longitude', location.longitude.toString());
 
       // Add explicit check-out indicator based on local state
-      if (lastUserEmail === barcodeData && userCheckedIn) {
+      if (userCheckedIn) {
         // Current time in HH:mm:ss format
         const now = new Date();
         const timeStr = now.toLocaleTimeString('en-GB', { hour12: false }); // HH:mm:ss
         formData.append('check_out', timeStr);
       }
 
-      const response = await axios.post(`${API_BASE}/attendance/mark/`, formData, {
+      const response = await axios.post('http://127.0.0.1:8000/api/attendance/mark/', formData, {
         headers: {
           'Accept': 'application/json',
           // Omit Content-Type for FormData
@@ -678,7 +681,21 @@ const AttendanceSystem = () => {
       setIsLoading(false);
       stopCamera();
     }
-  }, [lastUserEmail, userCheckedIn, handleBackendResult, stopCamera]);
+  }, [userCheckedIn, handleBackendResult, stopCamera]);
+
+  // Check if backend is accessible
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/health/'); // or any simple endpoint to test
+        console.log('Backend is accessible:', response.status);
+      } catch (error) {
+        console.error('Backend is not accessible. Please ensure your Django backend server is running at http://127.0.0.1:8000');
+        setMessage('⚠️ Backend server not accessible. Please ensure your Django backend server is running at http://127.0.0.1:8000');
+      }
+    };
+    checkBackend();
+  }, []);
 
 
   // Scan barcode from webcam
@@ -750,16 +767,7 @@ const AttendanceSystem = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-10">School Attendance</h1>
             <p className="text-gray-600">Mark your attendance using face recognition or barcode scan</p>
 
-            {/* Manual Email Override */}
-            <div className="mt-4 flex justify-center">
-              <input
-                type="email"
-                placeholder="Enter your email (teacher10@school.com)"
-                value={lastUserEmail || ''}
-                onChange={(e) => setLastUserEmail(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-center text-sm w-full max-w-xs focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
+
             {currentLocation ? (
               <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm">
                 <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">

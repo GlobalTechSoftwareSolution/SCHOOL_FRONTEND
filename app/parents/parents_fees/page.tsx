@@ -96,6 +96,208 @@ const ParentFeePayments = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [activeView, setActiveView] = useState("overview");
 
+  // Custom CSS for enhanced responsiveness
+  const responsiveStyles = `
+    /* Mobile devices */
+    @media (max-width: 480px) {
+      .fee-payment-card {
+        padding: 0.75rem !important;
+      }
+      
+      .fee-payment-card .payment-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      .fee-payment-card .payment-details {
+        font-size: 0.75rem;
+      }
+      
+      .fee-payment-card .payment-details div {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+      }
+      
+      .stats-card {
+        padding: 1rem !important;
+      }
+      
+      .stats-card .stat-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      .filters-container {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+      }
+      
+      .filter-group {
+        width: 100%;
+      }
+      
+      .modal-content {
+        padding: 1rem !important;
+        margin: 0.5rem !important;
+      }
+      
+      .payment-trend-container {
+        height: 200px !important;
+      }
+      
+      .payment-trend-bar {
+        margin: 0 0.25rem !important;
+      }
+    }
+    
+    /* Small tablets */
+    @media (min-width: 481px) and (max-width: 768px) {
+      .fee-payment-card {
+        padding: 1rem;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .payment-grid {
+        grid-template-columns: repeat(1, 1fr) !important;
+      }
+      
+      .analytics-grid {
+        grid-template-columns: 1fr !important;
+      }
+      
+      .children-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .modal-content {
+        max-width: 95% !important;
+      }
+      
+      .payment-trend-container {
+        height: 250px !important;
+      }
+    }
+    
+    /* Large tablets and small desktops */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .payment-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .children-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .analytics-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .header-flex {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .search-container {
+        width: 100% !important;
+      }
+      
+      .filter-container {
+        width: 100% !important;
+      }
+    }
+    
+    /* Desktop and larger screens */
+    @media (min-width: 1025px) {
+      .payment-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+      
+      .children-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+      
+      .analytics-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .analytics-payment-trend {
+        grid-column: span 2 !important;
+      }
+    }
+    
+    /* High-resolution mobile devices */
+    @media (max-width: 576px) and (orientation: portrait) {
+      .dashboard-content {
+        padding: 0.5rem !important;
+      }
+      
+      .card-content {
+        padding: 0.75rem !important;
+      }
+      
+      .button-text {
+        display: none;
+      }
+      
+      .button-icon {
+        margin-right: 0 !important;
+      }
+    }
+    
+    /* Landscape mobile devices */
+    @media (min-width: 577px) and (max-width: 768px) and (orientation: landscape) {
+      .payment-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .children-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+    }
+    
+    /* Extra large screens */
+    @media (min-width: 1440px) {
+      .payment-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+      }
+      
+      .children-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+      }
+      
+      .analytics-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+      
+      .analytics-payment-trend {
+        grid-column: span 3 !important;
+      }
+    }
+    
+    /* Print styles */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      
+      .print-full-width {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+    }
+  `;
+
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("userData") || "{}");
     const email = userData?.email || "";
@@ -366,6 +568,7 @@ const ParentFeePayments = () => {
   return (
     <DashboardLayout role="parents">
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-4 xs:p-5 sm:p-6">
+        <style>{responsiveStyles}</style>
         {/* Enhanced Header */}
         <div className="mb-6 xs:mb-7 sm:mb-8">
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 xs:gap-5 sm:gap-6">
@@ -428,10 +631,10 @@ const ParentFeePayments = () => {
         {activeView === "overview" && (
           <>
             {/* Statistics Cards - Enhanced */}
-            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6 mb-6 xs:mb-7 sm:mb-8">
-              <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-5 md:gap-6 mb-6 xs:mb-7 sm:mb-8 stats-grid">
+              <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-blue-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 stats-card">
                 <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-blue-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between stat-content">
                   <div>
                     <p className="text-xs xs:text-sm font-medium text-gray-600">Total Payments</p>
                     <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">{stats.totalPayments}</p>
@@ -446,9 +649,9 @@ const ParentFeePayments = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-white to-emerald-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-emerald-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-emerald-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-emerald-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 stats-card">
                 <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-emerald-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between stat-content">
                   <div>
                     <p className="text-xs xs:text-sm font-medium text-gray-600">Paid Amount</p>
                     <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.amount_paid}</p>
@@ -463,9 +666,9 @@ const ParentFeePayments = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-white to-amber-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-amber-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-amber-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-amber-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 stats-card">
                 <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-amber-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between stat-content">
                   <div>
                     <p className="text-xs xs:text-sm font-medium text-gray-600">Remaining</p>
                     <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.totalRemaining}</p>
@@ -480,9 +683,9 @@ const ParentFeePayments = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-purple-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300">
+              <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-purple-200/30 p-4 xs:p-5 sm:p-6 relative overflow-hidden group hover:shadow-md transition-all duration-300 stats-card">
                 <div className="absolute top-0 right-0 w-16 h-16 xs:w-20 xs:h-20 bg-purple-500/5 rounded-full -translate-y-6 xs:-translate-y-8 translate-x-6 xs:translate-x-8"></div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between stat-content">
                   <div>
                     <p className="text-xs xs:text-sm font-medium text-gray-600">Total Fee</p>
                     <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mt-1 xs:mt-2">₹{stats.totalAmount}</p>
@@ -549,7 +752,7 @@ const ParentFeePayments = () => {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-6 analytics-grid">
               {/* Payment Status Distribution */}
               <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5">
                 <h3 className="font-semibold text-gray-900 text-sm xs:text-base mb-3 xs:mb-4">Payment Status Distribution</h3>
@@ -633,9 +836,9 @@ const ParentFeePayments = () => {
               </div>
 
               {/* Payment Trend */}
-              <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 md:col-span-2">
+              <div className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 md:col-span-2 analytics-payment-trend">
                 <h3 className="font-semibold text-gray-900 text-sm xs:text-base mb-3 xs:mb-4">Payment Trend</h3>
-                <div className="h-48 flex items-end justify-between gap-1 xs:gap-2">
+                <div className="h-48 flex items-end justify-between gap-1 xs:gap-2 payment-trend-container">
                   {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => {
                     // Calculate total payments for this month
                     const monthPayments = feePayments.filter(p => {
@@ -652,7 +855,7 @@ const ParentFeePayments = () => {
                       <div key={month} className="flex flex-col items-center flex-1">
                         <div className="text-xs text-gray-600 mb-1">{month}</div>
                         <div
-                          className="w-full bg-gradient-to-t from-blue-500 to-purple-500 rounded-t-sm transition-all duration-300 hover:from-blue-600 hover:to-purple-600"
+                          className="w-full bg-gradient-to-t from-blue-500 to-purple-500 rounded-t-sm transition-all duration-300 hover:from-blue-600 hover:to-purple-600 payment-trend-bar"
                           style={{ height: `${heightPercentage || 5}%` }}
                         ></div>
                         <div className="text-xs text-gray-500 mt-1">₹{Math.round(totalAmount)}</div>
@@ -678,7 +881,7 @@ const ParentFeePayments = () => {
                 👨‍👩‍👧‍👦 Family
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 xs:gap-4 sm:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 xs:gap-4 sm:gap-5 children-grid">
               {children.map((child, index) => {
                 const childPayments = feePayments.filter(p => p.student === child.email);
                 const childTotal = childPayments.reduce((sum, p) => sum + (Number(p.total_amount) || 0), 0);
@@ -759,8 +962,8 @@ const ParentFeePayments = () => {
         {/* Enhanced Filters and Search - Only show for Overview view */}
         {activeView === "overview" && (
           <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl xs:rounded-2xl shadow-sm border border-slate-200/60 p-4 xs:p-5 sm:p-6 mb-6 xs:mb-7 sm:mb-8">
-            <div className="flex flex-col lg:flex-row gap-4 xs:gap-5 items-start lg:items-center justify-between">
-              <div className="relative flex-1 w-full">
+            <div className="flex flex-col lg:flex-row gap-4 xs:gap-5 items-start lg:items-center justify-between filters-container">
+              <div className="relative flex-1 w-full search-container">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search className="h-4 w-4 xs:h-5 xs:w-5 text-gray-400" />
                 </div>
@@ -773,7 +976,7 @@ const ParentFeePayments = () => {
                 />
               </div>
 
-              <div className="flex flex-wrap gap-2 xs:gap-3 w-full lg:w-auto">
+              <div className="flex flex-wrap gap-2 xs:gap-3 w-full lg:w-auto filter-group">
                 <div className="relative flex-1 xs:flex-none min-w-[140px]">
                   <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 xs:h-4 xs:w-4 text-gray-400" />
                   <select
@@ -858,15 +1061,15 @@ const ParentFeePayments = () => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6 p-4 xs:p-5 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 xs:gap-5 sm:gap-6 p-4 xs:p-5 sm:p-6 payment-grid">
                 {filteredPayments.map((payment, index) => (
                   <div
                     key={payment.id || index}
-                    className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-blue-300"
+                    className="bg-white rounded-lg xs:rounded-xl border border-gray-200/60 p-4 xs:p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group hover:border-blue-300 fee-payment-card"
                     onClick={() => setExpandedPayment(expandedPayment === index ? null : index)}
                   >
                     {/* Header */}
-                    <div className="flex items-start justify-between mb-3 xs:mb-4">
+                    <div className="flex items-start justify-between mb-3 xs:mb-4 payment-header">
                       <div className="flex items-center gap-2 xs:gap-3">
                         <div className="transform group-hover:scale-110 transition-transform duration-300">
                           {getStatusIcon(payment.status)}
@@ -895,7 +1098,7 @@ const ParentFeePayments = () => {
                     </div>
 
                     {/* Payment Details */}
-                    <div className="space-y-2 xs:space-y-3">
+                    <div className="space-y-2 xs:space-y-3 payment-details">
                       <div className="flex items-center justify-between text-xs xs:text-sm">
                         <span className="text-gray-600">Fee Type:</span>
                         <span className="font-semibold text-blue-600">{payment.fee_type}</span>
@@ -1033,7 +1236,7 @@ const ParentFeePayments = () => {
         {/* Enhanced Payment Modal */}
         {showPaymentModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 xs:p-4">
-            <div className="bg-white rounded-xl xs:rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200/60">
+            <div className="bg-white rounded-xl xs:rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-200/60 modal-content">
               <div className="p-4 xs:p-5 sm:p-6 border-b border-gray-200/60 bg-gradient-to-r from-blue-50 to-purple-50/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 xs:gap-3">
